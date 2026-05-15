@@ -1,0 +1,69 @@
+{
+  "name": "@sudoku-tools/classic9",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "标准 9x9 数独工具库，提供解析、校验、求解、评分、生成、canonical 化和候选池工具。",
+  "author": "Cao Ruichuang",
+  "license": "MIT",
+  "homepage": "https://github.com/RichardCao/classic9-sudoku#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RichardCao/classic9-sudoku.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RichardCao/classic9-sudoku/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "sideEffects": false,
+  "keywords": [
+    "sudoku",
+    "sudoku-solver",
+    "sudoku-generator",
+    "classic9",
+    "puzzle",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs",
+    "examples",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "sudoku": "./dist/src/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --pretty false",
+    "examples:typecheck": "tsc -p tsconfig.examples.json --noEmit --pretty false",
+    "pack:dry-run": "npm_config_cache=./.npm-cache npm pack --dry-run",
+    "prepack": "npm run build",
+    "smoke:cli": "npm run build && node scripts/smoke-cli.mjs",
+    "smoke:dist": "npm run build && node -e \"import('./dist/src/index.js').then((m)=>{ if (typeof m.parsePuzzle !== 'function') throw new Error('parsePuzzle missing'); console.log('dist smoke passed'); })\"",
+    "smoke:pack": "npm run build && node scripts/smoke-packed-package.mjs",
+    "verify": "npm run typecheck && npm test && npm run examples:typecheck && npm run smoke:dist && npm run smoke:cli && npm run pack:dry-run && npm run smoke:pack",
+    "test": "tsc -p tsconfig.json --pretty false && node dist/tests/run-tests.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.9.3"
+  }
+}
