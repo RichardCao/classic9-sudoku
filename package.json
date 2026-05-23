@@ -1,6 +1,6 @@
 {
   "name": "@sudoku-tools/classic9",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "标准 9x9 数独工具库，提供解析、校验、求解、评分、生成、canonical 化和候选池工具。",
@@ -52,13 +52,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --pretty false",
+    "clean": "node -e \"import('node:fs').then((fs)=>fs.rmSync('dist',{recursive:true,force:true}))\"",
+    "audit:stable": "npm run build && node scripts/audit-stable-puzzles.mjs",
     "examples:typecheck": "tsc -p tsconfig.examples.json --noEmit --pretty false",
-    "pack:dry-run": "npm_config_cache=./.npm-cache npm pack --dry-run",
-    "prepack": "npm run build",
+    "pack:dry-run": "npm pack --dry-run --cache ./.npm-cache",
+    "prepack": "npm run clean && npm run build",
+    "prepublishOnly": "npm run verify",
     "smoke:cli": "npm run build && node scripts/smoke-cli.mjs",
     "smoke:dist": "npm run build && node -e \"import('./dist/src/index.js').then((m)=>{ if (typeof m.parsePuzzle !== 'function') throw new Error('parsePuzzle missing'); console.log('dist smoke passed'); })\"",
     "smoke:pack": "npm run build && node scripts/smoke-packed-package.mjs",
     "verify": "npm run typecheck && npm test && npm run examples:typecheck && npm run smoke:dist && npm run smoke:cli && npm run pack:dry-run && npm run smoke:pack",
+    "verify:release": "npm run verify && node scripts/verify-release.mjs",
     "test": "tsc -p tsconfig.json --pretty false && node dist/tests/run-tests.js",
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
   },

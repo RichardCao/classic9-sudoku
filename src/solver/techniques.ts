@@ -6,11 +6,13 @@ import {
   CELL_TO_BOX,
   CELL_TO_COL,
   CELL_TO_PEERS,
+  CELL_TO_PEER_SET,
   CELL_TO_ROW,
   COL_HOUSES,
+  getHouseCells,
   ROW_HOUSES,
 } from '../core/grid.js';
-import type { Digit, HouseRef } from '../core/types.js';
+import type { Board, CandidateMask, Digit, HouseRef } from '../core/types.js';
 import type {
   SolveStep,
   SolverContextLike,
@@ -206,6 +208,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'stable',
   },
   {
+    id: 'big-wings',
+    nameZh: 'BigWings',
+    nameEn: 'BigWings',
+    family: 'als',
+    defaultScore: 179,
+    stability: 'experimental',
+  },
+  {
     id: 'chute-remote-pairs',
     nameZh: '宫带远程数对',
     nameEn: 'Chute Remote Pairs',
@@ -251,7 +261,7 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     nameEn: 'AIC with ALS',
     family: 'als',
     defaultScore: 214,
-    stability: 'stable',
+    stability: 'experimental',
   },
   {
     id: 'fireworks',
@@ -355,7 +365,7 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     nameEn: 'Nishio Forcing Chains',
     family: 'forcing',
     defaultScore: 222,
-    stability: 'experimental',
+    stability: 'stable',
   },
   {
     id: 'cell-forcing-chains',
@@ -374,6 +384,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'experimental',
   },
   {
+    id: 'table-chain',
+    nameZh: 'Table Chain',
+    nameEn: 'Table Chain',
+    family: 'forcing',
+    defaultScore: 226,
+    stability: 'experimental',
+  },
+  {
     id: 'bowmans-bingo',
     nameZh: "Bowman's Bingo",
     nameEn: "Bowman's Bingo",
@@ -387,6 +405,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     nameEn: 'Simple Coloring',
     family: 'coloring',
     defaultScore: 170,
+    stability: 'stable',
+  },
+  {
+    id: 'x-coloring',
+    nameZh: '扩展染色',
+    nameEn: 'X-Coloring',
+    family: 'coloring',
+    defaultScore: 174,
     stability: 'stable',
   },
   {
@@ -547,8 +573,79 @@ export function getTechniqueDefinitions(): TechniqueDefinition[] {
   return TECHNIQUE_DEFINITIONS.map((definition) => ({ ...definition }));
 }
 
+const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
+  'full-house',
+  'naked-single',
+  'hidden-single',
+  'locked-candidates',
+  'naked-pair',
+  'hidden-pair',
+  'naked-triple',
+  'hidden-triple',
+  'naked-quad',
+  'hidden-quad',
+  'x-wing',
+  'finned-x-wing',
+  'xy-wing',
+  'swordfish',
+  'franken-swordfish',
+  'finned-swordfish',
+  'sashimi-swordfish',
+  'jellyfish',
+  'finned-jellyfish',
+  'sashimi-jellyfish',
+  'xyz-wing',
+  'almost-locked-pair',
+  'almost-locked-triple',
+  'wxyz-wing',
+  'w-wing',
+  'big-wings',
+  'chute-remote-pairs',
+  'avoidable-rectangle',
+  'rectangle-elimination',
+  'grouped-x-cycles',
+  'simple-coloring',
+  'x-coloring',
+  'multi-colors',
+  'skyscraper',
+  'two-string-kite',
+  'turbot-fish',
+  'als-xz',
+  'als-xy-wing',
+  'grouped-aic',
+  'aic-als',
+  'aic-ur',
+  'fireworks',
+  'twinned-xy-chains',
+  'aligned-pair-exclusion',
+  'death-blossom',
+  'nishio-forcing-chains',
+  'forcing-nets',
+  'digit-forcing-chains',
+  'table-chain',
+  'bowmans-bingo',
+  'cell-forcing-chains',
+  'unit-forcing-chains',
+  'exocet',
+  'double-exocet',
+  'pattern-overlay',
+  'tridagons',
+  'sk-loops',
+  'sue-de-coq',
+  'x-chain',
+  'xy-chain',
+  'empty-rectangle',
+  'aic',
+  'aic-exotic',
+  'three-d-medusa',
+  'unique-rectangle',
+  'extended-rectangle',
+  'hidden-unique-rectangle',
+  'bug-plus-one',
+] as const;
+
 export function buildDefaultTechniques(): SolverTechnique[] {
-  return [
+  const techniques: SolverTechnique[] = [
     new FullHouseTechnique(),
     new NakedSingleTechnique(),
     new HiddenSingleTechnique(),
@@ -572,6 +669,7 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new XYZWingTechnique(),
     new WXYZWingTechnique(),
     new WWingTechnique(),
+    new BigWingsTechnique(),
     new ChuteRemotePairsTechnique(),
     new AlmostLockedCandidatesTechnique(2),
     new AlmostLockedCandidatesTechnique(3),
@@ -593,8 +691,10 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new NishioForcingChainsTechnique(),
     new CellForcingChainsTechnique(),
     new UnitForcingChainsTechnique(),
+    new TableChainTechnique(),
     new BowmansBingoTechnique(),
     new SimpleColoringTechnique(),
+    new XColoringTechnique(),
     new GroupedXCyclesTechnique(),
     new GroupedAICTechnique(),
     new XChainTechnique(),
@@ -615,6 +715,19 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new AICWithUrTechnique(),
     new BugPlusOneTechnique(),
   ];
+  return orderTechniquesByPriority(techniques);
+}
+
+function orderTechniquesByPriority(techniques: readonly SolverTechnique[]): SolverTechnique[] {
+  const order = new Map(DEFAULT_TECHNIQUE_ORDER.map((id, index) => [id, index]));
+  return techniques
+    .map((technique, index) => ({ technique, index }))
+    .sort((left, right) => (
+      (order.get(left.technique.id) ?? Number.MAX_SAFE_INTEGER)
+      - (order.get(right.technique.id) ?? Number.MAX_SAFE_INTEGER)
+      || left.index - right.index
+    ))
+    .map((entry) => entry.technique);
 }
 
 class FullHouseTechnique implements SolverTechnique {
@@ -1004,7 +1117,11 @@ class FrankenSwordfishTechnique implements SolverTechnique {
     });
 
     for (const combo of createCombinations(basisHouses, 3)) {
-      if (!this.isMixedCombo(combo, orientation) || this.hasRedundantBasisHouse(context, combo, digit)) {
+      if (
+        !this.isMixedCombo(combo, orientation)
+        || this.hasRedundantBasisHouse(context, combo, digit)
+        || this.hasOverlappingBasisCandidate(context, combo, digit)
+      ) {
         continue;
       }
 
@@ -1119,6 +1236,23 @@ class FrankenSwordfishTechnique implements SolverTechnique {
     return false;
   }
 
+  private hasOverlappingBasisCandidate(
+    context: SolverContextLike,
+    combo: FrankenBasisHouse[],
+    digit: Digit,
+  ): boolean {
+    const seenCells = new Set<number>();
+    for (const house of combo) {
+      for (const cell of this.getCandidateCells(context, house, digit)) {
+        if (seenCells.has(cell)) {
+          return true;
+        }
+        seenCells.add(cell);
+      }
+    }
+    return false;
+  }
+
   private hasWeakCoverSet(
     context: SolverContextLike,
     combo: FrankenBasisHouse[],
@@ -1163,101 +1297,6 @@ class FrankenSwordfishTechnique implements SolverTechnique {
         .map((cell) => orientation === 'row' ? CELL_TO_COL[cell] : CELL_TO_ROW[cell])
         .filter((value): value is number => typeof value === 'number'),
     ).sort((left, right) => left - right);
-  }
-}
-
-class XWingTechnique implements SolverTechnique {
-  public readonly id: TechniqueId = 'x-wing';
-  public readonly score = 100;
-
-  public find(context: SolverContextLike): SolveStep | null {
-    for (let digit = 1; digit <= 9; digit += 1) {
-      const rowFish = this.findByBasis(context, digit as Digit, 'row');
-      if (rowFish) {
-        return rowFish;
-      }
-      const colFish = this.findByBasis(context, digit as Digit, 'col');
-      if (colFish) {
-        return colFish;
-      }
-    }
-    return null;
-  }
-
-  private findByBasis(
-    context: SolverContextLike,
-    digit: Digit,
-    basisType: 'row' | 'col',
-  ): SolveStep | null {
-    const basisIndexes = Array.from({ length: 9 }, (_, index) => index)
-      .filter((index) => {
-        const coverIndexes = this.getCoverIndexes(context, digit, basisType, index);
-        return coverIndexes.length === 2;
-      });
-
-    for (const basisCombo of createCombinations(basisIndexes, 2)) {
-      const coverUnion = uniqueNumbers(
-        basisCombo.flatMap((basisIndex) => this.getCoverIndexes(context, digit, basisType, basisIndex)),
-      ).sort((left, right) => left - right);
-      if (coverUnion.length !== 2) {
-        continue;
-      }
-
-      const selectedBasis = new Set(basisCombo);
-      const reasonCells = uniqueNumbers(
-        basisCombo.flatMap((basisIndex) => this.getCandidateCells(context, digit, basisType, basisIndex)),
-      );
-      const targetCells: number[] = [];
-      for (const coverIndex of coverUnion) {
-        const coverHouse: HouseRef = { type: basisType === 'row' ? 'col' : 'row', index: coverIndex };
-        for (const cell of context.getHouseCandidateCells(coverHouse, digit)) {
-          const cellBasis = basisType === 'row' ? context.getCellRow(cell) : context.getCellCol(cell);
-          if (!selectedBasis.has(cellBasis)) {
-            targetCells.push(cell);
-          }
-        }
-      }
-
-      const uniqueTargets = uniqueNumbers(targetCells);
-      if (uniqueTargets.length === 0) {
-        continue;
-      }
-
-      const basisHouses: HouseRef[] = basisCombo.map((index) => ({ type: basisType, index }));
-      const coverHouses: HouseRef[] = coverUnion.map((index) => ({
-        type: basisType === 'row' ? 'col' : 'row',
-        index,
-      }));
-      return eliminationStep(
-        this.id,
-        this.score,
-        uniqueTargets,
-        digit,
-        [...basisHouses, ...coverHouses],
-        reasonCells,
-        'Two basis lines share the same two cover lines, forming an X-Wing.',
-      );
-    }
-    return null;
-  }
-
-  private getCoverIndexes(
-    context: SolverContextLike,
-    digit: Digit,
-    basisType: 'row' | 'col',
-    basisIndex: number,
-  ): number[] {
-    return this.getCandidateCells(context, digit, basisType, basisIndex)
-      .map((cell) => basisType === 'row' ? context.getCellCol(cell) : context.getCellRow(cell));
-  }
-
-  private getCandidateCells(
-    context: SolverContextLike,
-    digit: Digit,
-    basisType: 'row' | 'col',
-    basisIndex: number,
-  ): number[] {
-    return context.getHouseCandidateCells({ type: basisType, index: basisIndex }, digit);
   }
 }
 
@@ -1645,19 +1684,44 @@ class WXYZWingTechnique implements SolverTechnique {
         houses: getCellHouses(context, cell),
       }));
 
-    for (const combo of createCombinations(candidateEntries, 4)) {
-      let unionMask = 0;
-      for (const entry of combo) {
-        unionMask |= entry.mask;
-      }
-      if (countMaskBits(unionMask) !== 4) {
-        continue;
-      }
+    for (let firstIndex = 0; firstIndex < candidateEntries.length - 3; firstIndex += 1) {
+      const first = candidateEntries[firstIndex]!;
+      for (let secondIndex = firstIndex + 1; secondIndex < candidateEntries.length - 2; secondIndex += 1) {
+        const second = candidateEntries[secondIndex]!;
+        const twoMask = first.mask | second.mask;
+        if (countMaskBits(twoMask) > 4) {
+          continue;
+        }
+        for (let thirdIndex = secondIndex + 1; thirdIndex < candidateEntries.length - 1; thirdIndex += 1) {
+          const third = candidateEntries[thirdIndex]!;
+          const threeMask = twoMask | third.mask;
+          if (countMaskBits(threeMask) > 4) {
+            continue;
+          }
+          for (let fourthIndex = thirdIndex + 1; fourthIndex < candidateEntries.length; fourthIndex += 1) {
+            const fourth = candidateEntries[fourthIndex]!;
+            const unionMask = threeMask | fourth.mask;
+            if (countMaskBits(unionMask) !== 4) {
+              continue;
+            }
+            const combo = [first, second, third, fourth];
       const cells = combo.map((entry) => entry.cell);
-      if (!isConnectedCluster(cells)) {
+      const pairHouseCache = new Map<string, HouseRef[]>();
+      const getPairHouses = (left: number, right: number): HouseRef[] => {
+        const key = left < right ? `${left}:${right}` : `${right}:${left}`;
+        const cached = pairHouseCache.get(key);
+        if (cached) {
+          return cached;
+        }
+        const houses = housesForCellPair(left, right);
+        pairHouseCache.set(key, houses);
+        return houses;
+      };
+
+      if (!isConnectedClusterCached(cells, getPairHouses)) {
         continue;
       }
-      const coveringHouses = findCoveringHousePair(cells, combo.map((entry) => entry.houses));
+      const coveringHouses = findCoveringHousePairCached(cells, combo.map((entry) => entry.houses));
       if (!coveringHouses) {
         continue;
       }
@@ -1673,16 +1737,34 @@ class WXYZWingTechnique implements SolverTechnique {
       }
 
       const eliminations = new Map<string, { cell: number; digit: Digit }>();
-      for (const digit of sharedDigits) {
+      const nonRestrictedDigits = sharedDigits.filter((digit) => {
         const digitCells = digitCellsByDigit.get(digit) ?? [];
-        if (!isRestrictedDigit(digitCells)) {
-          continue;
-        }
+        return !isRestrictedDigitCached(digitCells, getPairHouses);
+      });
+      const restrictedDigits = sharedDigits.filter((digit) => {
+        const digitCells = digitCellsByDigit.get(digit) ?? [];
+        return isRestrictedDigitCached(digitCells, getPairHouses);
+      });
+
+      if (nonRestrictedDigits.length === 1 && restrictedDigits.length > 0) {
+        const digit = nonRestrictedDigits[0]!;
+        const digitCells = digitCellsByDigit.get(digit) ?? [];
         for (const cell of getCommonSeenCells(digitCells)) {
           if (!cells.includes(cell) && context.isCandidatePresent(cell, digit)) {
             eliminations.set(`${cell}:${digit}`, { cell, digit });
           }
         }
+      } else if (nonRestrictedDigits.length === 0 && restrictedDigits.length === sharedDigits.length) {
+        for (const digit of sharedDigits) {
+          const digitCells = digitCellsByDigit.get(digit) ?? [];
+          for (const cell of getCommonSeenCells(digitCells)) {
+            if (!cells.includes(cell) && context.isCandidatePresent(cell, digit)) {
+              eliminations.set(`${cell}:${digit}`, { cell, digit });
+            }
+          }
+        }
+      } else {
+        continue;
       }
 
       const actions: SolveStep['actions'] = [...eliminations.values()]
@@ -1701,10 +1783,95 @@ class WXYZWingTechnique implements SolverTechnique {
             ...cells.map((cell) => ({ cell, role: 'reason' as const })),
             ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
           ],
-          note: 'WXYZ-Wing removes candidates that see every restricted occurrence inside the four-cell wing.',
+          note: nonRestrictedDigits.length === 1
+            ? 'WXYZ-Wing removes the only non-restricted shared digit seen by all of its occurrences in the wing.'
+            : 'WXYZ-Wing removes candidates that see every restricted occurrence inside the four-cell wing.',
         },
       };
+          }
+        }
+      }
     }
+    return null;
+  }
+}
+
+class BigWingsTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'big-wings';
+  public readonly score = 179;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const allAls = enumerateAlmostLockedSets(context, 3, 7);
+    const bivalueCells = Array.from({ length: context.board.length }, (_, cell) => cell)
+      .filter((cell) => context.board[cell] === EMPTY_VALUE && context.getCandidateCount(cell) === 2);
+
+    for (const als of allAls) {
+      for (const stem of bivalueCells) {
+        if (als.cells.includes(stem)) {
+          continue;
+        }
+
+        const stemDigits = context.getCandidateDigits(stem);
+        if (!stemDigits.every((digit) => als.digits.includes(digit))) {
+          continue;
+        }
+
+        const linkedDigits = stemDigits.filter((digit) => {
+          const digitCells = als.digitCells.get(digit) ?? [];
+          return digitCells.length > 0 && digitCells.every((cell) => (CELL_TO_PEERS[stem] ?? []).includes(cell));
+        });
+        // 单链接的 BigWings 只能把 ALS 压成 locked set，不能推出候选必删；
+        // 必须两个 stem 数字都与 ALS 构成 restricted common，删除才有足够约束。
+        if (linkedDigits.length !== stemDigits.length) {
+          continue;
+        }
+
+        const eliminations = new Map<string, { cell: number; digit: Digit }>();
+
+        for (const linkedDigit of linkedDigits) {
+          const digitCells = als.digitCells.get(linkedDigit) ?? [];
+          const targetCells = getCommonSeenCells([stem, ...digitCells])
+            .filter((cell) => cell !== stem && !als.cells.includes(cell) && context.isCandidatePresent(cell, linkedDigit));
+          for (const cell of uniqueNumbers(targetCells)) {
+            eliminations.set(`${cell}:${linkedDigit}`, { cell, digit: linkedDigit });
+          }
+        }
+
+        const weakDigits = als.digits.filter((digit) => !stemDigits.includes(digit));
+        for (const weakDigit of weakDigits) {
+          const digitCells = als.digitCells.get(weakDigit) ?? [];
+          const targetCells = getCommonSeenCells(digitCells)
+            .filter((cell) => cell !== stem && !als.cells.includes(cell) && context.isCandidatePresent(cell, weakDigit));
+          for (const cell of uniqueNumbers(targetCells)) {
+            eliminations.set(`${cell}:${weakDigit}`, { cell, digit: weakDigit });
+          }
+        }
+
+        const actions = [...eliminations.values()].map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
+        if (actions.length === 0) {
+          continue;
+        }
+
+        return {
+          technique: this.id,
+          score: this.score,
+          actions,
+          evidence: {
+            houses: uniqueHouses([
+              ...collectAlsHouses(als),
+              ...context.getCellHouses(stem),
+            ]),
+            cells: [
+              ...als.cells.map((cell) => ({ cell, role: 'reason' as const })),
+              { cell: stem, role: 'pivot' as const },
+              ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
+            ],
+            note: 'BigWings 通过两个 stem 数字同时连接 ALS，因此既可删除 stem 链接数字，也可删除 ALS 独占数字。',
+          },
+        };
+      }
+    }
+
     return null;
   }
 }
@@ -2668,10 +2835,10 @@ class SKLoopsTechnique implements SolverTechnique {
     const digits: Digit[] = [];
 
     for (let digit = 1; digit <= 9; digit += 1) {
-      const hasSolvedDigitOutsideLoop = context.getHouseCells(house).some((cell) =>
-        !allowed.has(cell) && context.board[cell] === digit,
+      const houseCells = context.getHouseCells(house).filter((cell) =>
+        context.board[cell] === digit || context.isCandidatePresent(cell, digit as Digit),
       );
-      if (hasSolvedDigitOutsideLoop) {
+      if (houseCells.length === 0 || !houseCells.every((cell) => allowed.has(cell))) {
         continue;
       }
       if (!this.nodeContainsDigit(context, leftCells, digit as Digit) || !this.nodeContainsDigit(context, rightCells, digit as Digit)) {
@@ -2773,36 +2940,120 @@ class NishioForcingChainsTechnique implements SolverTechnique {
   public readonly score = 222;
 
   public find(context: SolverContextLike): SolveStep | null {
-    for (const source of collectBranchCandidateSources(context).slice(0, 40)) {
-      const branch = context.clone();
-      branch.placeDigit(source.cell, source.digit);
-      if (!branch.hasContradiction()) {
-        continue;
+    const candidateEntries = collectNishioCandidateEntries(context);
+
+    for (const entry of candidateEntries.slice(0, 8)) {
+      for (let index = 0; index < entry.digits.length; index += 1) {
+        const digit = entry.digits[index]!;
+        if ((entry.strongLinkCounts[index] ?? 0) <= 0 && entry.digits.length > 4) {
+          continue;
+        }
+        if (!this.exactBranchContradicts(context, entry.cellIndex, digit)) {
+          continue;
+        }
+        return this.buildEliminationStep(context, entry.cellIndex, digit, true);
       }
-      const outcome: BranchOutcome = {
-        assumption: { type: 'place', cell: source.cell, digit: source.digit },
-        contradiction: true,
-        exhausted: true,
-        contradictionAt: inspectContradiction(branch),
-        placements: [],
-        eliminations: [],
-      };
-      return {
-        technique: this.id,
-        score: this.score,
-        actions: [{ type: 'eliminate', cell: source.cell, digit: source.digit }],
-        evidence: {
-          houses: context.getCellHouses(source.cell),
-          cells: [
-            { cell: source.cell, digit: source.digit, role: 'reason' as const },
-            { cell: source.cell, digit: source.digit, role: 'target' as const },
-          ],
-          branches: buildBranchEvidence([outcome]),
-          note: 'Nishio removes a candidate whose direct assumption contradicts the current candidate state.',
-        },
-      };
     }
+
+    const logicEntries = candidateEntries
+      .filter((entry) =>
+        entry.totalStrongLinks >= 2
+        || (entry.digits.length === 2 && entry.totalStrongLinks > 0),
+      )
+      .slice(0, 12);
+
+    for (const entry of logicEntries) {
+      for (let index = 0; index < entry.digits.length; index += 1) {
+        const digit = entry.digits[index]!;
+        if ((entry.strongLinkCounts[index] ?? 0) <= 0) {
+          continue;
+        }
+        if (!this.logicBranchContradicts(context, entry.cellIndex, digit, getBranchTechniqueCache())) {
+          continue;
+        }
+        return this.buildEliminationStep(context, entry.cellIndex, digit, false);
+      }
+    }
+
     return null;
+  }
+
+  private buildEliminationStep(
+    context: SolverContextLike,
+    cell: number,
+    digit: Digit,
+    useExactContradiction: boolean,
+  ): SolveStep {
+    const branch = context.clone();
+    branch.placeDigit(cell, digit, { allowConflict: true });
+    const outcome: BranchOutcome = {
+      assumption: { type: 'place', cell, digit },
+      contradiction: true,
+      exhausted: true,
+      contradictionAt: inspectContradiction(branch),
+      placements: [],
+      eliminations: [],
+    };
+    return {
+      technique: this.id,
+      score: this.score,
+      actions: [{ type: 'eliminate', cell, digit }],
+      evidence: {
+        houses: context.getCellHouses(cell),
+        cells: [
+          { cell, digit, role: 'reason' as const },
+          { cell, digit, role: 'target' as const },
+        ],
+        branches: buildBranchEvidence([outcome]),
+        note: useExactContradiction
+          ? 'Nishio removes a candidate whose direct assumption has no valid completion.'
+          : 'Nishio removes a candidate whose logical branch reaches a contradiction.',
+      },
+    };
+  }
+
+  private logicBranchContradicts(
+    context: SolverContextLike,
+    cellIndex: number,
+    digit: Digit,
+    branchTechniques: SolverTechnique[],
+  ): boolean {
+    const branch = context.clone();
+    branch.placeDigit(cellIndex, digit, { allowConflict: true });
+    let appliedSteps = 0;
+
+    for (let stepIndex = 0; stepIndex < 96; stepIndex += 1) {
+      if (branch.hasContradiction()) {
+        return true;
+      }
+
+      const step = findBranchStep(branch, branchTechniques);
+      if (!step) {
+        break;
+      }
+
+      branch.applyStep(step);
+      appliedSteps += 1;
+    }
+
+    if (branch.hasContradiction()) {
+      return true;
+    }
+
+    if (appliedSteps < 4) {
+      return false;
+    }
+
+    return branchHasNoSolution([...branch.board] as Board, [...branch.candidates], 1000);
+  }
+
+  private exactBranchContradicts(context: SolverContextLike, cellIndex: number, digit: Digit): boolean {
+    const branch = context.clone();
+    branch.placeDigit(cellIndex, digit, { allowConflict: true });
+    if (branch.hasContradiction()) {
+      return true;
+    }
+    return branchHasNoSolution([...branch.board] as Board, [...branch.candidates], 1000);
   }
 }
 
@@ -2848,6 +3099,89 @@ class UnitForcingChainsTechnique implements SolverTechnique {
   }
 }
 
+class TableChainTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'table-chain';
+  public readonly score = 226;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const contradiction = this.findContradiction(context);
+    if (contradiction) {
+      return contradiction;
+    }
+
+    const cellReduction = this.findCellReduction(context);
+    if (cellReduction) {
+      return cellReduction;
+    }
+
+    return this.findRegionReduction(context);
+  }
+
+  private findContradiction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context)) {
+      const outcome = evaluateTableChainBranch(context, source.cell, source.digit);
+      if (!outcome.contradiction) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: [{ type: 'eliminate', cell: source.cell, digit: source.digit }],
+        evidence: {
+          houses: context.getCellHouses(source.cell),
+          cells: [
+            { cell: source.cell, digit: source.digit, role: 'reason' as const },
+            { cell: source.cell, digit: source.digit, role: 'target' as const },
+          ],
+          branches: buildBranchEvidence([outcome]),
+          note: 'Table Chain removes a candidate whose static implication branch reaches a contradiction.',
+        },
+      };
+    }
+    return null;
+  }
+
+  private findCellReduction(context: SolverContextLike): SolveStep | null {
+    for (const pivot of collectBranchCells(context, 6)) {
+      const digits = context.getCandidateDigits(pivot);
+      const outcomes = digits.map((digit) => evaluateTableChainBranch(context, pivot, digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        [{ cell: pivot, role: 'reason' as const }],
+        outcomes,
+        [pivot],
+      );
+      if (step) {
+        step.evidence.note = 'Table Chain cell reduction keeps the conclusion shared by every candidate of one cell.';
+        return step;
+      }
+    }
+    return null;
+  }
+
+  private findRegionReduction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectTableChainUnitSources(context)) {
+      const outcomes = source.cells.map((cell) => evaluateTableChainBranch(context, cell, source.digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        source.cells.map((cell) => ({ cell, digit: source.digit, role: 'reason' as const })),
+        outcomes,
+        source.cells,
+        [source.house],
+      );
+      if (step) {
+        step.evidence.note = 'Table Chain region reduction keeps the conclusion shared by every possible position for one digit in one house.';
+        return step;
+      }
+    }
+    return null;
+  }
+}
+
 class BowmansBingoTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'bowmans-bingo';
   public readonly score = 248;
@@ -2855,7 +3189,7 @@ class BowmansBingoTechnique implements SolverTechnique {
   public find(context: SolverContextLike): SolveStep | null {
     for (const source of collectBranchCandidateSources(context).slice(0, 32)) {
       const branch = context.clone();
-      branch.placeDigit(source.cell, source.digit);
+      branch.placeDigit(source.cell, source.digit, { allowConflict: true });
       const result = runBranchWalkthrough(branch, 16, {
         type: 'place',
         cell: source.cell,
@@ -2986,7 +3320,7 @@ class AlsXZTechnique implements SolverTechnique {
       const left = allAls[leftIndex]!;
       for (let rightIndex = leftIndex + 1; rightIndex < allAls.length; rightIndex += 1) {
         const right = allAls[rightIndex]!;
-        if (!areCellSetsDisjoint(left.cells, right.cells)) {
+        if (!areAlsDisjoint(left, right)) {
           continue;
         }
         const restrictedCommons = getRestrictedCommonDigits(left, right);
@@ -3023,10 +3357,11 @@ class AlsXYWingTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     const allAls = enumerateAlmostLockedSets(context, 1, 4);
+
     for (const pivot of allAls) {
       for (let leftIndex = 0; leftIndex < allAls.length; leftIndex += 1) {
         const left = allAls[leftIndex]!;
-        if (left === pivot || !areCellSetsDisjoint(pivot.cells, left.cells)) {
+        if (left === pivot || !areAlsDisjoint(pivot, left)) {
           continue;
         }
         const pivotLeftRestricted = getRestrictedCommonDigits(pivot, left);
@@ -3035,7 +3370,7 @@ class AlsXYWingTechnique implements SolverTechnique {
         }
         for (let rightIndex = leftIndex + 1; rightIndex < allAls.length; rightIndex += 1) {
           const right = allAls[rightIndex]!;
-          if (right === pivot || !areCellSetsDisjoint(pivot.cells, left.cells, right.cells)) {
+          if (right === pivot || !areAlsDisjoint(pivot, left, right)) {
             continue;
           }
           const pivotRightRestricted = getRestrictedCommonDigits(pivot, right);
@@ -3083,229 +3418,15 @@ class AlsXYWingTechnique implements SolverTechnique {
   }
 }
 
-interface AlsPairFragment {
-  als: AlmostLockedSet;
-  pairCell: number;
-  tripleCell: number;
-  pairDigits: Digit[];
-  extraDigit: Digit;
-  sharedHouses: HouseRef[];
-}
-
-interface AlsAicEntryLink {
-  sourceCell: number;
-  sourceHouse: HouseRef;
-  digit: Digit;
-}
-
-interface AlsInternalStrongLink {
-  digit: Digit;
-  house: HouseRef;
-}
-
-interface ExternalStrongLinkBridge {
-  bridgeCell: number;
-  house: HouseRef;
-}
-
 class AICWithAlsTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'aic-als';
   public readonly score = 214;
 
   public find(context: SolverContextLike): SolveStep | null {
-    for (const fragment of findAlsPairFragments(context)) {
-      const internalStrongLinks = findAlsInternalStrongLinks(context, fragment);
-      if (internalStrongLinks.length === 0) {
-        continue;
-      }
-      for (const entry of findAlsAicEntryLinks(context, fragment)) {
-        const sourceDigits = context.getCandidateDigits(entry.sourceCell);
-        if (sourceDigits.length !== 2 || !sourceDigits.includes(entry.digit)) {
-          continue;
-        }
-        const endpointDigit = sourceDigits.find((digit) => digit !== entry.digit);
-        if (!endpointDigit || !context.isCandidatePresent(fragment.pairCell, endpointDigit)) {
-          continue;
-        }
-        if (!this.isCellWeakLink(context, fragment.tripleCell, entry.digit, internalStrongLinks)) {
-          continue;
-        }
-        if (!this.isBivalueWeakLinkOnPairCell(context, fragment, endpointDigit, internalStrongLinks)) {
-          continue;
-        }
-        for (const internal of internalStrongLinks) {
-          if (internal.digit === endpointDigit || !this.isDistinctStructuralChain(entry, fragment, internal)) {
-            continue;
-          }
-          const type1 = this.tryType1(context, fragment, entry, internal, endpointDigit);
-          if (type1) {
-            return type1;
-          }
-          const type2 = this.tryType2(context, fragment, entry, internal, endpointDigit);
-          if (type2) {
-            return type2;
-          }
-        }
-      }
-    }
+    void context;
+    // 当前简化实现会把 ALS 内部关系摊平成普通候选链，真实题库回归中已发现误删。
+    // 先保持 definition 与显式技巧 ID，但在按 SE 的 ALS/RCC 链模型重写前不产出步骤。
     return null;
-  }
-
-  private tryType1(
-    context: SolverContextLike,
-    fragment: AlsPairFragment,
-    entry: AlsAicEntryLink,
-    internal: AlsInternalStrongLink,
-    endpointDigit: Digit,
-  ): SolveStep | null {
-    if (!this.isValidSameDigitEndpoint(context, entry.sourceCell, fragment.pairCell, endpointDigit)) {
-      return null;
-    }
-    const targetCells = getCommonSeenCells([entry.sourceCell, fragment.pairCell])
-      .filter((cell) => !fragment.als.cells.includes(cell) && context.isCandidatePresent(cell, endpointDigit));
-    const uniqueTargets = uniqueNumbers(targetCells);
-    if (uniqueTargets.length === 0) {
-      return null;
-    }
-    return this.buildStep(
-      context,
-      fragment,
-      entry,
-      internal,
-      endpointDigit,
-      uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: endpointDigit })),
-      'ALS-AIC uses an external conjugate link, an ALS internal strong link, and matching endpoints to eliminate common peers.',
-    );
-  }
-
-  private tryType2(
-    context: SolverContextLike,
-    fragment: AlsPairFragment,
-    entry: AlsAicEntryLink,
-    internal: AlsInternalStrongLink,
-    endpointDigit: Digit,
-  ): SolveStep | null {
-    for (const bridge of findExternalStrongLinkBridges(context, fragment.pairCell, endpointDigit, [entry.sourceCell, ...fragment.als.cells])) {
-      if (!this.isDistinctBridgeChain(entry, internal, bridge)) {
-        continue;
-      }
-      if (!this.isValidSameDigitEndpoint(context, entry.sourceCell, bridge.bridgeCell, endpointDigit)) {
-        continue;
-      }
-      const targetCells = getCommonSeenCells([entry.sourceCell, bridge.bridgeCell])
-        .filter((cell) => !fragment.als.cells.includes(cell) && context.isCandidatePresent(cell, endpointDigit));
-      const uniqueTargets = uniqueNumbers(targetCells);
-      if (uniqueTargets.length === 0) {
-        continue;
-      }
-      return this.buildStep(
-        context,
-        fragment,
-        entry,
-        internal,
-        endpointDigit,
-        uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: endpointDigit })),
-        'ALS-AIC extends through an external endpoint strong link, so common peers of the endpoints lose the candidate.',
-        bridge,
-      );
-    }
-    return null;
-  }
-
-  private buildStep(
-    context: SolverContextLike,
-    fragment: AlsPairFragment,
-    entry: AlsAicEntryLink,
-    internal: AlsInternalStrongLink,
-    endpointDigit: Digit,
-    actions: SolveStep['actions'],
-    note: string,
-    bridge?: ExternalStrongLinkBridge,
-  ): SolveStep {
-    return {
-      technique: this.id,
-      score: this.score,
-      actions,
-      evidence: {
-        houses: uniqueHouses([
-          entry.sourceHouse,
-          ...fragment.sharedHouses,
-          internal.house,
-          ...(bridge ? [bridge.house] : []),
-          ...context.getCellHouses(entry.sourceCell),
-          ...context.getCellHouses(fragment.pairCell),
-          ...(bridge ? context.getCellHouses(bridge.bridgeCell) : []),
-        ]),
-        cells: [
-          { cell: entry.sourceCell, digit: endpointDigit, role: 'reason' as const },
-          { cell: entry.sourceCell, digit: entry.digit, role: 'reason' as const },
-          { cell: fragment.tripleCell, digit: fragment.extraDigit, role: 'reason' as const },
-          { cell: fragment.tripleCell, digit: internal.digit, role: 'reason' as const },
-          { cell: fragment.pairCell, digit: internal.digit, role: 'reason' as const },
-          { cell: fragment.pairCell, digit: endpointDigit, role: 'reason' as const },
-          ...(bridge ? [{ cell: bridge.bridgeCell, digit: endpointDigit, role: 'reason' as const }] : []),
-          ...fragment.als.cells.map((cell) => ({ cell, role: 'link' as const })),
-          ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
-        ],
-        links: [
-          { from: entry.sourceCell, to: fragment.tripleCell, digit: entry.digit, type: 'strong' as const, house: entry.sourceHouse },
-          { from: fragment.tripleCell, to: fragment.pairCell, digit: internal.digit, type: 'strong' as const, house: internal.house },
-          ...(bridge ? [{ from: fragment.pairCell, to: bridge.bridgeCell, digit: endpointDigit, type: 'strong' as const, house: bridge.house }] : []),
-        ],
-        note,
-      },
-    };
-  }
-
-  private isCellWeakLink(
-    context: SolverContextLike,
-    cell: number,
-    digit: Digit,
-    internalStrongLinks: AlsInternalStrongLink[],
-  ): boolean {
-    const digits = context.getCandidateDigits(cell);
-    return digits.includes(digit) && internalStrongLinks.some((internal) => internal.digit !== digit && digits.includes(internal.digit));
-  }
-
-  private isBivalueWeakLinkOnPairCell(
-    context: SolverContextLike,
-    fragment: AlsPairFragment,
-    endpointDigit: Digit,
-    internalStrongLinks: AlsInternalStrongLink[],
-  ): boolean {
-    const digits = context.getCandidateDigits(fragment.pairCell);
-    return digits.length === 2
-      && digits.includes(endpointDigit)
-      && internalStrongLinks.some((internal) => internal.digit !== endpointDigit && digits.includes(internal.digit));
-  }
-
-  private isValidSameDigitEndpoint(
-    context: SolverContextLike,
-    leftCell: number,
-    rightCell: number,
-    digit: Digit,
-  ): boolean {
-    return leftCell !== rightCell
-      && (CELL_TO_PEERS[leftCell] ?? []).includes(rightCell)
-      && context.isCandidatePresent(leftCell, digit)
-      && context.isCandidatePresent(rightCell, digit);
-  }
-
-  private isDistinctStructuralChain(
-    entry: AlsAicEntryLink,
-    fragment: AlsPairFragment,
-    internal: AlsInternalStrongLink,
-  ): boolean {
-    return !sameHouse(entry.sourceHouse, internal.house)
-      && fragment.sharedHouses.some((house) => sameHouse(house, internal.house));
-  }
-
-  private isDistinctBridgeChain(
-    entry: AlsAicEntryLink,
-    internal: AlsInternalStrongLink,
-    bridge: ExternalStrongLinkBridge,
-  ): boolean {
-    return !sameHouse(bridge.house, entry.sourceHouse) && !sameHouse(bridge.house, internal.house);
   }
 }
 
@@ -3743,7 +3864,7 @@ class DeathBlossomTechnique implements SolverTechnique {
 
     const pivotDigit = pivotDigits[digitIndex]!;
     for (const als of petalOptions.get(pivotDigit) ?? []) {
-      if (!areCellSetsDisjoint(...choices.map((choice) => choice.als.cells), als.cells)) {
+      if (!areAlsDisjoint(...choices.map((choice) => choice.als), als)) {
         continue;
       }
       const result = this.searchChoices(
@@ -3945,6 +4066,257 @@ class SimpleColoringTechnique implements SolverTechnique {
         },
       };
     }
+    return null;
+  }
+}
+
+class XColoringTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'x-coloring';
+  public readonly score = 174;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const currentDigit = digit as Digit;
+      const adjacency = new Map<number, Set<number>>();
+      const linkHouses = new Map<string, HouseRef[]>();
+
+      for (const house of ALL_HOUSES) {
+        const cells = context.getHouseCandidateCells(house, currentDigit);
+        if (cells.length !== 2) {
+          continue;
+        }
+        for (const cell of cells) {
+          if (!adjacency.has(cell)) {
+            adjacency.set(cell, new Set<number>());
+          }
+        }
+        adjacency.get(cells[0]!)!.add(cells[1]!);
+        adjacency.get(cells[1]!)!.add(cells[0]!);
+        const key = buildLinkKey(cells[0]!, cells[1]!);
+        linkHouses.set(key, uniqueHouses([...(linkHouses.get(key) ?? []), house]));
+      }
+
+      for (const component of buildColorComponents(adjacency)) {
+        const expanded = this.expandComponent(context, currentDigit, component);
+        if (expanded.invalidColor !== null) {
+          const invalidStep = this.buildInvalidColorStep(context, currentDigit, expanded, linkHouses);
+          if (invalidStep) {
+            return invalidStep;
+          }
+        }
+
+        const trap = this.findTrap(context, currentDigit, expanded, linkHouses);
+        if (trap) {
+          return trap;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private expandComponent(
+    context: SolverContextLike,
+    digit: Digit,
+    component: ColorComponent,
+  ): XColoringComponent {
+    const colorSets: [Set<number>, Set<number>] = [
+      new Set(component.cells.filter((cell) => component.colorMap.get(cell) === 0)),
+      new Set(component.cells.filter((cell) => component.colorMap.get(cell) === 1)),
+    ];
+    const derivations: XColorDerivation[] = [];
+    let invalidColor: 0 | 1 | null = null;
+    let invalidHouse: HouseRef | null = null;
+    let invalidKind: XColorInvalidKind | null = null;
+    let changed = true;
+
+    while (changed && invalidColor === null) {
+      changed = false;
+      for (const color of [0, 1] as const) {
+        const seenByColor = this.buildSeenSet(colorSets[color]);
+        for (const house of ALL_HOUSES) {
+          const candidateCells = context.getHouseCandidateCells(house, digit);
+          const exceptions = candidateCells.filter((cell) => !seenByColor.has(cell));
+          if (exceptions.length !== 1) {
+            continue;
+          }
+          const cell = exceptions[0]!;
+          if (colorSets[color].has(cell)) {
+            continue;
+          }
+
+          colorSets[color].add(cell);
+          derivations.push({ cell, color, house });
+          changed = true;
+
+          if (colorSets[color === 0 ? 1 : 0].has(cell)) {
+            invalidColor = color;
+            invalidHouse = house;
+            invalidKind = 'overlap';
+            break;
+          }
+        }
+      }
+    }
+
+    if (invalidColor === null) {
+      for (const color of [0, 1] as const) {
+        for (const house of ALL_HOUSES) {
+          const coloredInHouse = context.getHouseCandidateCells(house, digit)
+            .filter((cell) => colorSets[color].has(cell));
+          if (coloredInHouse.length >= 2) {
+            invalidColor = color;
+            invalidHouse = house;
+            invalidKind = 'same-color-house';
+            break;
+          }
+        }
+        if (invalidColor !== null) {
+          break;
+        }
+      }
+    }
+
+    if (invalidColor === null) {
+      for (const color of [0, 1] as const) {
+        const colorCells = [...colorSets[color]];
+        for (const house of ALL_HOUSES) {
+          const candidateCells = context.getHouseCandidateCells(house, digit);
+          if (candidateCells.length === 0) {
+            continue;
+          }
+          const allSeeColor = candidateCells.every((cell) =>
+            colorCells.some((colored) => colored !== cell && (CELL_TO_PEERS[cell] ?? []).includes(colored)),
+          );
+          if (!allSeeColor) {
+            continue;
+          }
+          invalidColor = color;
+          invalidHouse = house;
+          invalidKind = 'house-covered';
+          break;
+        }
+        if (invalidColor !== null) {
+          break;
+        }
+      }
+    }
+
+    return {
+      baseColorMap: component.colorMap,
+      colorSets,
+      derivations,
+      invalidColor,
+      invalidHouse,
+      invalidKind,
+    };
+  }
+
+  private buildSeenSet(colorSet: Set<number>): Set<number> {
+    const seen = new Set<number>(colorSet);
+    for (const cell of colorSet) {
+      for (const peer of CELL_TO_PEERS[cell] ?? []) {
+        seen.add(peer);
+      }
+    }
+    return seen;
+  }
+
+  private buildInvalidColorStep(
+    context: SolverContextLike,
+    digit: Digit,
+    component: XColoringComponent,
+    linkHouses: Map<string, HouseRef[]>,
+  ): SolveStep | null {
+    if (component.invalidColor === null) {
+      return null;
+    }
+    const validColor = component.invalidColor === 0 ? 1 : 0;
+    const invalidCells = [...component.baseColorMap.entries()]
+      .filter(([cell, color]) =>
+        color === component.invalidColor
+        && !component.colorSets[validColor].has(cell)
+        && context.isCandidatePresent(cell, digit),
+      )
+      .map(([cell]) => cell);
+    const uniqueTargets = uniqueNumbers(invalidCells);
+    if (uniqueTargets.length === 0) {
+      return null;
+    }
+
+    const allColoredCells = uniqueNumbers([
+      ...component.colorSets[0],
+      ...component.colorSets[1],
+    ]);
+    const houses = collectLinkedHouses([...component.baseColorMap.keys()], linkHouses);
+    if (component.invalidHouse) {
+      houses.push(component.invalidHouse);
+    }
+
+    let note = 'X-Coloring proves one color set impossible, so that color is eliminated.';
+    if (component.invalidKind === 'overlap') {
+      note = 'Extended coloring would paint one candidate with both colors, so that color is false.';
+    } else if (component.invalidKind === 'same-color-house') {
+      note = 'Extended coloring puts the same color in one house more than once, so that color is false.';
+    } else if (component.invalidKind === 'house-covered') {
+      note = 'Every candidate in one house sees the same color, so that color is false.';
+    }
+
+    return {
+      technique: this.id,
+      score: this.score,
+      actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit })),
+      evidence: {
+        houses: uniqueHouses(houses),
+        cells: [
+          ...allColoredCells.map((cell) => ({ cell, digit, role: 'reason' as const })),
+          ...uniqueTargets.map((cell) => ({ cell, digit, role: 'target' as const })),
+        ],
+        links: buildColorLinks(component.baseColorMap, digit, linkHouses),
+        note,
+      },
+    };
+  }
+
+  private findTrap(
+    context: SolverContextLike,
+    digit: Digit,
+    component: XColoringComponent,
+    linkHouses: Map<string, HouseRef[]>,
+  ): SolveStep | null {
+    const allColoredCells = uniqueNumbers([
+      ...component.colorSets[0],
+      ...component.colorSets[1],
+    ]);
+    const coloredSet = new Set(allColoredCells);
+
+    for (let cell = 0; cell < context.board.length; cell += 1) {
+      if (coloredSet.has(cell) || !context.isCandidatePresent(cell, digit)) {
+        continue;
+      }
+      const seesZero = [...component.colorSets[0]]
+        .some((colored) => (CELL_TO_PEERS[cell] ?? []).includes(colored));
+      const seesOne = [...component.colorSets[1]]
+        .some((colored) => (CELL_TO_PEERS[cell] ?? []).includes(colored));
+      if (!seesZero || !seesOne) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: [{ type: 'eliminate', cell, digit }],
+        evidence: {
+          houses: uniqueHouses(collectLinkedHouses([...component.baseColorMap.keys()], linkHouses)),
+          cells: [
+            ...allColoredCells.map((colored) => ({ cell: colored, digit, role: 'reason' as const })),
+            { cell, digit, role: 'target' as const },
+          ],
+          links: buildColorLinks(component.baseColorMap, digit, linkHouses),
+          note: 'The target sees both colors after extended coloring, so the candidate is eliminated.',
+        },
+      };
+    }
+
     return null;
   }
 }
@@ -4192,34 +4564,69 @@ class GroupedAICTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'grouped-aic';
   public readonly score = 212;
   private static readonly MAX_EDGES = 13;
+  private static readonly MAX_SEARCH_STATES = 25000;
 
   public find(context: SolverContextLike): SolveStep | null {
-    const nodes = this.buildNodes(context);
-    const adjacency = this.buildAdjacency(context, nodes);
+    const build = this.buildNodes(context);
+    const nodes = build.nodes;
+    const adjacency = this.buildAdjacency(context, nodes, build.nodesByDigit, {
+      allowNonBivalueCellWeakLinks: false,
+    });
+    return this.findInGraph(context, nodes, adjacency);
+  }
+
+  private findInGraph(
+    context: SolverContextLike,
+    nodes: Map<string, GroupedAicNode>,
+    adjacency: Map<string, GroupedAicEdge[]>,
+  ): SolveStep | null {
+    const seenCache = new Map<string, number[]>();
+    let searchedStates = 0;
 
     for (const start of adjacency.keys()) {
+      const startNode = nodes.get(start)!;
       const queue: Array<{
         key: string;
         path: string[];
+        pathSet: Set<string>;
         edges: GroupedAicPathEdge[];
         nextType: GroupedAicLinkType;
-      }> = [{ key: start, path: [start], edges: [], nextType: 'strong' }];
+        usedCandidates: Set<string>;
+      }> = [{
+        key: start,
+        path: [start],
+        pathSet: new Set([start]),
+        edges: [],
+        nextType: 'strong',
+        usedCandidates: new Set(startNode.cells.map((cell) => candidateRef(cell, startNode.digit))),
+      }];
 
-      while (queue.length > 0) {
-        const state = queue.shift()!;
+      for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+        searchedStates += 1;
+        if (searchedStates > GroupedAICTechnique.MAX_SEARCH_STATES) {
+          return null;
+        }
+        const state = queue[queueIndex]!;
         if (state.edges.length >= GroupedAICTechnique.MAX_EDGES) {
           continue;
         }
 
         for (const edge of adjacency.get(state.key) ?? []) {
-          if (edge.type !== state.nextType || state.path.includes(edge.to)) {
+          if (edge.type !== state.nextType || state.pathSet.has(edge.to)) {
             continue;
           }
-          if (this.pathReusesCandidate(state.path, edge.to, nodes)) {
+          if (this.pathReusesCandidate(state.usedCandidates, edge.to, nodes)) {
             continue;
           }
 
           const nextPath = [...state.path, edge.to];
+          const nextPathSet = new Set(state.pathSet);
+          nextPathSet.add(edge.to);
+          const nextNode = nodes.get(edge.to)!;
+          const nextUsedCandidates = new Set(state.usedCandidates);
+          for (const cell of nextNode.cells) {
+            nextUsedCandidates.add(candidateRef(cell, nextNode.digit));
+          }
           const nextEdge: GroupedAicPathEdge = {
             from: state.key,
             to: edge.to,
@@ -4229,7 +4636,7 @@ class GroupedAICTechnique implements SolverTechnique {
           const nextEdges = [...state.edges, nextEdge];
 
           if (nextEdges.length >= 3 && edge.type === 'strong') {
-            const type1 = this.trySameDigitEndpoint(context, nextPath, nextEdges, nodes);
+            const type1 = this.trySameDigitEndpoint(context, nextPath, nextEdges, nodes, seenCache);
             if (type1) {
               return type1;
             }
@@ -4242,8 +4649,10 @@ class GroupedAICTechnique implements SolverTechnique {
           queue.push({
             key: edge.to,
             path: nextPath,
+            pathSet: nextPathSet,
             edges: nextEdges,
             nextType: state.nextType === 'strong' ? 'weak' : 'strong',
+            usedCandidates: nextUsedCandidates,
           });
         }
       }
@@ -4252,40 +4661,78 @@ class GroupedAICTechnique implements SolverTechnique {
     return null;
   }
 
-  private buildNodes(context: SolverContextLike): Map<string, GroupedAicNode> {
+  private buildNodes(context: SolverContextLike): {
+    nodes: Map<string, GroupedAicNode>;
+    nodesByDigit: Map<Digit, GroupedAicNode[]>;
+  } {
     const nodes = new Map<string, GroupedAicNode>();
+    const nodesByDigit = new Map<Digit, GroupedAicNode[]>();
 
     for (let cell = 0; cell < context.board.length; cell += 1) {
       for (const digit of context.getCandidateDigits(cell)) {
         const key = groupedAicSingleNodeKey(cell, digit);
-        nodes.set(key, { key, digit, cells: [cell], isGroup: false });
+        const node = { key, digit, cells: [cell], isGroup: false };
+        nodes.set(key, node);
+        const list = nodesByDigit.get(digit) ?? [];
+        list.push(node);
+        nodesByDigit.set(digit, list);
       }
     }
 
     for (let digit = 1; digit <= 9; digit += 1) {
       for (const seed of collectGroupedNodeSeeds(context, digit as Digit)) {
         const key = groupedAicGroupNodeKey(seed.digit, seed.lineType, seed.box, seed.lineIndex, seed.cells);
-        nodes.set(key, {
+        const node = {
           key,
           digit: seed.digit,
           cells: seed.cells,
           isGroup: true,
-        });
+        };
+        nodes.set(key, node);
+        const list = nodesByDigit.get(seed.digit) ?? [];
+        list.push(node);
+        nodesByDigit.set(seed.digit, list);
       }
     }
 
-    return nodes;
+    return { nodes, nodesByDigit };
   }
 
   private buildAdjacency(
     context: SolverContextLike,
     nodes: Map<string, GroupedAicNode>,
+    nodesByDigit: Map<Digit, GroupedAicNode[]>,
+    options: { allowNonBivalueCellWeakLinks: boolean },
   ): Map<string, GroupedAicEdge[]> {
     const adjacency = new Map<string, GroupedAicEdge[]>();
-    const allNodes = [...nodes.values()];
+    const candidateCellsCache = new Map<string, number[]>();
+    const candidateCellSetCache = new Map<string, Set<number>>();
+    const getCandidateCells = (house: HouseRef, digit: Digit): number[] => {
+      const key = `${house.type}:${house.index}:${digit}`;
+      const cached = candidateCellsCache.get(key);
+      if (cached) {
+        return cached;
+      }
+      const cells = context.getHouseCandidateCells(house, digit);
+      candidateCellsCache.set(key, cells);
+      return cells;
+    };
+    const getCandidateCellSet = (house: HouseRef, digit: Digit): Set<number> => {
+      const key = `${house.type}:${house.index}:${digit}`;
+      const cached = candidateCellSetCache.get(key);
+      if (cached) {
+        return cached;
+      }
+      const set = new Set(getCandidateCells(house, digit));
+      candidateCellSetCache.set(key, set);
+      return set;
+    };
 
     for (let cell = 0; cell < context.board.length; cell += 1) {
       const digits = context.getCandidateDigits(cell);
+      if (!options.allowNonBivalueCellWeakLinks && digits.length !== 2) {
+        continue;
+      }
       for (let leftIndex = 0; leftIndex < digits.length; leftIndex += 1) {
         for (let rightIndex = leftIndex + 1; rightIndex < digits.length; rightIndex += 1) {
           const left = nodes.get(groupedAicSingleNodeKey(cell, digits[leftIndex]!));
@@ -4305,13 +4752,14 @@ class GroupedAICTechnique implements SolverTechnique {
 
     for (const house of context.getAllHouses()) {
       for (let digit = 1; digit <= 9; digit += 1) {
-        const candidateCells = context.getHouseCandidateCells(house, digit as Digit);
+        const currentDigit = digit as Digit;
+        const candidateCells = getCandidateCells(house, currentDigit);
         if (candidateCells.length < 2) {
           continue;
         }
-        const compatibleNodes = allNodes.filter((node) =>
-          node.digit === digit
-          && node.cells.every((cell) => candidateCells.includes(cell))
+        const candidateCellSet = getCandidateCellSet(house, currentDigit);
+        const compatibleNodes = (nodesByDigit.get(currentDigit) ?? []).filter((node) =>
+          node.cells.every((cell) => candidateCellSet.has(cell))
           && nodeCellsFitHouse(node.cells, house),
         );
 
@@ -4348,7 +4796,11 @@ class GroupedAICTechnique implements SolverTechnique {
     path: string[],
     edges: GroupedAicPathEdge[],
     nodes: Map<string, GroupedAicNode>,
+    seenCache: Map<string, number[]>,
   ): SolveStep | null {
+    if (!this.pathContainsGroup(path, nodes)) {
+      return null;
+    }
     const start = nodes.get(path[0]!)!;
     const end = nodes.get(path[path.length - 1]!)!;
     if (start.digit !== end.digit || groupedAicNodesOverlap(start, end)) {
@@ -4357,8 +4809,8 @@ class GroupedAICTechnique implements SolverTechnique {
 
     const pathCells = uniqueNumbers(path.flatMap((key) => nodes.get(key)!.cells));
     const excluded = new Set<number>([...pathCells]);
-    const seenByStart = groupedAicCellsSeeingNode(start);
-    const seenByEnd = groupedAicCellsSeeingNode(end);
+    const seenByStart = this.getSeenCells(start, seenCache);
+    const seenByEnd = this.getSeenCells(end, seenCache);
     const targetCells = uniqueNumbers(seenByStart.filter((cell) => seenByEnd.includes(cell)))
       .filter((cell) => !excluded.has(cell) && context.isCandidatePresent(cell, start.digit));
 
@@ -4381,6 +4833,9 @@ class GroupedAICTechnique implements SolverTechnique {
     edges: GroupedAicPathEdge[],
     nodes: Map<string, GroupedAicNode>,
   ): SolveStep | null {
+    if (!this.pathContainsGroup(path, nodes)) {
+      return null;
+    }
     const start = nodes.get(path[0]!)!;
     const end = nodes.get(path[path.length - 1]!)!;
     if (start.isGroup || end.isGroup || start.digit === end.digit) {
@@ -4457,20 +4912,27 @@ class GroupedAICTechnique implements SolverTechnique {
     };
   }
 
+  private getSeenCells(node: GroupedAicNode, seenCache: Map<string, number[]>): number[] {
+    const cached = seenCache.get(node.key);
+    if (cached) {
+      return cached;
+    }
+    const seen = groupedAicCellsSeeingNode(node);
+    seenCache.set(node.key, seen);
+    return seen;
+  }
+
   private pathReusesCandidate(
-    path: string[],
+    usedCandidates: Set<string>,
     nextKey: string,
     nodes: Map<string, GroupedAicNode>,
   ): boolean {
-    const used = new Set<string>();
-    for (const key of path) {
-      const node = nodes.get(key)!;
-      for (const cell of node.cells) {
-        used.add(candidateRef(cell, node.digit));
-      }
-    }
     const nextNode = nodes.get(nextKey)!;
-    return nextNode.cells.some((cell) => used.has(candidateRef(cell, nextNode.digit)));
+    return nextNode.cells.some((cell) => usedCandidates.has(candidateRef(cell, nextNode.digit)));
+  }
+
+  private pathContainsGroup(path: string[], nodes: Map<string, GroupedAicNode>): boolean {
+    return path.some((key) => nodes.get(key)?.isGroup);
   }
 }
 
@@ -4941,16 +5403,17 @@ class XYChainTechnique implements SolverTechnique {
         if (!endDigit) {
           continue;
         }
-        const queue: Array<{ node: XYNode; path: XYNode[] }> = [{
+        const queue: Array<{ node: XYNode; path: XYNode[]; pathCells: Set<number> }> = [{
           node: { cell: startCell, inDigit: startDigit, outDigit: endDigit },
           path: [{ cell: startCell, inDigit: startDigit, outDigit: endDigit }],
+          pathCells: new Set([startCell]),
         }];
 
-        while (queue.length > 0) {
-          const current = queue.shift()!;
+        for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+          const current = queue[queueIndex]!;
           const nextCandidates = bivalueCells.filter((cell) => (
             cell !== current.node.cell
-            && !current.path.some((item) => item.cell === cell)
+            && !current.pathCells.has(cell)
             && (CELL_TO_PEERS[current.node.cell] ?? []).includes(cell)
             && context.isCandidatePresent(cell, current.node.outDigit)
           ));
@@ -4991,7 +5454,9 @@ class XYChainTechnique implements SolverTechnique {
               }
             }
             if (nextPath.length < 12) {
-              queue.push({ node: nextNode, path: nextPath });
+              const nextPathCells = new Set(current.pathCells);
+              nextPathCells.add(nextCell);
+              queue.push({ node: nextNode, path: nextPath, pathCells: nextPathCells });
             }
           }
         }
@@ -5036,20 +5501,33 @@ class AICTechnique implements SolverTechnique {
       const queue: Array<{
         key: string;
         path: string[];
+        pathSet: Set<string>;
         edges: AicPathEdge[];
         nextType: 'strong' | 'weak';
-      }> = [{ key: start, path: [start], edges: [], nextType: 'strong' }];
+        usedCandidates: Set<string>;
+      }> = [{
+        key: start,
+        path: [start],
+        pathSet: new Set([start]),
+        edges: [],
+        nextType: 'strong',
+        usedCandidates: new Set([start]),
+      }];
 
-      while (queue.length > 0) {
-        const state = queue.shift()!;
+      for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+        const state = queue[queueIndex]!;
         if (state.edges.length >= AICTechnique.MAX_EDGES) {
           continue;
         }
         for (const edge of graph.adjacency.get(state.key) ?? []) {
-          if (edge.type !== state.nextType || state.path.includes(edge.to) || pathReusesAicCandidate(state.path, edge.to, graph.nodes)) {
+          if (edge.type !== state.nextType || state.pathSet.has(edge.to) || state.usedCandidates.has(edge.to)) {
             continue;
           }
           const nextPath = [...state.path, edge.to];
+          const nextPathSet = new Set(state.pathSet);
+          nextPathSet.add(edge.to);
+          const nextUsedCandidates = new Set(state.usedCandidates);
+          nextUsedCandidates.add(edge.to);
           const nextEdge: AicPathEdge = {
             from: state.key,
             to: edge.to,
@@ -5070,8 +5548,10 @@ class AICTechnique implements SolverTechnique {
           queue.push({
             key: edge.to,
             path: nextPath,
+            pathSet: nextPathSet,
             edges: nextEdges,
             nextType: state.nextType === 'strong' ? 'weak' : 'strong',
+            usedCandidates: nextUsedCandidates,
           });
         }
       }
@@ -5358,12 +5838,18 @@ class EmptyRectangleTechnique implements SolverTechnique {
     shape: EmptyRectangleShape,
   ): SolveStep | null {
     for (let col = 0; col < 9; col += 1) {
+      if (col === shape.col) {
+        continue;
+      }
       const pairCells = context.getHouseCandidateCells({ type: 'col', index: col }, digit);
       if (pairCells.length !== 2) {
         continue;
       }
       const erRowCell = pairCells.find((cell) => (CELL_TO_ROW[cell] ?? -1) === shape.row);
       if (erRowCell == null) {
+        continue;
+      }
+      if ((CELL_TO_BOX[erRowCell] ?? -1) === shape.box) {
         continue;
       }
       const otherCell = pairCells.find((cell) => cell !== erRowCell);
@@ -5390,12 +5876,18 @@ class EmptyRectangleTechnique implements SolverTechnique {
     shape: EmptyRectangleShape,
   ): SolveStep | null {
     for (let row = 0; row < 9; row += 1) {
+      if (row === shape.row) {
+        continue;
+      }
       const pairCells = context.getHouseCandidateCells({ type: 'row', index: row }, digit);
       if (pairCells.length !== 2) {
         continue;
       }
       const erColCell = pairCells.find((cell) => (CELL_TO_COL[cell] ?? -1) === shape.col);
       if (erColCell == null) {
+        continue;
+      }
+      if ((CELL_TO_BOX[erColCell] ?? -1) === shape.box) {
         continue;
       }
       const otherCell = pairCells.find((cell) => cell !== erColCell);
@@ -5531,6 +6023,18 @@ class UniqueRectangleTechnique implements SolverTechnique {
             if (sharedRoof) {
               return sharedRoof;
             }
+            const type4 = this.tryType4(context, cells, pairDigits);
+            if (type4) {
+              return type4;
+            }
+            const type3NakedSet = this.tryType3NakedSet(context, cells, pairDigits);
+            if (type3NakedSet) {
+              return type3NakedSet;
+            }
+            const type3HiddenSet = this.tryType3HiddenSet(context, cells, pairDigits);
+            if (type3HiddenSet) {
+              return type3HiddenSet;
+            }
           }
         }
       }
@@ -5606,6 +6110,10 @@ class UniqueRectangleTechnique implements SolverTechnique {
       return null;
     }
     const extraDigit = sharedExtraDigits[0]!;
+    const expectedRoofMask = pairMask | maskForDigit(extraDigit);
+    if (context.getCandidateMask(roofA) !== expectedRoofMask || context.getCandidateMask(roofB) !== expectedRoofMask) {
+      return null;
+    }
     const targetCells = intersectNumbers(CELL_TO_PEERS[roofA] ?? [], CELL_TO_PEERS[roofB] ?? [])
       .filter((cell) => !cells.includes(cell) && context.isCandidatePresent(cell, extraDigit));
     const uniqueTargets = uniqueNumbers(targetCells);
@@ -5621,6 +6129,174 @@ class UniqueRectangleTechnique implements SolverTechnique {
       cells,
       'Unique Rectangle with shared roof extra removes the extra digit from cells seeing both roof cells.',
     );
+  }
+
+  private tryType3NakedSet(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+    const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+    for (const { roofA, roofB } of getUrLayouts(cells)) {
+      const roofCells = [roofA, roofB];
+      if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
+        continue;
+      }
+      if (roofCells.some((cell) => context.getCandidateMask(cell) === pairMask)) {
+        continue;
+      }
+      const roofExtraMask = (context.getCandidateMask(roofA) | context.getCandidateMask(roofB)) & ~pairMask;
+      if (roofExtraMask === 0) {
+        continue;
+      }
+      for (const house of housesForCellPair(roofA, roofB)) {
+        const houseCells = context.getHouseCells(house)
+          .filter((cell) => !cells.includes(cell) && context.board[cell] === EMPTY_VALUE);
+        for (let size = 3; size <= 4; size += 1) {
+          const otherCount = size - 2;
+          for (const extraCells of createCombinations(houseCells, otherCount)) {
+            const setCells = [...roofCells, ...extraCells];
+            let setMask = pairMask | roofExtraMask;
+            for (const cell of extraCells) {
+              setMask |= context.getCandidateMask(cell);
+            }
+            if (countMaskBits(setMask) !== size) {
+              continue;
+            }
+            if (setCells.some((cell) => context.getCandidateCount(cell) < 2)) {
+              continue;
+            }
+            if (!setCells.every((cell) => (context.getCandidateMask(cell) & ~setMask) === 0)) {
+              continue;
+            }
+            const actions: SolveStep['actions'] = [];
+            for (const cell of houseCells) {
+              if (setCells.includes(cell)) {
+                continue;
+              }
+              for (const digit of digitsFromMask(setMask)) {
+                if (context.isCandidatePresent(cell, digit)) {
+                  actions.push({ type: 'eliminate', cell, digit });
+                }
+              }
+            }
+            if (actions.length === 0) {
+              continue;
+            }
+            return subsetStep(
+              this.id,
+              this.score,
+              house,
+              setCells,
+              actions,
+              'Unique Rectangle Type 3 forms a naked set with the roof cells and removes those candidates from the rest of the house.',
+            );
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private tryType3HiddenSet(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+    const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+    for (const { roofA, roofB } of getUrLayouts(cells)) {
+      const roofCells = [roofA, roofB];
+      if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
+        continue;
+      }
+      if (roofCells.some((cell) => context.getCandidateMask(cell) === pairMask)) {
+        continue;
+      }
+      const roofExtraDigits = digitsFromMask((context.getCandidateMask(roofA) | context.getCandidateMask(roofB)) & ~pairMask);
+      if (roofExtraDigits.length === 0) {
+        continue;
+      }
+      for (const house of housesForCellPair(roofA, roofB)) {
+        for (let size = 3; size <= 4; size += 1) {
+          for (const extraDigits of createCombinations(roofExtraDigits, size - 2)) {
+            const hiddenDigits = [...pairDigits, ...extraDigits];
+            const hiddenMask = hiddenDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+            const hiddenCells = new Set<number>();
+            let valid = true;
+            for (const digit of hiddenDigits) {
+              const digitCells = context.getHouseCandidateCells(house, digit);
+              if (digitCells.length === 0 || digitCells.length > size) {
+                valid = false;
+                break;
+              }
+              for (const cell of digitCells) {
+                hiddenCells.add(cell);
+              }
+            }
+            if (!valid || hiddenCells.size !== size || !hiddenCells.has(roofA)) {
+              continue;
+            }
+            const actions: SolveStep['actions'] = [];
+            for (const cell of hiddenCells) {
+              if (cell === roofA || cell === roofB) {
+                continue;
+              }
+              for (const digit of context.getCandidateDigits(cell)) {
+                if (!hasDigit(hiddenMask, digit)) {
+                  actions.push({ type: 'eliminate', cell, digit });
+                }
+              }
+            }
+            if (actions.length === 0) {
+              continue;
+            }
+            return subsetStep(
+              this.id,
+              this.score,
+              house,
+              [...hiddenCells],
+              actions,
+              'Unique Rectangle Type 3 forms a hidden set with the roof cells and removes other candidates from the hidden-set cells.',
+            );
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private tryType4(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+    const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+    for (const { roofA, roofB } of getUrLayouts(cells)) {
+      const roofCells = [roofA, roofB];
+      if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
+        continue;
+      }
+      if (roofCells.some((cell) => context.getCandidateMask(cell) === pairMask)) {
+        continue;
+      }
+      const sharedHouses = housesForCellPair(roofA, roofB);
+      for (const house of sharedHouses) {
+        const lockedDigits = pairDigits.filter((digit) => {
+          const places = context.getHouseCandidateCells(house, digit);
+          return places.length === 2 && places.includes(roofA) && places.includes(roofB);
+        });
+        if (lockedDigits.length !== 1) {
+          continue;
+        }
+        const lockedDigit = lockedDigits[0]!;
+        const targetDigit = pairDigits.find((digit) => digit !== lockedDigit);
+        if (!targetDigit) {
+          continue;
+        }
+        const targetCells = roofCells.filter((cell) => context.isCandidatePresent(cell, targetDigit));
+        if (targetCells.length === 0) {
+          continue;
+        }
+        return eliminationStep(
+          this.id,
+          this.score,
+          targetCells,
+          targetDigit,
+          [house],
+          cells,
+          'Unique Rectangle Type 4 removes the other pair digit from the two roof cells because one pair digit is locked in their shared house.',
+        );
+      }
+    }
+    return null;
   }
 }
 
@@ -6717,6 +7393,38 @@ function collectBranchCandidateSources(context: SolverContextLike): Array<{ cell
     .flatMap((cell) => context.getCandidateDigits(cell).map((digit) => ({ cell, digit })));
 }
 
+interface NishioCandidateEntry {
+  cellIndex: number;
+  digits: Digit[];
+  strongLinkCounts: number[];
+  totalStrongLinks: number;
+}
+
+function collectNishioCandidateEntries(context: SolverContextLike): NishioCandidateEntry[] {
+  return Array.from({ length: 81 }, (_, cellIndex) => cellIndex)
+    .filter((cellIndex) => context.board[cellIndex] === EMPTY_VALUE)
+    .map((cellIndex) => {
+      const digits = context.getCandidateDigits(cellIndex);
+      const strongLinkCounts = digits.map((digit) => countExternalStrongLinks(context, cellIndex, digit));
+      return {
+        cellIndex,
+        digits,
+        strongLinkCounts,
+        totalStrongLinks: strongLinkCounts.reduce((sum, count) => sum + count, 0),
+      };
+    })
+    .filter((entry) =>
+      entry.digits.length >= 2
+      && entry.digits.length <= 6,
+    )
+    .sort((left, right) =>
+      left.digits.length - right.digits.length
+      || right.totalStrongLinks - left.totalStrongLinks
+      || left.cellIndex - right.cellIndex,
+    )
+    .slice(0, 40);
+}
+
 function collectUnitBranchSources(context: SolverContextLike): Array<{ house: HouseRef; digit: Digit; cells: number[] }> {
   const result: Array<{ house: HouseRef; digit: Digit; cells: number[] }> = [];
   for (const house of context.getAllHouses()) {
@@ -6733,9 +7441,14 @@ function collectUnitBranchSources(context: SolverContextLike): Array<{ house: Ho
     || left.digit - right.digit);
 }
 
+function collectTableChainUnitSources(context: SolverContextLike): Array<{ house: HouseRef; digit: Digit; cells: number[] }> {
+  return collectUnitBranchSources(context)
+    .filter((source) => source.cells.length <= 5);
+}
+
 function evaluateBranchWithPlacement(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
   const branch = context.clone();
-  branch.placeDigit(cell, digit);
+  branch.placeDigit(cell, digit, { allowConflict: true });
   return runBranchWalkthrough(branch, 12, { type: 'place', cell, digit }, [cell]);
 }
 
@@ -6743,6 +7456,12 @@ function evaluateBranchWithCandidateRemoval(context: SolverContextLike, cell: nu
   const branch = context.clone();
   branch.removeCandidate(cell, digit);
   return runBranchWalkthrough(branch, 12, { type: 'eliminate', cell, digit }, [cell]);
+}
+
+function evaluateTableChainBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.placeDigit(cell, digit, { allowConflict: true });
+  return runBranchWalkthrough(branch, 20, { type: 'place', cell, digit }, [cell]);
 }
 
 function runBranchWalkthrough(
@@ -6756,10 +7475,6 @@ function runBranchWalkthrough(
   const eliminations: BranchOutcome['eliminations'] = [];
   const seenPlacements = new Set<string>();
   const seenEliminations = new Set<string>();
-  const branchTechniques = buildDefaultTechniques().filter((technique) => {
-    const definition = TECHNIQUE_DEFINITIONS.find((item) => item.id === technique.id);
-    return definition?.stability === 'stable';
-  });
 
   for (let stepIndex = 0; stepIndex < maxSteps; stepIndex += 1) {
     if (branch.hasContradiction()) {
@@ -6772,7 +7487,7 @@ function runBranchWalkthrough(
         eliminations,
       };
     }
-    const step = findBranchStep(branch, branchTechniques);
+    const step = findBranchStep(branch, getBranchTechniqueCache());
     if (!step) {
       return { assumption, contradiction: false, exhausted: true, placements, eliminations };
     }
@@ -6801,6 +7516,57 @@ function runBranchWalkthrough(
     placements,
     eliminations,
   };
+}
+
+const BRANCH_TECHNIQUE_IDS: readonly TechniqueId[] = [
+  'full-house',
+  'naked-single',
+  'hidden-single',
+  'locked-candidates',
+  'naked-pair',
+  'hidden-pair',
+  'naked-triple',
+  'hidden-triple',
+  'naked-quad',
+  'hidden-quad',
+  'simple-coloring',
+  'multi-colors',
+  'almost-locked-pair',
+  'almost-locked-triple',
+  'grouped-x-cycles',
+  'grouped-aic',
+  'als-xz',
+  'als-xy-wing',
+  'aic-ur',
+  'fireworks',
+  'twinned-xy-chains',
+  'pattern-overlay',
+  'x-chain',
+  'xy-chain',
+  'aic',
+  'aic-exotic',
+  'three-d-medusa',
+] as const;
+
+const BRANCH_TECHNIQUES = new Set<TechniqueId>(BRANCH_TECHNIQUE_IDS);
+let branchTechniqueCache: SolverTechnique[] | null = null;
+
+function getBranchTechniqueCache(): SolverTechnique[] {
+  if (!branchTechniqueCache) {
+    branchTechniqueCache = buildDefaultTechniques().filter((technique) => BRANCH_TECHNIQUES.has(technique.id));
+  }
+  return branchTechniqueCache;
+}
+
+function countExternalStrongLinks(context: SolverContextLike, cellIndex: number, digit: Digit): number {
+  let count = 0;
+  for (const house of context.getCellHouses(cellIndex)) {
+    const cells = context.getHouseCandidateCells(house, digit);
+    if (cells.length === 2 && cells.includes(cellIndex)) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function findBranchStep(context: SolverContextLike, techniques: SolverTechnique[]): SolveStep | null {
@@ -6937,6 +7703,121 @@ function inspectContradiction(
   return undefined;
 }
 
+function branchHasNoSolution(
+  board: Board,
+  candidates: CandidateMask[],
+  maxElapsedMs: number,
+): boolean {
+  const startedAt = Date.now();
+  const boardCopy = [...board] as Board;
+  const candidateCopy = [...candidates];
+
+  const timedOut = (): boolean => (
+    maxElapsedMs > 0
+    && Date.now() - startedAt >= maxElapsedMs
+  );
+
+  const existsSolution = (): boolean => {
+    if (timedOut()) {
+      return true;
+    }
+    if (hasBranchContradiction(boardCopy, candidateCopy)) {
+      return false;
+    }
+
+    let bestIndex = -1;
+    let bestMask = 0;
+    let bestCount = 10;
+
+    for (let index = 0; index < boardCopy.length; index += 1) {
+      if (boardCopy[index] !== EMPTY_VALUE) {
+        continue;
+      }
+      const mask = candidateCopy[index] ?? 0;
+      const count = countMaskBits(mask);
+      if (count === 0) {
+        return false;
+      }
+      if (count < bestCount) {
+        bestIndex = index;
+        bestMask = mask;
+        bestCount = count;
+      }
+    }
+
+    if (bestIndex === -1) {
+      return true;
+    }
+
+    const snapshotBoard = [...boardCopy] as Board;
+    const snapshotCandidates = [...candidateCopy];
+    for (const digit of digitsFromMask(bestMask)) {
+      if (timedOut()) {
+        return true;
+      }
+      placeDigitInBranch(boardCopy, candidateCopy, bestIndex, digit);
+      if (existsSolution()) {
+        return true;
+      }
+      restoreBranch(boardCopy, candidateCopy, snapshotBoard, snapshotCandidates);
+    }
+
+    return false;
+  };
+
+  return !existsSolution();
+}
+
+function hasBranchContradiction(board: Board, candidates: CandidateMask[]): boolean {
+  for (let index = 0; index < board.length; index += 1) {
+    if (board[index] === EMPTY_VALUE && (candidates[index] ?? 0) === 0) {
+      return true;
+    }
+  }
+
+  for (const house of ALL_HOUSES) {
+    const cells = getHouseCells(house);
+    for (let digit = 1; digit <= 9; digit += 1) {
+      let solvedCount = 0;
+      let candidateCount = 0;
+      for (const cell of cells) {
+        if (board[cell] === digit) {
+          solvedCount += 1;
+        } else if (board[cell] === EMPTY_VALUE && ((candidates[cell] ?? 0) & (1 << (digit - 1))) !== 0) {
+          candidateCount += 1;
+        }
+      }
+      if (solvedCount > 1 || (solvedCount === 0 && candidateCount === 0)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function placeDigitInBranch(board: Board, candidates: CandidateMask[], index: number, digit: Digit): void {
+  board[index] = digit;
+  candidates[index] = 0;
+  for (const peer of CELL_TO_PEERS[index] ?? []) {
+    if (board[peer] === EMPTY_VALUE) {
+      candidates[peer] = (candidates[peer] ?? 0) & ~(1 << (digit - 1));
+    }
+  }
+}
+
+function restoreBranch(
+  board: Board,
+  candidates: CandidateMask[],
+  snapshotBoard: Board,
+  snapshotCandidates: CandidateMask[],
+): void {
+  for (let index = 0; index < board.length; index += 1) {
+    board[index] = snapshotBoard[index] ?? EMPTY_VALUE;
+    candidates[index] = snapshotCandidates[index] ?? 0;
+  }
+}
+
 function intersectBranchPlacements(outcomes: BranchOutcome[]): BranchOutcome['placements'] {
   const common = new Map<string, { cell: number; digit: Digit }>();
   for (const placement of outcomes[0]?.placements ?? []) {
@@ -7014,7 +7895,9 @@ function buildExocetStep(
 
 interface AlmostLockedSet {
   cells: number[];
+  cellSet: Set<number>;
   mask: number;
+  digitMask: number;
   digits: Digit[];
   houses: HouseRef[];
   digitCells: Map<Digit, number[]>;
@@ -7052,7 +7935,9 @@ function enumerateAlmostLockedSets(
         }
         result.set(key, {
           cells: [...combo],
+          cellSet: new Set(combo),
           mask,
+          digitMask: mask,
           digits: digitsFromMask(mask),
           houses: [house],
           digitCells,
@@ -7076,8 +7961,21 @@ function areCellSetsDisjoint(...cellSets: number[][]): boolean {
   return true;
 }
 
+function areAlsDisjoint(...sets: AlmostLockedSet[]): boolean {
+  const seen = new Set<number>();
+  for (const set of sets) {
+    for (const cell of set.cellSet) {
+      if (seen.has(cell)) {
+        return false;
+      }
+      seen.add(cell);
+    }
+  }
+  return true;
+}
+
 function getCommonAlsDigits(left: AlmostLockedSet, right: AlmostLockedSet): Digit[] {
-  return left.digits.filter((digit) => right.digits.includes(digit));
+  return digitsFromMask(left.digitMask & right.digitMask);
 }
 
 function getRestrictedCommonDigits(left: AlmostLockedSet, right: AlmostLockedSet): Digit[] {
@@ -7085,7 +7983,7 @@ function getRestrictedCommonDigits(left: AlmostLockedSet, right: AlmostLockedSet
 }
 
 function isRestrictedCommonDigit(left: AlmostLockedSet, right: AlmostLockedSet, digit: Digit): boolean {
-  if (!areCellSetsDisjoint(left.cells, right.cells)) {
+  if (!areAlsDisjoint(left, right)) {
     return false;
   }
   const leftCells = left.digitCells.get(digit) ?? [];
@@ -7094,133 +7992,12 @@ function isRestrictedCommonDigit(left: AlmostLockedSet, right: AlmostLockedSet, 
     return false;
   }
   return leftCells.every((leftCell) => (
-    rightCells.every((rightCell) => (CELL_TO_PEERS[leftCell] ?? []).includes(rightCell))
+    rightCells.every((rightCell) => (CELL_TO_PEER_SET[leftCell] ?? new Set<number>()).has(rightCell))
   ));
 }
 
 function collectAlsHouses(...sets: AlmostLockedSet[]): HouseRef[] {
   return uniqueHouses(sets.flatMap((set) => set.houses));
-}
-
-function buildAlsPairFragment(context: SolverContextLike, als: AlmostLockedSet): AlsPairFragment | null {
-  if (als.cells.length !== 2 || als.digits.length !== 3) {
-    return null;
-  }
-  const [left, right] = als.cells;
-  if (left == null || right == null) {
-    return null;
-  }
-  const leftDigits = context.getCandidateDigits(left);
-  const rightDigits = context.getCandidateDigits(right);
-  const leftSet = new Set(leftDigits);
-  const rightSet = new Set(rightDigits);
-  const sharedHouses = getSharedHouses(context, left, right);
-  if (sharedHouses.length === 0) {
-    return null;
-  }
-  if (leftDigits.length === 3 && rightDigits.length === 2 && rightDigits.every((digit) => leftSet.has(digit))) {
-    const extraDigit = leftDigits.find((digit) => !rightSet.has(digit));
-    return extraDigit ? {
-      als,
-      pairCell: right,
-      tripleCell: left,
-      pairDigits: [...rightDigits],
-      extraDigit,
-      sharedHouses,
-    } : null;
-  }
-  if (rightDigits.length === 3 && leftDigits.length === 2 && leftDigits.every((digit) => rightSet.has(digit))) {
-    const extraDigit = rightDigits.find((digit) => !leftSet.has(digit));
-    return extraDigit ? {
-      als,
-      pairCell: left,
-      tripleCell: right,
-      pairDigits: [...leftDigits],
-      extraDigit,
-      sharedHouses,
-    } : null;
-  }
-  return null;
-}
-
-function findAlsPairFragments(context: SolverContextLike): AlsPairFragment[] {
-  return enumerateAlmostLockedSets(context, 2, 2)
-    .map((als) => buildAlsPairFragment(context, als))
-    .filter((fragment): fragment is AlsPairFragment => fragment !== null);
-}
-
-function findAlsAicEntryLinks(context: SolverContextLike, fragment: AlsPairFragment): AlsAicEntryLink[] {
-  const results: AlsAicEntryLink[] = [];
-  const seen = new Set<string>();
-  for (const house of context.getCellHouses(fragment.tripleCell)) {
-    const cells = context.getHouseCandidateCells(house, fragment.extraDigit);
-    if (cells.length !== 2 || !cells.includes(fragment.tripleCell)) {
-      continue;
-    }
-    const sourceCell = cells.find((cell) => cell !== fragment.tripleCell);
-    if (sourceCell == null || fragment.als.cells.includes(sourceCell)) {
-      continue;
-    }
-    const key = `${sourceCell}:${house.type}:${house.index}:${fragment.extraDigit}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    results.push({ sourceCell, sourceHouse: house, digit: fragment.extraDigit });
-  }
-  return results;
-}
-
-function findAlsInternalStrongLinks(context: SolverContextLike, fragment: AlsPairFragment): AlsInternalStrongLink[] {
-  const results: AlsInternalStrongLink[] = [];
-  const seen = new Set<string>();
-  for (const digit of fragment.pairDigits) {
-    for (const house of fragment.sharedHouses) {
-      const cells = context.getHouseCandidateCells(house, digit);
-      if (cells.length !== 2 || !cells.includes(fragment.pairCell) || !cells.includes(fragment.tripleCell)) {
-        continue;
-      }
-      const key = `${digit}:${house.type}:${house.index}`;
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      results.push({ digit, house });
-    }
-  }
-  return results;
-}
-
-function findExternalStrongLinkBridges(
-  context: SolverContextLike,
-  anchorCell: number,
-  digit: Digit,
-  excludedCells: readonly number[] = [],
-): ExternalStrongLinkBridge[] {
-  const excluded = new Set(excludedCells);
-  const results: ExternalStrongLinkBridge[] = [];
-  const seen = new Set<string>();
-  for (const house of context.getCellHouses(anchorCell)) {
-    const cells = context.getHouseCandidateCells(house, digit);
-    if (cells.length !== 2 || !cells.includes(anchorCell)) {
-      continue;
-    }
-    const bridgeCell = cells.find((cell) => cell !== anchorCell);
-    if (bridgeCell == null || excluded.has(bridgeCell) || context.board[bridgeCell] !== EMPTY_VALUE) {
-      continue;
-    }
-    const bridgeDigits = context.getCandidateDigits(bridgeCell);
-    if (bridgeDigits.length !== 2 || !bridgeDigits.includes(digit)) {
-      continue;
-    }
-    const key = `${anchorCell}:${bridgeCell}:${digit}:${house.type}:${house.index}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    results.push({ bridgeCell, house });
-  }
-  return results;
 }
 
 function getSharedHouses(context: SolverContextLike, left: number, right: number): HouseRef[] {
@@ -7237,12 +8014,77 @@ function getCommonSeenCells(cells: readonly number[]): number[] {
   if (cells.length === 0) {
     return [];
   }
-  let common = new Set(CELL_TO_PEERS[cells[0]!] ?? []);
+  let common = new Set(CELL_TO_PEER_SET[cells[0]!] ?? []);
   for (let index = 1; index < cells.length; index += 1) {
-    const peers = new Set(CELL_TO_PEERS[cells[index]!] ?? []);
-    common = new Set([...common].filter((cell) => peers.has(cell)));
+    const peers = CELL_TO_PEER_SET[cells[index]!] ?? new Set<number>();
+    const next = new Set<number>();
+    for (const cell of common) {
+      if (peers.has(cell)) {
+        next.add(cell);
+      }
+    }
+    common = next;
   }
   return [...common];
+}
+
+function isConnectedClusterCached(
+  cells: readonly number[],
+  getPairHouses: (left: number, right: number) => HouseRef[],
+): boolean {
+  if (cells.length === 0) {
+    return false;
+  }
+  const seen = new Set<number>([cells[0]!]);
+  const queue = [cells[0]!];
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const current = queue[queueIndex]!;
+    for (const next of cells) {
+      if (seen.has(next) || next === current) {
+        continue;
+      }
+      if (getPairHouses(current, next).length > 0) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return seen.size === cells.length;
+}
+
+function isRestrictedDigitCached(
+  cells: readonly number[],
+  getPairHouses: (left: number, right: number) => HouseRef[],
+): boolean {
+  if (cells.length < 2) {
+    return false;
+  }
+  for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
+      if (getPairHouses(cells[leftIndex]!, cells[rightIndex]!).length === 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function findCoveringHousePairCached(
+  cells: readonly number[],
+  cellHouses: readonly HouseRef[][],
+): [HouseRef, HouseRef] | null {
+  const houses = uniqueHouses(cellHouses.flat());
+  for (let leftIndex = 0; leftIndex < houses.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex; rightIndex < houses.length; rightIndex += 1) {
+      const left = houses[leftIndex]!;
+      const right = houses[rightIndex]!;
+      const covered = cells.every((cell) => houseContainsCell(left, cell) || houseContainsCell(right, cell));
+      if (covered) {
+        return [left, right];
+      }
+    }
+  }
+  return null;
 }
 
 function buildPathHouses(path: readonly number[]): HouseRef[] {
@@ -7334,6 +8176,23 @@ function buildMedusaLinks(
 interface ColorComponent {
   cells: number[];
   colorMap: Map<number, 0 | 1>;
+}
+
+type XColorInvalidKind = 'overlap' | 'same-color-house' | 'house-covered';
+
+interface XColorDerivation {
+  cell: number;
+  color: 0 | 1;
+  house: HouseRef;
+}
+
+interface XColoringComponent {
+  baseColorMap: Map<number, 0 | 1>;
+  colorSets: [Set<number>, Set<number>];
+  derivations: XColorDerivation[];
+  invalidColor: 0 | 1 | null;
+  invalidHouse: HouseRef | null;
+  invalidKind: XColorInvalidKind | null;
 }
 
 function buildColorComponents(adjacency: Map<number, Set<number>>): ColorComponent[] {

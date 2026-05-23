@@ -1,10 +1,80 @@
+import { getTechniqueDefinitions } from '../solver/techniques.js';
+
 export type JsonSchema = Record<string, unknown>;
+
+const TECHNIQUE_ID_ENUM = getTechniqueDefinitions().map((definition) => definition.id);
+const TECHNIQUE_ID_SCHEMA: JsonSchema = {
+  type: 'string',
+  enum: TECHNIQUE_ID_ENUM,
+};
+const MAX_SEED = 0xffffffff;
 
 const COUNT_RECORD_SCHEMA: JsonSchema = {
   type: 'object',
   additionalProperties: {
     type: 'integer',
     minimum: 0,
+  },
+};
+
+const TECHNIQUE_COUNT_RECORD_SCHEMA: JsonSchema = {
+  ...COUNT_RECORD_SCHEMA,
+  propertyNames: {
+    enum: TECHNIQUE_ID_ENUM,
+  },
+};
+
+const CANONICAL_KEY_SCHEMA: JsonSchema = {
+  type: 'string',
+  minLength: 81,
+  maxLength: 81,
+  pattern: '^[0-9]{81}$',
+};
+
+const RATING_POLICY_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'version', 'techniqueOrder', 'techniqueScores'],
+  properties: {
+    id: { type: 'string' },
+    version: { type: 'string' },
+    techniqueOrder: {
+      type: 'array',
+      minItems: 1,
+      items: TECHNIQUE_ID_SCHEMA,
+    },
+    fallbackTechniques: {
+      type: 'array',
+      items: TECHNIQUE_ID_SCHEMA,
+    },
+    techniqueScores: {
+      type: 'object',
+      propertyNames: {
+        enum: TECHNIQUE_ID_ENUM,
+      },
+      additionalProperties: {
+        type: 'number',
+      },
+    },
+    maxSteps: { type: 'integer', minimum: 1 },
+    gradeRules: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['grade'],
+        $comment: 'minScore <= maxScore 是跨字段动态规则，请通过 validateRatingPolicy() 做运行时校验。',
+        properties: {
+          grade: { type: 'string' },
+          minScore: { type: 'number' },
+          maxScore: { type: 'number' },
+          allowedTechniques: {
+            type: 'array',
+            items: TECHNIQUE_ID_SCHEMA,
+          },
+        },
+      },
+    },
   },
 };
 
@@ -18,6 +88,17 @@ export const BOARD_SCHEMA: JsonSchema = {
   items: {
     type: 'integer',
     minimum: 0,
+    maximum: 9,
+  },
+};
+
+const SOLUTION_BOARD_SCHEMA: JsonSchema = {
+  type: 'array',
+  minItems: 81,
+  maxItems: 81,
+  items: {
+    type: 'integer',
+    minimum: 1,
     maximum: 9,
   },
 };
@@ -132,9 +213,7 @@ export const SOLVE_STEP_SCHEMA: JsonSchema = {
   additionalProperties: false,
   required: ['technique', 'actions', 'evidence', 'score'],
   properties: {
-    technique: {
-      type: 'string',
-    },
+    technique: TECHNIQUE_ID_SCHEMA,
     score: {
       type: 'number',
     },
@@ -330,9 +409,7 @@ export const TECHNIQUE_DEFINITION_SCHEMA: JsonSchema = {
   additionalProperties: false,
   required: ['id', 'nameZh', 'nameEn', 'family', 'defaultScore', 'stability'],
   properties: {
-    id: {
-      type: 'string',
-    },
+    id: TECHNIQUE_ID_SCHEMA,
     nameZh: {
       type: 'string',
     },
@@ -356,6 +433,7 @@ export const TECHNIQUE_LIST_SCHEMA: JsonSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: '技巧定义列表',
   type: 'array',
+  $comment: 'JSON Schema uniqueItems 只能检查完整 object 是否重复；技巧 id 唯一性由内置 getTechniqueDefinitions() 与运行时测试保证。',
   items: TECHNIQUE_DEFINITION_SCHEMA,
 };
 
@@ -374,6 +452,7 @@ export const CANONICAL_TRANSFORM_SCHEMA: JsonSchema = {
       type: 'array',
       minItems: 9,
       maxItems: 9,
+      uniqueItems: true,
       items: {
         type: 'integer',
         minimum: 0,
@@ -384,6 +463,7 @@ export const CANONICAL_TRANSFORM_SCHEMA: JsonSchema = {
       type: 'array',
       minItems: 9,
       maxItems: 9,
+      uniqueItems: true,
       items: {
         type: 'integer',
         minimum: 0,
@@ -394,9 +474,13 @@ export const CANONICAL_TRANSFORM_SCHEMA: JsonSchema = {
       type: 'array',
       minItems: 10,
       maxItems: 10,
+      uniqueItems: true,
+      prefixItems: [
+        { const: 0 },
+      ],
       items: {
         type: 'integer',
-        minimum: 0,
+        minimum: 1,
         maximum: 9,
       },
     },
@@ -417,11 +501,7 @@ export const CANONICAL_RESULT_SCHEMA: JsonSchema = {
     version: {
       const: '1',
     },
-    key: {
-      type: 'string',
-      minLength: 81,
-      maxLength: 81,
-    },
+    key: CANONICAL_KEY_SCHEMA,
     board: BOARD_SCHEMA,
     transform: CANONICAL_TRANSFORM_SCHEMA,
   },
@@ -441,13 +521,9 @@ export const CANONICAL_PAIR_RESULT_SCHEMA: JsonSchema = {
     version: {
       const: '1',
     },
-    key: {
-      type: 'string',
-      minLength: 81,
-      maxLength: 81,
-    },
+    key: CANONICAL_KEY_SCHEMA,
     board: BOARD_SCHEMA,
-    solution: BOARD_SCHEMA,
+    solution: SOLUTION_BOARD_SCHEMA,
     transform: CANONICAL_TRANSFORM_SCHEMA,
   },
 };
@@ -473,10 +549,15 @@ export const RATING_RESULT_SCHEMA: JsonSchema = {
     solved: { type: 'boolean' },
     score: { type: 'number' },
     grade: { type: ['string', 'null'] },
-    hardestTechnique: { type: ['string', 'null'] },
+    hardestTechnique: {
+      anyOf: [
+        TECHNIQUE_ID_SCHEMA,
+        { type: 'null' },
+      ],
+    },
     hardestScore: { type: 'number' },
     techniqueCounts: {
-      ...COUNT_RECORD_SCHEMA,
+      ...TECHNIQUE_COUNT_RECORD_SCHEMA,
     },
     steps: {
       type: 'array',
@@ -490,85 +571,147 @@ export const RATING_RESULT_SCHEMA: JsonSchema = {
   },
 };
 
+const SEARCH_ONLY_REQUEST_PROPERTIES: Record<string, unknown> = {
+  maxResults: {
+    type: 'integer',
+    minimum: 1,
+    description: 'search-only 字段；generateOne 会忽略。',
+  },
+  scoreBucketSize: {
+    type: 'integer',
+    minimum: 1,
+    description: 'search-only 字段；generateOne 会忽略。',
+  },
+};
+
+const GENERATION_REQUEST_PROPERTIES: Record<string, unknown> = {
+  seed: { type: 'integer', minimum: 1, maximum: MAX_SEED },
+  ratingPolicy: RATING_POLICY_SCHEMA,
+  canonicalize: { type: 'boolean' },
+  minimality: {
+    enum: ['none', 'strict'],
+  },
+  relaxation: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['enabled'],
+    properties: {
+      enabled: { type: 'boolean' },
+      maxRounds: { type: 'integer', minimum: 0 },
+      scoreExpansionPerRound: { type: 'number', minimum: 0 },
+      clueExpansionPerRound: { type: 'integer', minimum: 0, maximum: 81 },
+      attemptMultiplierPerRound: { type: 'number', minimum: 1 },
+    },
+  },
+  constraints: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      score: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          min: { type: 'number' },
+          max: { type: 'number' },
+          target: { type: 'number' },
+          tolerance: { type: 'number', minimum: 0 },
+        },
+      },
+      clues: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          min: { type: 'integer', minimum: 0, maximum: 81 },
+          max: { type: 'integer', minimum: 17, maximum: 81 },
+          target: { type: 'integer', minimum: 17, maximum: 81 },
+        },
+      },
+      allowedTechniques: {
+        type: 'array',
+        minItems: 1,
+        items: TECHNIQUE_ID_SCHEMA,
+      },
+      forbiddenTechniques: {
+        type: 'array',
+        items: TECHNIQUE_ID_SCHEMA,
+      },
+      requiredTechniques: {
+        type: 'array',
+        items: {
+          oneOf: [
+            {
+              type: 'object',
+              additionalProperties: false,
+              required: ['type', 'techniques'],
+              properties: {
+                type: { const: 'appears' },
+                techniques: {
+                  type: 'array',
+                  minItems: 1,
+                  items: TECHNIQUE_ID_SCHEMA,
+                },
+                minCount: { type: 'integer', minimum: 1 },
+              },
+            },
+            {
+              type: 'object',
+              additionalProperties: false,
+              required: ['type', 'techniques'],
+              properties: {
+                type: { const: 'hardest-in' },
+                techniques: {
+                  type: 'array',
+                  minItems: 1,
+                  items: TECHNIQUE_ID_SCHEMA,
+                },
+              },
+            },
+            {
+              type: 'object',
+              additionalProperties: false,
+              required: ['type', 'families'],
+              properties: {
+                type: { const: 'family-coverage' },
+                families: {
+                  type: 'array',
+                  minItems: 1,
+                  items: { type: 'string' },
+                },
+              },
+            },
+          ],
+        },
+      },
+      preferredTechniques: {
+        type: 'array',
+        items: TECHNIQUE_ID_SCHEMA,
+      },
+      symmetry: {
+        enum: ['none', 'central'],
+      },
+      uniqueness: {
+        enum: ['required'],
+      },
+    },
+  },
+  budget: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      maxAttempts: { type: 'integer', minimum: 1 },
+      maxElapsedMs: { type: 'integer', minimum: 1 },
+    },
+  },
+  ...SEARCH_ONLY_REQUEST_PROPERTIES,
+};
+
 export const GENERATION_REQUEST_SCHEMA: JsonSchema = {
   $id: 'https://github.com/RichardCao/classic9-sudoku/schema/generation-request.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: '生成请求',
   type: 'object',
-  additionalProperties: true,
-  properties: {
-    seed: { type: 'integer' },
-    canonicalize: { type: 'boolean' },
-    minimality: {
-      enum: ['none', 'strict'],
-    },
-    relaxation: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        maxRounds: { type: 'integer', minimum: 0 },
-        scoreExpansionPerRound: { type: 'number', minimum: 0 },
-        clueExpansionPerRound: { type: 'integer', minimum: 0, maximum: 81 },
-        attemptMultiplierPerRound: { type: 'number', minimum: 1 },
-      },
-    },
-    constraints: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        score: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            min: { type: 'number' },
-            max: { type: 'number' },
-            target: { type: 'number' },
-            tolerance: { type: 'number' },
-          },
-        },
-        clues: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            min: { type: 'integer', minimum: 0, maximum: 81 },
-            max: { type: 'integer', minimum: 0, maximum: 81 },
-            target: { type: 'integer', minimum: 0, maximum: 81 },
-          },
-        },
-        allowedTechniques: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-        forbiddenTechniques: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-        requiredTechniques: {
-          type: 'array',
-          items: { type: 'object' },
-        },
-        preferredTechniques: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-        symmetry: {
-          enum: ['none', 'central'],
-        },
-        uniqueness: {
-          enum: ['required'],
-        },
-      },
-    },
-    budget: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        maxAttempts: { type: 'integer', minimum: 1 },
-        maxElapsedMs: { type: 'integer', minimum: 1 },
-      },
-    },
-  },
+  additionalProperties: false,
+  properties: GENERATION_REQUEST_PROPERTIES,
 };
 
 export const GENERATION_RESULT_SCHEMA: JsonSchema = {
@@ -585,37 +728,51 @@ export const GENERATION_RESULT_SCHEMA: JsonSchema = {
     puzzle: {
       type: 'object',
       additionalProperties: true,
-      required: ['puzzle', 'solution', 'seed', 'clueCount', 'score', 'grade', 'hardestTechnique'],
+      required: ['puzzle', 'solution', 'seed', 'solved', 'clueCount', 'score', 'grade', 'hardestTechnique', 'techniqueCounts'],
       properties: {
         puzzle: BOARD_SCHEMA,
-        solution: BOARD_SCHEMA,
-        seed: { type: 'integer' },
+        solution: SOLUTION_BOARD_SCHEMA,
+        seed: { type: 'integer', minimum: 1, maximum: MAX_SEED },
+        solved: { type: 'boolean' },
+        stuckReason: { enum: ['contradiction', 'no-technique-match', 'step-limit'] },
         clueCount: { type: 'integer', minimum: 0, maximum: 81 },
         score: { type: 'number' },
         grade: { type: ['string', 'null'] },
-        hardestTechnique: { type: ['string', 'null'] },
-        techniqueCounts: {
-          ...COUNT_RECORD_SCHEMA,
+        hardestTechnique: {
+          anyOf: [
+            TECHNIQUE_ID_SCHEMA,
+            { type: 'null' },
+          ],
         },
-        canonicalKey: { type: 'string' },
+        techniqueCounts: {
+          ...TECHNIQUE_COUNT_RECORD_SCHEMA,
+        },
+        canonicalKey: CANONICAL_KEY_SCHEMA,
       },
     },
     bestCandidate: {
       type: 'object',
       additionalProperties: true,
-      required: ['puzzle', 'solution', 'seed', 'clueCount', 'score', 'grade', 'hardestTechnique'],
+      required: ['puzzle', 'solution', 'seed', 'solved', 'clueCount', 'score', 'grade', 'hardestTechnique', 'techniqueCounts'],
       properties: {
         puzzle: BOARD_SCHEMA,
-        solution: BOARD_SCHEMA,
-        seed: { type: 'integer' },
+        solution: SOLUTION_BOARD_SCHEMA,
+        seed: { type: 'integer', minimum: 1, maximum: MAX_SEED },
+        solved: { type: 'boolean' },
+        stuckReason: { enum: ['contradiction', 'no-technique-match', 'step-limit'] },
         clueCount: { type: 'integer', minimum: 0, maximum: 81 },
         score: { type: 'number' },
         grade: { type: ['string', 'null'] },
-        hardestTechnique: { type: ['string', 'null'] },
-        techniqueCounts: {
-          ...COUNT_RECORD_SCHEMA,
+        hardestTechnique: {
+          anyOf: [
+            TECHNIQUE_ID_SCHEMA,
+            { type: 'null' },
+          ],
         },
-        canonicalKey: { type: 'string' },
+        techniqueCounts: {
+          ...TECHNIQUE_COUNT_RECORD_SCHEMA,
+        },
+        canonicalKey: CANONICAL_KEY_SCHEMA,
       },
     },
     requestAnalysis: {
@@ -650,20 +807,27 @@ export const GENERATED_PUZZLE_SCHEMA: JsonSchema = {
   title: '生成题目',
   type: 'object',
   additionalProperties: true,
-  required: ['puzzle', 'solution', 'seed', 'clueCount', 'score', 'grade', 'hardestTechnique', 'techniqueCounts'],
+  required: ['puzzle', 'solution', 'seed', 'solved', 'clueCount', 'score', 'grade', 'hardestTechnique', 'techniqueCounts'],
   properties: {
     puzzle: BOARD_SCHEMA,
-    solution: BOARD_SCHEMA,
-    seed: { type: 'integer' },
+    solution: SOLUTION_BOARD_SCHEMA,
+    seed: { type: 'integer', minimum: 1, maximum: MAX_SEED },
+    solved: { type: 'boolean' },
+    stuckReason: { enum: ['contradiction', 'no-technique-match', 'step-limit'] },
     clueCount: { type: 'integer', minimum: 0, maximum: 81 },
     score: { type: 'number' },
     grade: { type: ['string', 'null'] },
-    hardestTechnique: { type: ['string', 'null'] },
+    hardestTechnique: {
+      anyOf: [
+        TECHNIQUE_ID_SCHEMA,
+        { type: 'null' },
+      ],
+    },
     techniqueCounts: {
-      ...COUNT_RECORD_SCHEMA,
+      ...TECHNIQUE_COUNT_RECORD_SCHEMA,
     },
     canonicalKey: {
-      type: 'string',
+      ...CANONICAL_KEY_SCHEMA,
     },
   },
 };
@@ -672,23 +836,11 @@ export const SEARCH_REQUEST_SCHEMA: JsonSchema = {
   $id: 'https://github.com/RichardCao/classic9-sudoku/schema/search-request.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: '批量搜索请求',
-  allOf: [
-    GENERATION_REQUEST_SCHEMA,
-    {
-      type: 'object',
-      additionalProperties: true,
-      properties: {
-        maxResults: {
-          type: 'integer',
-          minimum: 1,
-        },
-        scoreBucketSize: {
-          type: 'integer',
-          minimum: 1,
-        },
-      },
-    },
-  ],
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    ...GENERATION_REQUEST_PROPERTIES,
+  },
 };
 
 export const SEARCH_SUMMARY_SCHEMA: JsonSchema = {
@@ -714,7 +866,7 @@ export const SEARCH_SUMMARY_SCHEMA: JsonSchema = {
       ...COUNT_RECORD_SCHEMA,
     },
     techniqueHits: {
-      ...COUNT_RECORD_SCHEMA,
+      ...TECHNIQUE_COUNT_RECORD_SCHEMA,
     },
     bestScore: {
       type: ['number', 'null'],
@@ -783,12 +935,11 @@ export const CANDIDATE_SELECTION_PLAN_SCHEMA: JsonSchema = {
     },
     preferredTechniques: {
       type: 'array',
-      items: {
-        type: 'string',
-      },
+      items: TECHNIQUE_ID_SCHEMA,
     },
     scoreBuckets: {
       type: 'array',
+      $comment: 'min <= max 和 bucket 不重叠是跨项动态规则，请通过 selectFromCandidates() 做运行时校验。',
       items: {
         type: 'object',
         additionalProperties: false,
@@ -1091,26 +1242,68 @@ export const SEARCH_MANIFEST_SUMMARY_SCHEMA: JsonSchema = {
 
 export function getJsonSchemas(): Record<string, JsonSchema> {
   return {
-    board: BOARD_SCHEMA,
-    candidateConstraints: CANDIDATE_CONSTRAINTS_SCHEMA,
-    puzzleState: PUZZLE_STATE_SCHEMA,
-    solveStep: SOLVE_STEP_SCHEMA,
-    techniqueDefinition: TECHNIQUE_DEFINITION_SCHEMA,
-    techniqueList: TECHNIQUE_LIST_SCHEMA,
-    canonicalTransform: CANONICAL_TRANSFORM_SCHEMA,
-    canonicalResult: CANONICAL_RESULT_SCHEMA,
-    canonicalPairResult: CANONICAL_PAIR_RESULT_SCHEMA,
-    ratingResult: RATING_RESULT_SCHEMA,
-    generationRequest: GENERATION_REQUEST_SCHEMA,
-    generationResult: GENERATION_RESULT_SCHEMA,
-    generatedPuzzle: GENERATED_PUZZLE_SCHEMA,
-    searchRequest: SEARCH_REQUEST_SCHEMA,
-    searchSummary: SEARCH_SUMMARY_SCHEMA,
-    searchEvent: SEARCH_EVENT_SCHEMA,
-    candidateSelectionPlan: CANDIDATE_SELECTION_PLAN_SCHEMA,
-    candidateSelectionResult: CANDIDATE_SELECTION_RESULT_SCHEMA,
-    candidatePoolStats: CANDIDATE_POOL_STATS_SCHEMA,
-    candidateDedupeResult: CANDIDATE_DEDUPE_RESULT_SCHEMA,
-    searchManifestSummary: SEARCH_MANIFEST_SUMMARY_SCHEMA,
+    board: cloneJsonSchema(BOARD_SCHEMA),
+    candidateConstraints: cloneJsonSchema(CANDIDATE_CONSTRAINTS_SCHEMA),
+    puzzleState: cloneJsonSchema(PUZZLE_STATE_SCHEMA),
+    solveStep: cloneJsonSchema(SOLVE_STEP_SCHEMA),
+    techniqueDefinition: cloneJsonSchema(TECHNIQUE_DEFINITION_SCHEMA),
+    techniqueList: cloneJsonSchema(TECHNIQUE_LIST_SCHEMA),
+    canonicalTransform: cloneJsonSchema(CANONICAL_TRANSFORM_SCHEMA),
+    canonicalResult: cloneJsonSchema(CANONICAL_RESULT_SCHEMA),
+    canonicalPairResult: cloneJsonSchema(CANONICAL_PAIR_RESULT_SCHEMA),
+    ratingPolicy: cloneJsonSchema(RATING_POLICY_SCHEMA),
+    ratingResult: cloneJsonSchema(RATING_RESULT_SCHEMA),
+    generationRequest: cloneJsonSchema(GENERATION_REQUEST_SCHEMA),
+    generationResult: cloneJsonSchema(GENERATION_RESULT_SCHEMA),
+    generatedPuzzle: cloneJsonSchema(GENERATED_PUZZLE_SCHEMA),
+    searchRequest: cloneJsonSchema(SEARCH_REQUEST_SCHEMA),
+    searchSummary: cloneJsonSchema(SEARCH_SUMMARY_SCHEMA),
+    searchEvent: cloneJsonSchema(SEARCH_EVENT_SCHEMA),
+    candidateSelectionPlan: cloneJsonSchema(CANDIDATE_SELECTION_PLAN_SCHEMA),
+    candidateSelectionResult: cloneJsonSchema(CANDIDATE_SELECTION_RESULT_SCHEMA),
+    candidatePoolStats: cloneJsonSchema(CANDIDATE_POOL_STATS_SCHEMA),
+    candidateDedupeResult: cloneJsonSchema(CANDIDATE_DEDUPE_RESULT_SCHEMA),
+    searchManifestSummary: cloneJsonSchema(SEARCH_MANIFEST_SUMMARY_SCHEMA),
   };
+}
+
+function cloneJsonSchema(schema: JsonSchema): JsonSchema {
+  return JSON.parse(JSON.stringify(schema)) as JsonSchema;
+}
+
+function deepFreezeJson(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    deepFreezeJson(child);
+  }
+  return Object.freeze(value);
+}
+
+for (const schema of [
+  BOARD_SCHEMA,
+  CANDIDATE_CONSTRAINTS_SCHEMA,
+  PUZZLE_STATE_SCHEMA,
+  SOLVE_STEP_SCHEMA,
+  TECHNIQUE_DEFINITION_SCHEMA,
+  TECHNIQUE_LIST_SCHEMA,
+  CANONICAL_TRANSFORM_SCHEMA,
+  CANONICAL_RESULT_SCHEMA,
+  CANONICAL_PAIR_RESULT_SCHEMA,
+  RATING_POLICY_SCHEMA,
+  RATING_RESULT_SCHEMA,
+  GENERATION_REQUEST_SCHEMA,
+  GENERATION_RESULT_SCHEMA,
+  GENERATED_PUZZLE_SCHEMA,
+  SEARCH_REQUEST_SCHEMA,
+  SEARCH_SUMMARY_SCHEMA,
+  SEARCH_EVENT_SCHEMA,
+  CANDIDATE_SELECTION_PLAN_SCHEMA,
+  CANDIDATE_SELECTION_RESULT_SCHEMA,
+  CANDIDATE_POOL_STATS_SCHEMA,
+  CANDIDATE_DEDUPE_RESULT_SCHEMA,
+  SEARCH_MANIFEST_SUMMARY_SCHEMA,
+]) {
+  deepFreezeJson(schema);
 }

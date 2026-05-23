@@ -1,4 +1,4 @@
-import type { CandidateMask, Digit, HouseRef } from '../core/types.js';
+import type { Board, CandidateMask, Digit, HouseRef } from '../core/types.js';
 
 export type TechniqueId =
   | 'full-house'
@@ -24,6 +24,7 @@ export type TechniqueId =
   | 'xyz-wing'
   | 'wxyz-wing'
   | 'w-wing'
+  | 'big-wings'
   | 'chute-remote-pairs'
   | 'almost-locked-pair'
   | 'almost-locked-triple'
@@ -45,9 +46,11 @@ export type TechniqueId =
   | 'nishio-forcing-chains'
   | 'cell-forcing-chains'
   | 'unit-forcing-chains'
+  | 'table-chain'
   | 'bowmans-bingo'
   | 'aic-exotic'
   | 'simple-coloring'
+  | 'x-coloring'
   | 'multi-colors'
   | 'three-d-medusa'
   | 'grouped-x-cycles'
@@ -139,7 +142,50 @@ export interface TechniqueDefinition {
 export interface SolveOptions {
   allowedTechniques?: TechniqueId[];
   preferredTechniques?: TechniqueId[];
+  fallbackTechniques?: TechniqueId[];
   maxSteps?: number;
+  allowContradictoryCandidateState?: boolean;
+}
+
+export interface FindStepsOptions extends SolveOptions {
+  sort?: 'pipeline' | 'score-desc' | 'action-count-desc' | 'canonical';
+  limit?: number;
+  includeDiagnostics?: boolean;
+}
+
+export interface FindStepsDiagnostics {
+  techniquesTried: TechniqueId[];
+  techniqueCalls: Partial<Record<TechniqueId, number>>;
+  techniqueHits: Partial<Record<TechniqueId, number>>;
+  initialContradictions?: number;
+  stuckReason?: 'contradiction';
+  elapsedMs?: number;
+}
+
+export interface FindStepsResult {
+  steps: SolveStep[];
+  diagnostics?: FindStepsDiagnostics;
+}
+
+export interface TechniqueUsageStats {
+  technique: TechniqueId;
+  calls: number;
+  hits: number;
+  placements: number;
+  eliminations: number;
+  actions: number;
+  totalScore: number;
+  maxScore: number;
+  elapsedMs: number;
+}
+
+export interface SolverUsageReport {
+  totalElapsedMs: number;
+  totalCalls: number;
+  totalHits: number;
+  totalPlacements: number;
+  totalEliminations: number;
+  byTechnique: Partial<Record<TechniqueId, TechniqueUsageStats>>;
 }
 
 export interface SolveAnalysis {
@@ -149,6 +195,88 @@ export interface SolveAnalysis {
   hardestTechnique: TechniqueId | null;
   candidates: CandidateMask[];
   stuckReason?: 'contradiction' | 'no-technique-match' | 'step-limit';
+}
+
+export interface SolveStepScenario {
+  stepNumber: number;
+  step: SolveStep;
+  boardBefore: Board;
+  boardAfter: Board;
+  candidateMasksBefore: CandidateMask[];
+  candidateMasksAfter: CandidateMask[];
+}
+
+export interface AnalyzeSolveOptions extends SolveOptions {
+  includeUsage?: boolean;
+}
+
+export interface AnalyzeSolveResult extends SolveAnalysis {
+  usage?: SolverUsageReport;
+}
+
+export type StepVerificationMode = 'action' | 'evidence';
+
+export interface StepVerificationOptions {
+  mode?: StepVerificationMode;
+  allowNoopEliminations?: boolean;
+}
+
+export type StepVerificationIssueCode =
+  | 'unknown-technique'
+  | 'invalid-step-shape'
+  | 'invalid-action-shape'
+  | 'empty-actions'
+  | 'invalid-action-type'
+  | 'invalid-cell'
+  | 'invalid-digit'
+  | 'place-on-filled-cell'
+  | 'place-digit-not-candidate'
+  | 'place-conflicts-house'
+  | 'eliminate-on-filled-cell'
+  | 'eliminate-missing-candidate'
+  | 'duplicate-action'
+  | 'action-causes-empty-cell'
+  | 'action-causes-homeless-digit'
+  | 'action-causes-duplicate-digit'
+  | 'invalid-evidence-house'
+  | 'invalid-evidence-cell'
+  | 'invalid-evidence-link'
+  | 'invalid-evidence-branch'
+  | 'evidence-missing-target'
+  | 'initial-state-contradiction';
+
+export interface StepVerificationIssue {
+  severity: 'error' | 'warning';
+  code: StepVerificationIssueCode;
+  message: string;
+  actionIndex?: number;
+  actionType?: string;
+  path?: string;
+  cell?: number;
+  digit?: Digit;
+}
+
+export interface StepVerificationResult {
+  valid: boolean;
+  issues: StepVerificationIssue[];
+  before: {
+    board: number[];
+    candidates: CandidateMask[];
+  };
+  after?: {
+    board: number[];
+    candidates: CandidateMask[];
+  };
+}
+
+export interface WalkthroughVerificationResult {
+  valid: boolean;
+  firstInvalidStepIndex: number | null;
+  stepResults: StepVerificationResult[];
+  finalBoard: number[];
+  finalCandidates: CandidateMask[];
+  solved: boolean;
+  stuckReason?: 'contradiction' | 'incomplete' | 'invalid-step';
 }
 
 export interface SolverTechnique {
@@ -174,7 +302,7 @@ export interface SolverContextLike {
   getCellRow(cell: number): number;
   getCellCol(cell: number): number;
   getCellBox(cell: number): number;
-  placeDigit(cell: number, digit: Digit): void;
+  placeDigit(cell: number, digit: Digit, options?: { allowConflict?: boolean }): void;
   removeCandidate(cell: number, digit: Digit): boolean;
   applyStep(step: SolveStep): void;
 }

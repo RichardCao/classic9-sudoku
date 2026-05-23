@@ -1,6 +1,6 @@
 import { CELL_COUNT, EMPTY_VALUE } from '../core/constants.js';
 import { ALL_DIGITS_MASK, isDigit, maskFromDigits, removeDigit } from '../core/bitset.js';
-import { CELL_TO_PEERS, isCellIndex } from '../core/grid.js';
+import { ALL_HOUSES, CELL_TO_PEERS, getHouseCells, isCellIndex } from '../core/grid.js';
 import type { Board, CandidateMask, Digit } from '../core/types.js';
 import { parsePuzzle, type PuzzleInput } from '../parser/index.js';
 
@@ -37,16 +37,19 @@ export interface StateContradiction {
   type:
     | 'invalid-board-length'
     | 'invalid-board-value'
-    | 'duplicate-given'
     | 'empty-cell-without-candidate'
     | 'missing-house-candidate'
+    | 'illegal-candidate'
     | 'invalid-constraint';
   cell?: number;
+  source?: 'candidateMasks' | 'exactCandidates';
   message: string;
 }
 
 export interface StateWarning {
   type:
+    | 'invalid-given-index'
+    | 'given-index-not-filled'
     | 'constraint-on-filled-cell'
     | 'pencilmarks-ignored'
     | 'duplicate-given-index';
@@ -77,6 +80,7 @@ export function normalizeState(input: StateInput): NormalizedState {
   applyExactCandidates(board, candidates, state.constraints?.exactCandidates, state.constraints?.exactCandidatesMode, contradictions, warnings);
   applyForbiddenCandidates(board, candidates, state.constraints?.forbidden, contradictions, warnings);
   notePencilMarks(state.constraints?.pencilMarks, warnings);
+  applyAssumptions(board, candidates, state.assumptions, contradictions);
   collectCandidateContradictions(board, candidates, contradictions);
 
   return {
@@ -122,6 +126,18 @@ function normalizeCandidateMasks(
       candidates[index] = 0;
       continue;
     }
+    const legalMask = computeLegalCandidateMask(board, index);
+    const illegalMask = value & ~legalMask;
+    if (illegalMask !== 0) {
+      contradictions.push({
+        type: 'illegal-candidate',
+        cell: index,
+        source: 'candidateMasks',
+        message: `Candidate mask at ${index} includes digits conflicting with filled peers`,
+      });
+      candidates[index] = value;
+      continue;
+    }
     candidates[index] = value;
   }
   return candidates;
@@ -131,7 +147,14 @@ function toPuzzleState(input: StateInput): PuzzleState {
   if (typeof input === 'string' || Array.isArray(input)) {
     return { board: parsePuzzle(input) };
   }
-  return input as PuzzleState;
+  if (typeof input !== 'object' || input === null) {
+    throw new Error('State input must be a puzzle string, board array, or puzzle state object.');
+  }
+  const state = input as PuzzleState;
+  if (!Array.isArray(state.board)) {
+    throw new Error('PuzzleState.board must be a board array.');
+  }
+  return state;
 }
 
 function validateBoardShape(board: Board, contradictions: StateContradiction[]): void {
@@ -157,7 +180,7 @@ function validateBoardShape(board: Board, contradictions: StateContradiction[]):
 function normalizeGivens(state: PuzzleState, warnings: StateWarning[]): boolean[] {
   const givens = new Array<boolean>(CELL_COUNT).fill(false);
   if (!state.givens) {
-  for (let index = 0; index < Math.min(state.board.length, CELL_COUNT); index += 1) {
+    for (let index = 0; index < Math.min(state.board.length, CELL_COUNT); index += 1) {
       givens[index] = (state.board[index] ?? EMPTY_VALUE) !== EMPTY_VALUE;
     }
     return givens;
@@ -166,10 +189,17 @@ function normalizeGivens(state: PuzzleState, warnings: StateWarning[]): boolean[
   for (const index of state.givens) {
     if (!isCellIndex(index)) {
       warnings.push({
-        type: 'duplicate-given-index',
+        type: 'invalid-given-index',
         message: `Ignoring invalid given index: ${index}`,
       });
       continue;
+    }
+    if ((state.board[index] ?? EMPTY_VALUE) === EMPTY_VALUE) {
+      warnings.push({
+        type: 'given-index-not-filled',
+        cell: index,
+        message: `Given index ${index} does not point to a filled cell.`,
+      });
     }
     if (givens[index]) {
       warnings.push({
@@ -191,15 +221,21 @@ export function computeCandidates(board: Board): CandidateMask[] {
       continue;
     }
     let mask = ALL_DIGITS_MASK;
-    for (const peer of CELL_TO_PEERS[index] ?? []) {
-      const value = board[peer];
-      if (isDigit(value ?? 0)) {
-        mask = removeDigit(mask, value as Digit);
-      }
-    }
+    mask = computeLegalCandidateMask(board, index);
     candidates[index] = mask;
   }
   return candidates;
+}
+
+function computeLegalCandidateMask(board: Board, cell: number): CandidateMask {
+  let mask = ALL_DIGITS_MASK;
+  for (const peer of CELL_TO_PEERS[cell] ?? []) {
+    const value = board[peer];
+    if (isDigit(value ?? 0)) {
+      mask = removeDigit(mask, value as Digit);
+    }
+  }
+  return mask;
 }
 
 function applyExactCandidates(
@@ -226,6 +262,14 @@ function applyExactCandidates(
     const exactMask = maskFromDigits(item.digits);
     const legalMask = candidates[item.cell] ?? 0;
     const illegalMask = exactMask & ~legalMask;
+    if (trusted && illegalMask !== 0) {
+      contradictions.push({
+        type: 'illegal-candidate',
+        cell: item.cell,
+        source: 'exactCandidates',
+        message: `Exact candidates for cell ${item.cell} include digits conflicting with filled peers`,
+      });
+    }
     if (!trusted && illegalMask !== 0) {
       contradictions.push({
         type: 'invalid-constraint',
@@ -275,6 +319,80 @@ function notePencilMarks(pencilMarks: CandidateList[] | undefined, warnings: Sta
   });
 }
 
+function applyAssumptions(
+  board: Board,
+  candidates: CandidateMask[],
+  assumptions: Assumption[] | undefined,
+  contradictions: StateContradiction[],
+): void {
+  if (!assumptions || assumptions.length === 0) {
+    return;
+  }
+  const assumedByCell = new Map<number, Digit>();
+  for (const assumption of assumptions) {
+    if (!isCellIndex(assumption.cell) || !isDigit(assumption.digit)) {
+      contradictions.push({
+        type: 'invalid-constraint',
+        message: `Invalid assumption at cell ${assumption.cell}: ${assumption.digit}`,
+      });
+      continue;
+    }
+    const previousAssumption = assumedByCell.get(assumption.cell);
+    if (previousAssumption !== undefined && previousAssumption !== assumption.digit) {
+      contradictions.push({
+        type: 'invalid-constraint',
+        cell: assumption.cell,
+        message: `Assumption conflicts with previous assumption at cell ${assumption.cell}`,
+      });
+      continue;
+    }
+    if (board[assumption.cell] !== EMPTY_VALUE && board[assumption.cell] !== assumption.digit) {
+      contradictions.push({
+        type: 'invalid-constraint',
+        cell: assumption.cell,
+        message: `Assumption conflicts with filled cell ${assumption.cell}`,
+      });
+      continue;
+    }
+    if ((CELL_TO_PEERS[assumption.cell] ?? []).some((peer) => assumedByCell.get(peer) === assumption.digit)) {
+      contradictions.push({
+        type: 'invalid-constraint',
+        cell: assumption.cell,
+        message: `Assumption ${assumption.cell}:${assumption.digit} conflicts with a peer assumption`,
+      });
+      continue;
+    }
+    if ((CELL_TO_PEERS[assumption.cell] ?? []).some((peer) => board[peer] === assumption.digit)) {
+      contradictions.push({
+        type: 'invalid-constraint',
+        cell: assumption.cell,
+        message: `Assumption ${assumption.cell}:${assumption.digit} conflicts with a peer value`,
+      });
+      continue;
+    }
+    if (board[assumption.cell] === EMPTY_VALUE) {
+      const assumedMask = maskFromDigits([assumption.digit]);
+      if (((candidates[assumption.cell] ?? 0) & assumedMask) === 0) {
+        contradictions.push({
+          type: 'invalid-constraint',
+          cell: assumption.cell,
+          message: `Assumption ${assumption.cell}:${assumption.digit} is not present in current candidates`,
+        });
+        continue;
+      }
+      candidates[assumption.cell] = assumedMask;
+      assumedByCell.set(assumption.cell, assumption.digit);
+      for (const peer of CELL_TO_PEERS[assumption.cell] ?? []) {
+        if (board[peer] === EMPTY_VALUE) {
+          candidates[peer] = removeDigit(candidates[peer] ?? 0, assumption.digit);
+        }
+      }
+    } else {
+      assumedByCell.set(assumption.cell, assumption.digit);
+    }
+  }
+}
+
 function isValidCandidateList(item: CandidateList, contradictions: StateContradiction[]): boolean {
   if (!isCellIndex(item.cell)) {
     contradictions.push({
@@ -308,6 +426,23 @@ function collectCandidateContradictions(
         cell: index,
         message: `Empty cell ${index} has no candidates`,
       });
+    }
+  }
+  for (const house of ALL_HOUSES) {
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const houses = getHouseCells(house);
+      const hasValue = houses.some((cell) => board[cell] === digit);
+      if (hasValue) {
+        continue;
+      }
+      const digitMask = maskFromDigits([digit]);
+      const hasCandidate = houses.some((cell) => board[cell] === EMPTY_VALUE && ((candidates[cell] ?? 0) & digitMask) !== 0);
+      if (!hasCandidate) {
+        contradictions.push({
+          type: 'missing-house-candidate',
+          message: `House ${house.type} ${house.index} has no candidate for digit ${digit}`,
+        });
+      }
     }
   }
 }

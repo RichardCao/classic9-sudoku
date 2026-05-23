@@ -10,7 +10,7 @@
 2. 81 位字符串解析和序列化。
 3. `PuzzleState`、`CandidateConstraints` 的基础语义。
 4. `SolveStep.actions` 的 `place` 和 `eliminate`。
-5. `canonical.classic9.v1` 的 key 版本。
+5. canonical 结果中的 `algorithm = canonical.classic9` 和 `version = 1`。
 6. 评分结果中的 `ratingPolicyId` 和 `ratingPolicyVersion`。
 
 ## 可扩展字段
@@ -40,13 +40,17 @@
 
 ## canonical 版本
 
-canonical key 必须带算法和版本：
+canonical 结果必须保存算法和版本：
 
 ```text
-canonical.classic9.v1:<key>
+algorithm = canonical.classic9
+version = 1
+key = <81 位 canonical key>
 ```
 
-如果未来改变最小序算法，即使新算法仍然能生成 81 位 key，也必须升级版本，不能覆盖旧 key。
+当前 `canonicalKey` 字段保存的是裸 81 位 key，不带 `canonical.classic9.v1:` 前缀。调用方如果长期入库，建议同时保存 `algorithm` 和 `version`，或自行组合成带版本前缀的外部键。
+
+如果未来改变最小序算法，即使新算法仍然能生成 81 位 key，也必须升级 version，不能覆盖旧 key。
 
 ## 评分版本
 
@@ -58,9 +62,13 @@ canonical.classic9.v1:<key>
 2. `solution`
 3. `canonicalKey`
 4. `score`
-5. `ratingPolicyId`
-6. `ratingPolicyVersion`
-7. `techniqueCounts`
+5. `solved`
+6. `stuckReason`
+7. `ratingPolicyId`
+8. `ratingPolicyVersion`
+9. `techniqueCounts`
+
+0.2.0 的 `GeneratedPuzzle.solved` 是核心字段。历史候选池如果没有该字段，应重评或迁移后再用于正式入库。
 
 ## TypeScript 和运行时
 

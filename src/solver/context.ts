@@ -1,5 +1,5 @@
 import { EMPTY_VALUE } from '../core/constants.js';
-import { digitsFromMask, removeDigit } from '../core/bitset.js';
+import { digitsFromMask, isDigit, removeDigit } from '../core/bitset.js';
 import {
   ALL_HOUSES,
   CELL_TO_BOX,
@@ -9,10 +9,11 @@ import {
   cloneBoard,
   getHouseCells,
   isBoardFilled,
+  isCellIndex,
 } from '../core/grid.js';
 import type { Board, CandidateMask, Digit, HouseRef } from '../core/types.js';
 import { normalizeState, type NormalizedState, type StateInput } from '../state/index.js';
-import type { SolveStep, SolverContextLike } from './types.js';
+import type { SolveStep, SolverContextLike, StepAction } from './types.js';
 
 export class SolverContext implements SolverContextLike {
   public readonly board: Board;
@@ -35,7 +36,7 @@ export class SolverContext implements SolverContextLike {
   }
 
   public isSolved(): boolean {
-    return isBoardFilled(this.board);
+    return isBoardFilled(this.board) && !this.hasContradiction();
   }
 
   public hasContradiction(): boolean {
@@ -78,7 +79,7 @@ export class SolverContext implements SolverContextLike {
   }
 
   public getAllHouses(): HouseRef[] {
-    return ALL_HOUSES;
+    return ALL_HOUSES.map((house) => ({ ...house }));
   }
 
   public getCellHouses(cell: number): HouseRef[] {
@@ -117,16 +118,23 @@ export class SolverContext implements SolverContextLike {
   }
 
   public applyStep(step: SolveStep): void {
+    const draft = this.clone();
     for (const action of step.actions) {
-      if (action.type === 'eliminate') {
-        this.removeCandidate(action.cell, action.digit);
-      } else {
-        this.placeDigit(action.cell, action.digit);
-      }
+      assertApplicableStepAction(draft, action);
+      applyValidatedStepAction(draft, action);
     }
+    this.board.splice(0, this.board.length, ...draft.board);
+    this.candidates.splice(0, this.candidates.length, ...draft.candidates);
   }
 
-  public placeDigit(cell: number, digit: Digit): void {
+  public placeDigit(cell: number, digit: Digit, options?: { allowConflict?: boolean }): void {
+    assertValidCellDigit(cell, digit);
+    if (this.board[cell] !== EMPTY_VALUE) {
+      throw new Error(`不能在已填格 ${cell} 放置数字。`);
+    }
+    if (!options?.allowConflict && this.hasPeerValue(cell, digit)) {
+      throw new Error(`不能在格 ${cell} 放置与同行、同列或同宫冲突的数字 ${digit}。`);
+    }
     this.board[cell] = digit;
     this.candidates[cell] = 0;
     for (const peer of CELL_TO_PEERS[cell] ?? []) {
@@ -137,6 +145,7 @@ export class SolverContext implements SolverContextLike {
   }
 
   public removeCandidate(cell: number, digit: Digit): boolean {
+    assertValidCellDigit(cell, digit);
     if (this.board[cell] !== EMPTY_VALUE) {
       return false;
     }
@@ -144,6 +153,84 @@ export class SolverContext implements SolverContextLike {
     const after = removeDigit(before, digit);
     this.candidates[cell] = after;
     return before !== after;
+  }
+
+  public hasPeerValue(cell: number, digit: Digit): boolean {
+    return (CELL_TO_PEERS[cell] ?? []).some((peer) => this.board[peer] === digit);
+  }
+}
+
+export function applyStepAction(context: SolverContext, action: StepAction): void {
+  assertApplicableStepAction(context, action);
+  applyValidatedStepAction(context, action);
+}
+
+function applyValidatedStepAction(context: SolverContext, action: StepAction): void {
+  switch (action.type) {
+    case 'place':
+      placeDigitUnchecked(context, action.cell, action.digit);
+      return;
+    case 'eliminate':
+      removeCandidateUnchecked(context, action.cell, action.digit);
+      return;
+    default:
+      throw new Error(`未知动作类型：${String((action as { type?: unknown }).type)}`);
+  }
+}
+
+function placeDigitUnchecked(context: SolverContext, cell: number, digit: Digit): void {
+  context.board[cell] = digit;
+  context.candidates[cell] = 0;
+  for (const peer of CELL_TO_PEERS[cell] ?? []) {
+    if (context.board[peer] === EMPTY_VALUE) {
+      context.candidates[peer] = removeDigit(context.candidates[peer] ?? 0, digit);
+    }
+  }
+}
+
+function removeCandidateUnchecked(context: SolverContext, cell: number, digit: Digit): void {
+  context.candidates[cell] = removeDigit(context.candidates[cell] ?? 0, digit);
+}
+
+function assertApplicableStepAction(context: SolverContext, action: StepAction): void {
+  assertKnownStepAction(action);
+  assertValidCellDigit(action.cell, action.digit);
+  if (action.type === 'place') {
+    if (context.board[action.cell] !== EMPTY_VALUE) {
+      throw new Error(`place 动作不能覆盖已填格：${action.cell}`);
+    }
+    if (!context.isCandidatePresent(action.cell, action.digit)) {
+      throw new Error(`place 动作的数字不是候选：cell=${action.cell}, digit=${action.digit}`);
+    }
+    if (context.hasPeerValue(action.cell, action.digit)) {
+      throw new Error(`place 动作会造成同行、同列或同宫冲突：cell=${action.cell}, digit=${action.digit}`);
+    }
+    return;
+  }
+  if (context.board[action.cell] !== EMPTY_VALUE) {
+    throw new Error(`eliminate 动作不能作用于已填格：${action.cell}`);
+  }
+  if (!context.isCandidatePresent(action.cell, action.digit)) {
+    throw new Error(`eliminate 动作的数字不是候选：cell=${action.cell}, digit=${action.digit}`);
+  }
+}
+
+function assertKnownStepAction(action: StepAction): asserts action is StepAction {
+  if (typeof action !== 'object' || action === null) {
+    throw new Error('动作必须是 object。');
+  }
+  const actionType = (action as { type?: unknown }).type;
+  if (actionType !== 'place' && actionType !== 'eliminate') {
+    throw new Error(`未知动作类型：${String(actionType)}`);
+  }
+}
+
+function assertValidCellDigit(cell: number, digit: number): asserts digit is Digit {
+  if (!isCellIndex(cell)) {
+    throw new Error(`无效格子索引：${cell}`);
+  }
+  if (!isDigit(digit)) {
+    throw new Error(`无效数字：${digit}`);
   }
 }
 

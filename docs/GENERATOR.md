@@ -81,11 +81,32 @@ node dist/src/cli/index.js generator-analyze request.json
 8. 按分数和线索数约束筛选。
 9. 返回 diagnostics。
 
+红线：
+
+1. `success` 才能作为正式题目结果入库。
+2. `bestCandidate` 只用于调参、诊断和回看失败样本，不应直接当成合格题目。
+3. 失败状态即使带有 `bestCandidate`，也不代表满足了请求约束。
+
 当前生成器始终保证唯一解。`constraints.uniqueness` 只接受 `required`，第一版不支持跳过唯一性检查。
+
+当前完整终盘生成器是 lightweight / reproducible 取向：它从一个固定合法终盘出发，做数字置换、行列带内/栈内置换、带/栈置换和转置等价变换。它适合 smoke、稳定测试和可复现候选池任务，但不声称覆盖所有终盘等价类。需要更大终盘多样性时，应在后续版本增加真正随机终盘生成或外部终盘池。
 
 `score.target` 和 `score.tolerance` 表示硬约束：如果二者同时给出，生成器只接受分数落在 `[target - tolerance, target + tolerance]` 范围内的题目。`target` 也会用于失败时选择最接近的 `bestCandidate`。
 
+`clues.target` 是硬约束：如果给出，生成器只接受线索数等于 `target` 的题目。严格最小化可能让线索数低于挖洞目标；这类候选会被拒绝，并只可能作为 `bestCandidate` 返回。
+
 `GenerationResult.puzzle` 只会在 `status === "success"` 时出现，并且这时题目满足请求约束。失败状态如果保留了最接近目标的候选，会放在 `bestCandidate` 字段；它只用于诊断或人工调参，不应直接入库。
+
+缺省值：
+
+1. `seed` 范围是 `1..4294967295`；未提供时会把 `Date.now()` 规范化到该范围。
+2. `minimality` 未提供时使用 `none`。
+3. `symmetry` 未提供时使用 `none`。
+4. `constraints.clues.target` 未提供时，优先使用 `constraints.clues.max`，其次使用 `constraints.clues.min`，都没有时使用 `28`。
+5. `budget.maxAttempts` 未提供时，普通请求使用 `200`；分析结果为 `unlikely` 的请求使用 `500`。
+6. `budget.maxElapsedMs` 未提供时，普通请求使用 `2000`；分析结果为 `unlikely` 的请求使用 `4000`。
+
+`maxResults` 和 `scoreBucketSize` 是 `search` 专用字段。为了方便把同一个请求对象在 `generateOne` 和 `search` 之间复用，`generateOne` 会接受并忽略这两个字段，但仍会校验它们必须是正整数。
 
 当前最小实现还不覆盖核心库内部多进程 worker 协调。并行搜索应通过 CLI `parallel-search-plan` 生成 shard 命令，再由外部 shell、任务队列或 CI runner 并行执行。
 
@@ -147,6 +168,10 @@ relaxationsApplied
 
 用于说明每一轮放宽了什么条件。
 
+`scoreExpansionPerRound` 只会放宽 `constraints.score.min` 和 `constraints.score.max`，不会放宽 `constraints.score.target` / `constraints.score.tolerance`。
+
+`clueExpansionPerRound` 只会放宽 `constraints.clues.min` 和 `constraints.clues.max`，不会放宽 `constraints.clues.target`。如果请求只有 `clues.target`，当前实现不会把它自动转成区间，也不会记录虚假的 `clue-range-expanded`。
+
 ## 后续计划
 
 后续 generator 应继续补更细的 relaxation 策略，例如 preferred 技巧放宽。核心原则是：生成器不能只返回失败，还必须解释为什么失败。
@@ -167,7 +192,7 @@ relaxationsApplied
 
 当前实现是同步 iterable，后续可以扩展为 async iterable。
 
-`budget.maxAttempts` 在 `search` 中表示外层最多启动多少次 `generateOne`。每一次外层尝试会把内部 `generateOne` 的 `maxAttempts` 固定为 1。`budget.maxElapsedMs` 是单次 `generateOne` 的时间预算，不是整批 `search` 的全局墙钟时间预算。
+`budget.maxAttempts` 在 `search` 中表示外层最多启动多少次 `generateOne`。每一次外层尝试会把内部 `generateOne` 的 `maxAttempts` 固定为 1。`budget.maxElapsedMs` 是单次 `generateOne` 的时间预算，不是整批 `search` 的全局墙钟时间预算。当前版本没有 `globalMaxElapsedMs` / `searchBudget`；如果调用方需要整批搜索硬 deadline，应在外层调度器中控制。
 
 `done` 事件会包含 `summary`：
 
@@ -208,7 +233,7 @@ node dist/src/cli/index.js search '{"seed":1,"maxResults":5,"minimality":"none",
 node dist/src/cli/index.js search '{"seed":1000,"maxResults":5,"minimality":"none","constraints":{"clues":{"target":40}},"budget":{"maxAttempts":10,"maxElapsedMs":5000}}' --summary-only --write-candidates ./dist/tmp/candidates.json --append-candidates
 ```
 
-追加写入时目标文件必须是 JSON array。这个选项只负责追加，不自动做 canonical 去重；去重应交给后续 `selectFromCandidates` 的 `dedupeCanonical`。
+追加写入时目标文件必须是 JSON array。这个选项只负责追加，不自动做 canonical 去重；去重应交给后续 `selectFromCandidates` 的 `dedupeCanonical`。如果需要跨同构题去重，应在生成时开启 `canonicalize: true`；否则 `selectFromCandidates` 只能按题面字符串 fallback 去重。
 
 把搜索汇总单独写入文件：
 
@@ -237,6 +262,8 @@ manifest 会记录：
 5. 下一次续跑应使用的 `nextSeed`。
 
 续跑时会忽略请求里的 `seed`，改用 manifest 的 `nextSeed`。如果分数范围、技巧约束、canonicalize、minimality 或预算等身份字段变化，CLI 会拒绝续跑，避免把不同任务混到同一个 manifest。
+
+`scoreBucketSize` 只影响 summary 的分桶展示，不影响生成序列或候选接受条件，因此不属于 manifest 续跑身份字段。
 
 汇总一个或多个 manifest：
 
@@ -275,6 +302,8 @@ node dist/src/cli/index.js schema searchManifestSummary
 ```bash
 node dist/src/cli/index.js parallel-search-plan request.json --out-dir ./dist/tmp/shards --workers 5 --attempts-per-worker 100
 ```
+
+`parallel-search-plan` 会先复用 `search()` 的请求校验；非法 `seed`、`maxResults`、`scoreBucketSize`、生成约束或过滤后无可用技巧都会在计划阶段直接失败，而不是生成一组后续必然失败的 worker 命令。
 
 输出中的每个 worker 都会写自己的：
 
@@ -317,6 +346,8 @@ node dist/src/cli/index.js schema generatedPuzzle
 2. canonical 去重。
 3. 分数分桶。
 4. preferred 技巧优先排序。
+
+canonical 去重只会对已经通过分桶和桶容量检查、即将被选中的候选生效。桶外候选不会提前占用 canonical key。
 
 候选池文件格式见：
 

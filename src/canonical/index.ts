@@ -1,5 +1,6 @@
 import { BLOCK_SIZE, BOARD_SIZE, CELL_COUNT } from '../core/constants.js';
 import { digitsFromMask, maskForDigit } from '../core/bitset.js';
+import { ALL_HOUSES, assertBoardValues, getHouseCells } from '../core/grid.js';
 import type { Board, Digit } from '../core/types.js';
 import type { PuzzleState, CandidateConstraints, CandidateList, Assumption } from '../state/index.js';
 import type { SolveStep, StepAction, StepBranchEvidence, StepCellEvidence, StepLinkEvidence } from '../solver/types.js';
@@ -21,6 +22,18 @@ export interface CanonicalResult {
 
 export interface CanonicalPairResult extends CanonicalResult {
   solution: Board;
+}
+
+export function validateCanonicalTransform(transform: CanonicalTransform): void {
+  if (typeof transform !== 'object' || transform === null || Array.isArray(transform)) {
+    throw new Error('canonical transform must be an object');
+  }
+  if (typeof transform.transposed !== 'boolean') {
+    throw new Error('canonical transform transposed must be boolean');
+  }
+  validatePermutation(transform.rowOrder, 9, 'canonical transform rowOrder');
+  validatePermutation(transform.colOrder, 9, 'canonical transform colOrder');
+  validateDigitMap(transform.digitMap);
 }
 
 function transpose(board: Board): Board {
@@ -121,6 +134,7 @@ function buildCanonicalCandidate(
       }
     }
   }
+  fillMissingDigitMapEntries(digitMap, nextDigit);
   return { key, digitMap };
 }
 
@@ -128,10 +142,26 @@ function keyToBoard(key: string): Board {
   return Array.from(key, (char) => Number(char));
 }
 
-export function canonicalizeBoard(board: Board): CanonicalResult {
-  if (board.length !== CELL_COUNT) {
-    throw new Error(`Board must contain ${CELL_COUNT} cells`);
+function fillMissingDigitMapEntries(digitMap: number[], nextDigit: number): void {
+  const usedTargets = new Set(digitMap.filter((value) => value > 0));
+  const unusedTargets: number[] = [];
+  for (let digit = 1; digit <= 9; digit += 1) {
+    if (!usedTargets.has(digit)) {
+      unusedTargets.push(digit);
+    }
   }
+
+  let fallbackIndex = 0;
+  for (let sourceDigit = 1; sourceDigit <= 9; sourceDigit += 1) {
+    if (digitMap[sourceDigit] === 0) {
+      digitMap[sourceDigit] = unusedTargets[fallbackIndex] ?? nextDigit;
+      fallbackIndex += 1;
+    }
+  }
+}
+
+export function canonicalizeBoard(board: Board): CanonicalResult {
+  assertBoardValues(board);
 
   let bestKey = '';
   let bestDigitMap = new Array<number>(10).fill(0);
@@ -172,6 +202,7 @@ export function canonicalizeBoard(board: Board): CanonicalResult {
 }
 
 export function canonicalizePair(puzzle: Board, solution: Board): CanonicalPairResult {
+  assertSolutionMatchesPuzzle(puzzle, solution);
   const canonical = canonicalizeBoard(puzzle);
   return {
     ...canonical,
@@ -179,10 +210,34 @@ export function canonicalizePair(puzzle: Board, solution: Board): CanonicalPairR
   };
 }
 
-export function applyTransformToBoard(board: Board, transform: CanonicalTransform): Board {
-  if (board.length !== CELL_COUNT) {
-    throw new Error(`Board must contain ${CELL_COUNT} cells`);
+function assertSolutionMatchesPuzzle(puzzle: Board, solution: Board): void {
+  assertBoardValues(puzzle, 'Puzzle');
+  assertBoardValues(solution, 'Solution');
+  for (let cell = 0; cell < CELL_COUNT; cell += 1) {
+    const value = solution[cell] ?? 0;
+    if (value === 0) {
+      throw new Error('Solution must be complete and cannot contain empty cells');
+    }
+    const clue = puzzle[cell] ?? 0;
+    if (clue !== 0 && clue !== value) {
+      throw new Error(`Solution does not match puzzle clue at ${cell}`);
+    }
   }
+  for (const house of ALL_HOUSES) {
+    const seen = new Set<number>();
+    for (const cell of getHouseCells(house)) {
+      const value = solution[cell] ?? 0;
+      if (seen.has(value)) {
+        throw new Error(`Solution has duplicate digit in ${house.type} ${house.index}`);
+      }
+      seen.add(value);
+    }
+  }
+}
+
+export function applyTransformToBoard(board: Board, transform: CanonicalTransform): Board {
+  assertBoardValues(board);
+  validateCanonicalTransform(transform);
   const source = transform.transposed ? transpose(board) : [...board];
   const result = new Array<number>(CELL_COUNT).fill(0);
 
@@ -198,6 +253,7 @@ export function applyTransformToBoard(board: Board, transform: CanonicalTransfor
 }
 
 export function invertTransform(transform: CanonicalTransform): CanonicalTransform {
+  validateCanonicalTransform(transform);
   const rowOrder = invertOrder(transform.rowOrder);
   const colOrder = invertOrder(transform.colOrder);
   const digitMap = new Array<number>(10).fill(0);
@@ -216,6 +272,7 @@ export function invertTransform(transform: CanonicalTransform): CanonicalTransfo
 }
 
 export function applyTransformToState(state: PuzzleState, transform: CanonicalTransform): PuzzleState {
+  validateCanonicalTransform(transform);
   return {
     ...state,
     board: applyTransformToBoard(state.board, transform),
@@ -240,6 +297,7 @@ function applyTransformToCandidateMasks(candidateMasks: readonly number[], trans
 }
 
 export function applyTransformToStep(step: SolveStep, transform: CanonicalTransform): SolveStep {
+  validateCanonicalTransform(transform);
   return {
     ...step,
     actions: step.actions.map((action) => applyTransformToAction(action, transform)),
@@ -282,6 +340,42 @@ function invertOrder(order: readonly number[]): number[] {
     result[order[index]!] = index;
   }
   return result;
+}
+
+function validatePermutation(value: readonly number[], expectedLength: number, label: string): void {
+  if (!Array.isArray(value) || value.length !== expectedLength) {
+    throw new Error(`${label} must contain ${expectedLength} items`);
+  }
+  const seen = new Set<number>();
+  for (const item of value) {
+    if (!Number.isInteger(item) || item < 0 || item >= expectedLength) {
+      throw new Error(`${label} must be a permutation of 0..${expectedLength - 1}`);
+    }
+    if (seen.has(item)) {
+      throw new Error(`${label} contains duplicate value: ${item}`);
+    }
+    seen.add(item);
+  }
+}
+
+function validateDigitMap(value: readonly number[]): void {
+  if (!Array.isArray(value) || value.length !== 10) {
+    throw new Error('canonical transform digitMap must contain 10 items');
+  }
+  if (value[0] !== 0) {
+    throw new Error('canonical transform digitMap[0] must be 0');
+  }
+  const seen = new Set<number>();
+  for (let digit = 1; digit <= 9; digit += 1) {
+    const mapped = value[digit];
+    if (!Number.isInteger(mapped) || mapped < 1 || mapped > 9) {
+      throw new Error('canonical transform digitMap must map digits 1..9 to 1..9');
+    }
+    if (seen.has(mapped)) {
+      throw new Error(`canonical transform digitMap contains duplicate value: ${mapped}`);
+    }
+    seen.add(mapped);
+  }
 }
 
 function transformCell(cell: number, transform: CanonicalTransform): number {

@@ -1,27 +1,47 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createHash, randomUUID } from 'node:crypto';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
+  analyzeSolve,
   analyzeGenerationRequest,
+  assertValidSearchRequest,
   analyzeCandidatePool,
+  buildSolveOptionsFromRatingPolicy,
   canonicalizeBoard,
   dedupeCandidates,
+  findSteps,
   formatStep,
   generateOne,
+  getRatingPolicy,
   getTechniqueDefinitions,
   search,
   selectFromCandidates,
   getJsonSchemas,
+  nextStep,
   parsePuzzle,
   rate,
+  verifyStep,
+  verifyWalkthrough,
   walkthrough,
   validate,
+  validateCandidatePool,
   getPackageInfo,
 } from '../index.js';
-import type { GenerationRequest } from '../generator/index.js';
+import type { GenerationEvent, GenerationRequest, SearchRequest } from '../generator/index.js';
 import type { CandidateSelectionPlan, GeneratedPuzzle, SearchSummary } from '../generator/index.js';
+import type { RatingPolicy } from '../rating/index.js';
+import { buildDefaultTechniques } from '../solver/techniques.js';
+import { MAX_SEED, defaultSeed } from '../generator/random.js';
+import type {
+  FindStepsOptions,
+  SolveOptions,
+  SolveStep,
+  SolverUsageReport,
+  StepVerificationOptions,
+  TechniqueId,
+} from '../solver/index.js';
 
 interface CliResult {
   exitCode: number;
@@ -50,6 +70,8 @@ interface SearchRunManifest {
   updatedAt: string;
 }
 
+const SEARCH_EVENT_TYPES = new Set(['accepted', 'rejected', 'done']);
+
 interface SearchManifestSummary {
   manifests: number;
   requestHashes: Record<string, number>;
@@ -76,6 +98,68 @@ interface SearchManifestSummary {
   bestScore: number | null;
   worstScore: number | null;
 }
+
+interface BatchPuzzleInput {
+  puzzleId: string;
+  puzzle: string;
+  sourceIndex: number;
+}
+
+interface BatchPuzzleResult {
+  puzzleId: string;
+  puzzle: string;
+  sourceIndex?: number;
+  ok?: boolean;
+  solved: boolean;
+  score?: number;
+  hardestTechnique?: TechniqueId | null;
+  hardestScore?: number;
+  stepCount: number;
+  placementCount: number;
+  eliminationCount: number;
+  stuckReason?: string;
+  elapsedMs: number;
+  grade?: string | null;
+  steps?: unknown[];
+  error?: string;
+}
+
+interface BatchSummary {
+  puzzles: number;
+  solved: number;
+  unsolved: number;
+  failed: number;
+  solveRate: number;
+  totalElapsedMs: number;
+  avgElapsedMs: number;
+  scoreMin?: number;
+  scoreMax?: number;
+  scoreAvg?: number;
+  hardestTechniqueCounts: Partial<Record<TechniqueId, number>>;
+  stuckReasonCounts: Record<string, number>;
+}
+
+interface BatchCliConfig {
+  includeSteps: boolean;
+  includeUsage: boolean;
+  format: 'json' | 'jsonl' | 'csv' | 'text';
+  inputPath: string;
+  outputPath: string | null;
+  summaryPath: string | null;
+  usagePath: string | null;
+  failFast: boolean;
+  puzzles: BatchPuzzleInput[];
+  solveOptions: SolveOptions;
+  ratingPolicy: RatingPolicy;
+}
+
+const CLI_DEFAULT_FALLBACK_TECHNIQUES: readonly TechniqueId[] = [
+  'bowmans-bingo',
+  'forcing-nets',
+  'digit-forcing-chains',
+  'cell-forcing-chains',
+  'unit-forcing-chains',
+];
 
 export function runCli(argv: readonly string[]): CliResult {
   const [command, ...args] = argv;
@@ -121,7 +205,7 @@ export function runCli(argv: readonly string[]): CliResult {
       if (!puzzle) {
         return errorResult('Missing puzzle argument');
       }
-      const analysis = walkthrough(puzzle);
+      const analysis = walkthrough(puzzle, buildCliSolveOptions(args));
       if (getOption(args, '--format') === 'text') {
         const locale = getOption(args, '--locale') === 'zh-CN' ? 'zh-CN' : 'en-US';
         return {
@@ -146,7 +230,34 @@ export function runCli(argv: readonly string[]): CliResult {
       }
       return {
         exitCode: 0,
-        output: rate(puzzle),
+        output: rate(puzzle, buildCliRatingPolicy(args)),
+      };
+    }
+
+    if (command === 'batch-solve' || command === 'batch-rate') {
+      const config = buildBatchCliConfig(args);
+      const startedAt = Date.now();
+      const usageReports: SolverUsageReport[] = [];
+      const results = config.puzzles.map((puzzle) => runBatchPuzzle(
+        command,
+        puzzle,
+        config,
+        usageReports,
+      ));
+      const summary = buildBatchSummary(results, Date.now() - startedAt);
+      const usage = config.includeUsage ? aggregateBatchUsage(usageReports) : null;
+      if (config.outputPath) {
+        writeBatchOutput(config.outputPath, results, config.format);
+      }
+      if (config.summaryPath) {
+        writeJsonAtomic(config.summaryPath, summary);
+      }
+      if (config.usagePath) {
+        writeJsonAtomic(config.usagePath, usage);
+      }
+      return {
+        exitCode: 0,
+        output: config.outputPath ? summary : formatBatchOutput(results, config.format),
       };
     }
 
@@ -208,7 +319,19 @@ export function runCli(argv: readonly string[]): CliResult {
       let request = asGenerationRequest(parseJsonArgument(source));
       const resumeManifestPath = getOption(args, '--resume-manifest');
       const writeManifestPath = getOption(args, '--write-manifest') ?? resumeManifestPath;
-      const startedAt = new Date().toISOString();
+      const writeCandidatesPath = getOption(args, '--write-candidates');
+      const writeSummaryPath = getOption(args, '--write-summary');
+      assertUniqueOutputPaths([writeCandidatesPath, writeSummaryPath, writeManifestPath]);
+      const eventFilter = getOption(args, '--events');
+      const allowedEvents = eventFilter ? parseSearchEventFilter(eventFilter) : null;
+      const appendCandidates = args.includes('--append-candidates');
+      let existingCandidates: GeneratedPuzzle[] = [];
+      const releaseLock = acquireLocks([writeCandidatesPath, writeSummaryPath, writeManifestPath]);
+      try {
+        existingCandidates = appendCandidates && writeCandidatesPath
+          ? readCandidateArrayIfExists(writeCandidatesPath)
+          : [];
+        const startedAt = new Date().toISOString();
       const requestHash = hashSearchRequest(request);
       let existingManifest: SearchRunManifest | null = null;
       if (resumeManifestPath) {
@@ -221,23 +344,37 @@ export function runCli(argv: readonly string[]): CliResult {
       } else if (writeManifestPath && existsSync(writeManifestPath) && !args.includes('--overwrite-manifest')) {
         return errorResult(`manifest 已存在，为避免覆盖或重复 seed 段，请使用 --resume-manifest 或 --overwrite-manifest：${writeManifestPath}`);
       }
-      const seedStart = request.seed ?? Date.now();
-      const events = [...search(request)];
-      const doneEvent = events.find((event) => event.type === 'done');
-      const writeCandidatesPath = getOption(args, '--write-candidates');
+      const seedStart = request.seed ?? defaultSeed();
+      request = {
+        ...request,
+        seed: seedStart,
+      };
+      const collectEvents = !args.includes('--summary-only');
+      const events: GenerationEvent[] = [];
+      const candidates: GeneratedPuzzle[] = writeCandidatesPath ? [] : [];
+      let doneEvent: GenerationEvent | null = null;
+      for (const event of search(request)) {
+        if (writeCandidatesPath && event.type === 'accepted') {
+          candidates.push(event.puzzle);
+        }
+        if (event.type === 'done') {
+          doneEvent = event;
+        }
+        if (collectEvents && (!allowedEvents || allowedEvents.has(event.type))) {
+          events.push(event);
+        }
+      }
       if (writeCandidatesPath) {
-        const candidates = events.flatMap((event) => event.type === 'accepted' ? [event.puzzle] : []);
-        const outputCandidates = args.includes('--append-candidates')
-          ? [...readJsonArrayIfExists(writeCandidatesPath), ...candidates]
+        const outputCandidates = appendCandidates
+          ? [...existingCandidates, ...candidates]
           : candidates;
         mkdirSync(dirname(writeCandidatesPath), { recursive: true });
-        writeFileSync(writeCandidatesPath, JSON.stringify(outputCandidates, null, 2), 'utf8');
+        writeJsonAtomic(writeCandidatesPath, outputCandidates);
       }
-      const writeSummaryPath = getOption(args, '--write-summary');
       if (writeSummaryPath) {
         const summary = doneEvent?.type === 'done' ? doneEvent.summary : null;
         mkdirSync(dirname(writeSummaryPath), { recursive: true });
-        writeFileSync(writeSummaryPath, JSON.stringify(summary, null, 2), 'utf8');
+        writeJsonAtomic(writeSummaryPath, summary);
       }
       if (writeManifestPath) {
         const manifest = buildSearchManifest(
@@ -249,7 +386,7 @@ export function runCli(argv: readonly string[]): CliResult {
           doneEvent?.type === 'done' ? doneEvent.summary : null,
         );
         mkdirSync(dirname(writeManifestPath), { recursive: true });
-        writeFileSync(writeManifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+        writeJsonAtomic(writeManifestPath, manifest);
       }
       if (args.includes('--summary-only')) {
         return {
@@ -257,18 +394,19 @@ export function runCli(argv: readonly string[]): CliResult {
           output: doneEvent ?? null,
         };
       }
-      const eventFilter = getOption(args, '--events');
-      if (eventFilter) {
-        const allowedEvents = new Set(eventFilter.split(',').map((item) => item.trim()).filter(Boolean));
+      if (allowedEvents) {
         return {
           exitCode: 0,
-          output: events.filter((event) => allowedEvents.has(event.type)),
+          output: events,
         };
       }
       return {
         exitCode: 0,
         output: events,
       };
+      } finally {
+        releaseLock();
+      }
     }
 
     if (command === 'select') {
@@ -287,14 +425,15 @@ export function runCli(argv: readonly string[]): CliResult {
       }
       const selection = selectFromCandidates(candidates as GeneratedPuzzle[], plan as CandidateSelectionPlan);
       const selectedPath = getOption(args, '--write-selected');
+      const rejectedPath = getOption(args, '--write-rejected');
+      assertUniqueOutputPaths([selectedPath, rejectedPath]);
       if (selectedPath) {
         mkdirSync(dirname(selectedPath), { recursive: true });
-        writeFileSync(selectedPath, JSON.stringify(selection.selected, null, 2), 'utf8');
+        writeJsonAtomic(selectedPath, selection.selected);
       }
-      const rejectedPath = getOption(args, '--write-rejected');
       if (rejectedPath) {
         mkdirSync(dirname(rejectedPath), { recursive: true });
-        writeFileSync(rejectedPath, JSON.stringify(selection.rejected, null, 2), 'utf8');
+        writeJsonAtomic(rejectedPath, selection.rejected);
       }
       return {
         exitCode: 0,
@@ -308,10 +447,11 @@ export function runCli(argv: readonly string[]): CliResult {
       if (!source || !outputDir) {
         return errorResult('缺少搜索请求 JSON 或 --out-dir。');
       }
-      const request = asGenerationRequest(parseJsonArgument(source));
+      const request = asGenerationRequest(parseJsonArgument(source)) as SearchRequest;
+      assertValidSearchRequest(request);
       const workers = parsePositiveIntegerOption(args, '--workers', 1);
-      const attemptsPerWorker = parsePositiveIntegerOption(args, '--attempts-per-worker', Math.max(1, Number((request as Record<string, unknown>).maxResults ?? 1)));
-      const seedStart = parsePositiveIntegerOption(args, '--seed-start', request.seed ?? Date.now());
+      const attemptsPerWorker = parsePositiveIntegerOption(args, '--attempts-per-worker', request.maxResults ?? 1);
+      const seedStart = parsePositiveIntegerOption(args, '--seed-start', request.seed ?? defaultSeed());
       const plan = buildParallelSearchPlan(request, outputDir, workers, attemptsPerWorker, seedStart);
       return {
         exitCode: 0,
@@ -330,7 +470,7 @@ export function runCli(argv: readonly string[]): CliResult {
       }
       const merged = mergeCandidateFiles(inputPaths, args.includes('--dedupe-canonical'));
       mkdirSync(dirname(outputPath), { recursive: true });
-      writeFileSync(outputPath, JSON.stringify(merged.candidates, null, 2), 'utf8');
+      writeJsonAtomic(outputPath, merged.candidates);
       return {
         exitCode: 0,
         output: {
@@ -374,15 +514,16 @@ export function runCli(argv: readonly string[]): CliResult {
       if (key !== null && key !== 'canonical' && key !== 'puzzle') {
         return errorResult('--key 只能是 canonical 或 puzzle。');
       }
+      const rejectedPath = getOption(args, '--write-rejected');
+      assertUniqueOutputPaths([outputPath, rejectedPath]);
       const result = dedupeCandidates(candidates as GeneratedPuzzle[], {
         key: key === 'puzzle' ? 'puzzle' : 'canonical',
       });
       mkdirSync(dirname(outputPath), { recursive: true });
-      writeFileSync(outputPath, JSON.stringify(result.candidates, null, 2), 'utf8');
-      const rejectedPath = getOption(args, '--write-rejected');
+      writeJsonAtomic(outputPath, result.candidates);
       if (rejectedPath) {
         mkdirSync(dirname(rejectedPath), { recursive: true });
-        writeFileSync(rejectedPath, JSON.stringify(result.rejected, null, 2), 'utf8');
+        writeJsonAtomic(rejectedPath, result.rejected);
       }
       return {
         exitCode: 0,
@@ -399,7 +540,7 @@ export function runCli(argv: readonly string[]): CliResult {
       const outputPath = getOption(args, '--write-summary');
       if (outputPath) {
         mkdirSync(dirname(outputPath), { recursive: true });
-        writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
+        writeJsonAtomic(outputPath, summary);
       }
       return {
         exitCode: 0,
@@ -434,11 +575,19 @@ function buildHelp(): Record<string, unknown> {
       },
       {
         command: 'solve <puzzle>',
-        description: '运行当前稳定的人类逻辑求解器。支持 --format text --locale zh-CN。',
+        description: '运行人类逻辑求解器。支持 --profile stable|extended、--allow、--prefer、--max-steps、--format text 和 --locale zh-CN。--allow 可显式启用 profile 外 experimental 技巧。',
       },
       {
         command: 'rate <puzzle>',
-        description: '按 classic-stable.v1 评分规则给题目打分。',
+        description: '按内置评分规则给题目打分。支持 --profile stable|extended、--allow、--prefer 和 --max-steps。--allow 可显式启用 profile 外 experimental 技巧。',
+      },
+      {
+        command: 'batch-solve --input <file>',
+        description: '批量求解题集。支持 --output、--format json|jsonl|csv|text、--summary、--usage、--only、--start-line、--end-line、--profile、--allow、--prefer、--max-steps、--include-steps 和 --include-usage。',
+      },
+      {
+        command: 'batch-rate --input <file>',
+        description: '批量评分题集。支持 --output、--format json|jsonl|csv|text、--summary、--only、--start-line、--end-line、--profile、--allow、--prefer、--max-steps 和 --include-steps。',
       },
       {
         command: 'schema [name]',
@@ -506,13 +655,47 @@ function getOption(args: readonly string[], name: string): string | null {
   if (index < 0) {
     return null;
   }
-  return args[index + 1] ?? null;
+  const value = args[index + 1];
+  if (!value || value.startsWith('--')) {
+    throw new Error(`${name} 缺少参数值。`);
+  }
+  return value;
 }
 
 function parsePositiveIntegerOption(args: readonly string[], name: string, fallback: number): number {
+  if (!Number.isInteger(fallback) || fallback <= 0) {
+    throw new Error(`${name} 默认值必须是大于 0 的整数。`);
+  }
   const raw = getOption(args, name);
-  if (!raw) {
+  if (raw === null) {
     return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${name} 必须是大于 0 的整数。`);
+  }
+  return value;
+}
+
+function parseNonNegativeIntegerOption(args: readonly string[], name: string, fallback: number): number {
+  if (!Number.isInteger(fallback) || fallback < 0) {
+    throw new Error(`${name} 默认值必须是大于等于 0 的整数。`);
+  }
+  const raw = getOption(args, name);
+  if (raw === null) {
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${name} 必须是大于等于 0 的整数。`);
+  }
+  return value;
+}
+
+function parseOptionalPositiveIntegerOption(args: readonly string[], name: string): number | null {
+  const raw = getOption(args, name);
+  if (raw === null) {
+    return null;
   }
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
@@ -537,10 +720,551 @@ function collectPositionalArgs(args: readonly string[], optionsWithValue: Set<st
   return result;
 }
 
+function readBatchInputs(path: string): BatchPuzzleInput[] {
+  const text = readFileSync(path, 'utf8');
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return [];
+  }
+  if (trimmed.startsWith('[')) {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!Array.isArray(parsed)) {
+      throw new Error('批量输入 JSON 必须是 array。');
+    }
+    return parsed.map((item, index) => normalizeBatchInputItem(item, index + 1));
+  }
+  return text.split(/\r?\n/)
+    .map((line, index) => ({ line: line.trim(), lineNumber: index + 1 }))
+    .filter((item) => item.line.length > 0 && !item.line.startsWith('#'))
+    .map(({ line, lineNumber }) => {
+      const parts = line.split(/\t+/);
+      if (parts.length >= 2) {
+        return {
+          puzzleId: parts[0] || String(lineNumber),
+          puzzle: parts[1]!,
+          sourceIndex: lineNumber,
+        };
+      }
+      return {
+        puzzleId: String(lineNumber),
+        puzzle: line,
+        sourceIndex: lineNumber,
+      };
+    });
+}
+
+function normalizeBatchInputItem(item: unknown, index: number): BatchPuzzleInput {
+  if (typeof item === 'string') {
+    return {
+      puzzleId: String(index),
+      puzzle: item,
+      sourceIndex: index,
+    };
+  }
+  if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+    const record = item as Record<string, unknown>;
+    const puzzle = typeof record.puzzle === 'string'
+      ? record.puzzle
+      : typeof record.grid === 'string'
+        ? record.grid
+        : null;
+    if (!puzzle) {
+      throw new Error(`批量输入第 ${index} 项缺少 puzzle 字符串。`);
+    }
+    return {
+      puzzleId: String(record.id ?? record.puzzleId ?? index),
+      puzzle,
+      sourceIndex: index,
+    };
+  }
+  throw new Error(`批量输入第 ${index} 项格式无效。`);
+}
+
+function filterBatchInputs(inputs: BatchPuzzleInput[], args: readonly string[]): BatchPuzzleInput[] {
+  const only = getOption(args, '--only');
+  const startLine = parseOptionalPositiveIntegerOption(args, '--start-line');
+  const endLine = parseOptionalPositiveIntegerOption(args, '--end-line');
+  if (startLine !== null && endLine !== null && startLine > endLine) {
+    throw new Error('--start-line 不能大于 --end-line。');
+  }
+  const wanted = only
+    ? new Set(only.split(',').map((item) => item.trim()).filter(Boolean))
+    : null;
+  return inputs.filter((input, index) => {
+    if (startLine !== null && input.sourceIndex < startLine) {
+      return false;
+    }
+    if (endLine !== null && input.sourceIndex > endLine) {
+      return false;
+    }
+    if (!wanted) {
+      return true;
+    }
+    return wanted.has(input.puzzleId) || wanted.has(String(index + 1)) || wanted.has(String(input.sourceIndex));
+  });
+}
+
+function buildBatchCliConfig(args: readonly string[]): BatchCliConfig {
+  const inputPath = getOption(args, '--input') ?? args[0];
+  if (!inputPath) {
+    throw new Error('缺少 --input。');
+  }
+  const outputPath = getOption(args, '--output');
+  const summaryPath = getOption(args, '--summary');
+  const usagePath = getOption(args, '--usage');
+  assertUniqueOutputPaths([outputPath, summaryPath, usagePath]);
+  const format = normalizeBatchFormat(getOption(args, '--format'));
+  return {
+    includeSteps: args.includes('--include-steps'),
+    includeUsage: args.includes('--include-usage') || Boolean(usagePath),
+    format,
+    inputPath,
+    outputPath,
+    summaryPath,
+    usagePath,
+    failFast: args.includes('--fail-fast'),
+    puzzles: filterBatchInputs(readBatchInputs(inputPath), args),
+    solveOptions: buildCliSolveOptions(args),
+    ratingPolicy: buildCliRatingPolicy(args),
+  };
+}
+
+function buildCliSolveOptions(args: readonly string[]): SolveOptions {
+  return buildSolveOptionsFromRatingPolicy(buildCliRatingPolicy(args));
+}
+
+function buildCliRatingPolicy(args: readonly string[]): RatingPolicy {
+  const policy = getRatingPolicy(parseProfileOption(args));
+  const allowedTechniques = parseTechniqueListOption(args, '--allow');
+  const preferredTechniques = parseTechniqueListOption(args, '--prefer');
+  const maxSteps = parseOptionalPositiveIntegerOption(args, '--max-steps');
+  let techniqueOrder = [...policy.techniqueOrder];
+  let fallbackTechniques = [...(policy.fallbackTechniques ?? [])];
+  let enabledTechniques = new Set([...techniqueOrder, ...fallbackTechniques]);
+  if (allowedTechniques) {
+    const allowed = new Set(allowedTechniques);
+    const preferred = new Set(preferredTechniques ?? []);
+    const fallbackSet = new Set(CLI_DEFAULT_FALLBACK_TECHNIQUES.filter((technique) => allowed.has(technique) && !preferred.has(technique)));
+    techniqueOrder = buildDefaultTechniques()
+      .map((technique) => technique.id)
+      .filter((technique) => allowed.has(technique) && !fallbackSet.has(technique));
+    fallbackTechniques = buildDefaultTechniques()
+      .map((technique) => technique.id)
+      .filter((technique) => fallbackSet.has(technique));
+    if (techniqueOrder.length === 0 && fallbackTechniques.length === 0) {
+      throw new Error('--allow 过滤后没有可用技巧。');
+    }
+    if (techniqueOrder.length === 0 && fallbackTechniques.length > 0) {
+      techniqueOrder = [...fallbackTechniques];
+      fallbackTechniques = [];
+    }
+    enabledTechniques = new Set([...techniqueOrder, ...fallbackTechniques]);
+  }
+  if (preferredTechniques) {
+    const invalidPreferred = preferredTechniques.filter((technique) => !enabledTechniques.has(technique));
+    if (invalidPreferred.length > 0) {
+      throw new Error(`--prefer 包含未启用技巧：${invalidPreferred.join(', ')}`);
+    }
+    techniqueOrder = applyPreferredTechniqueOrder(techniqueOrder, preferredTechniques);
+    fallbackTechniques = applyPreferredTechniqueOrder(fallbackTechniques, preferredTechniques);
+  }
+  return {
+    id: policy.id,
+    version: policy.version,
+    techniqueOrder,
+    techniqueScores: { ...policy.techniqueScores },
+    ...(policy.gradeRules ? {
+      gradeRules: policy.gradeRules.map((rule) => ({
+        ...rule,
+        ...(rule.allowedTechniques ? { allowedTechniques: [...rule.allowedTechniques] } : {}),
+      })),
+    } : {}),
+    ...(fallbackTechniques.length > 0 ? { fallbackTechniques } : {}),
+    ...(maxSteps !== null ? { maxSteps } : {}),
+    ...(maxSteps === null && typeof policy.maxSteps === 'number' ? { maxSteps: policy.maxSteps } : {}),
+  };
+}
+
+function parseProfileOption(args: readonly string[]): 'classic-stable' | 'classic-extended' {
+  const raw = getOption(args, '--profile');
+  if (raw === null || raw === 'stable' || raw === 'classic-stable' || raw === 'classic-stable.v1') {
+    return 'classic-stable';
+  }
+  if (raw === 'extended' || raw === 'classic-extended' || raw === 'classic-extended.v1') {
+    return 'classic-extended';
+  }
+  throw new Error('--profile 只能是 stable 或 extended。');
+}
+
+function parseTechniqueListOption(args: readonly string[], name: string): TechniqueId[] | null {
+  const raw = getOption(args, name);
+  if (raw === null) {
+    return null;
+  }
+  const known = new Set(getTechniqueDefinitions().map((definition) => definition.id));
+  const parsed = raw.split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (parsed.length === 0) {
+    throw new Error(`${name} 不能为空。`);
+  }
+  const unknown = parsed.filter((technique) => !known.has(technique as TechniqueId));
+  if (unknown.length > 0) {
+    throw new Error(`${name} 包含未知技巧：${unknown.join(', ')}`);
+  }
+  return [...new Set(parsed)] as TechniqueId[];
+}
+
+function applyPreferredTechniqueOrder(
+  techniques: readonly TechniqueId[],
+  preferredTechniques: readonly TechniqueId[],
+): TechniqueId[] {
+  const preferred = preferredTechniques.filter((technique) => techniques.includes(technique));
+  const preferredSet = new Set(preferred);
+  return [
+    ...preferred,
+    ...techniques.filter((technique) => !preferredSet.has(technique)),
+  ];
+}
+
+function runBatchPuzzle(
+  command: 'batch-solve' | 'batch-rate',
+  input: BatchPuzzleInput,
+  config: BatchCliConfig,
+  usageReports: SolverUsageReport[],
+): BatchPuzzleResult {
+  try {
+    return command === 'batch-rate'
+      ? runBatchRatePuzzle(input, config.includeSteps, config.ratingPolicy)
+      : runBatchSolvePuzzle(input, config.includeSteps, config.includeUsage, usageReports, config.solveOptions);
+  } catch (error) {
+    if (config.failFast) {
+      throw error;
+    }
+    return buildBatchErrorResult(input, error);
+  }
+}
+
+function runBatchSolvePuzzle(
+  input: BatchPuzzleInput,
+  includeSteps: boolean,
+  includeUsage: boolean,
+  usageReports: SolverUsageReport[],
+  solveOptions: SolveOptions,
+): BatchPuzzleResult {
+  const startedAt = Date.now();
+  const analysis = includeUsage
+    ? analyzeSolve(input.puzzle, { ...solveOptions, includeUsage: true })
+    : walkthrough(input.puzzle, solveOptions);
+  const maybeAnalysis = analysis as { usage?: SolverUsageReport };
+  if (maybeAnalysis.usage) {
+    usageReports.push(maybeAnalysis.usage);
+  }
+  const placementCount = analysis.steps.reduce((sum, step) => sum + step.actions.filter((action) => action.type === 'place').length, 0);
+  const eliminationCount = analysis.steps.reduce((sum, step) => sum + step.actions.filter((action) => action.type === 'eliminate').length, 0);
+  return {
+    puzzleId: input.puzzleId,
+    puzzle: input.puzzle,
+    sourceIndex: input.sourceIndex,
+    ok: true,
+    solved: analysis.solved,
+    score: analysis.score,
+    hardestTechnique: analysis.hardestTechnique,
+    stepCount: analysis.steps.length,
+    placementCount,
+    eliminationCount,
+    elapsedMs: Date.now() - startedAt,
+    ...(analysis.stuckReason === undefined ? {} : { stuckReason: analysis.stuckReason }),
+    ...(includeSteps ? { steps: analysis.steps } : {}),
+  };
+}
+
+function runBatchRatePuzzle(input: BatchPuzzleInput, includeSteps: boolean, policy: RatingPolicy): BatchPuzzleResult {
+  const startedAt = Date.now();
+  const result = rate(input.puzzle, policy);
+  const placementCount = result.steps.reduce((sum, step) => sum + step.actions.filter((action) => action.type === 'place').length, 0);
+  const eliminationCount = result.steps.reduce((sum, step) => sum + step.actions.filter((action) => action.type === 'eliminate').length, 0);
+  return {
+    puzzleId: input.puzzleId,
+    puzzle: input.puzzle,
+    sourceIndex: input.sourceIndex,
+    ok: true,
+    solved: result.solved,
+    score: result.score,
+    hardestTechnique: result.hardestTechnique,
+    hardestScore: result.hardestScore,
+    stepCount: result.steps.length,
+    placementCount,
+    eliminationCount,
+    elapsedMs: Date.now() - startedAt,
+    grade: result.grade,
+    ...(result.stuckReason === undefined ? {} : { stuckReason: result.stuckReason }),
+    ...(includeSteps ? { steps: result.steps } : {}),
+  };
+}
+
+function buildBatchErrorResult(input: BatchPuzzleInput, error: unknown): BatchPuzzleResult {
+  return {
+    puzzleId: input.puzzleId,
+    puzzle: input.puzzle,
+    sourceIndex: input.sourceIndex,
+    ok: false,
+    solved: false,
+    stepCount: 0,
+    placementCount: 0,
+    eliminationCount: 0,
+    elapsedMs: 0,
+    error: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function buildBatchSummary(results: readonly BatchPuzzleResult[], totalElapsedMs: number): BatchSummary {
+  const solved = results.filter((result) => result.solved).length;
+  const failed = results.filter((result) => result.ok === false).length;
+  const scores = results
+    .filter((result) => result.solved)
+    .map((result) => result.score)
+    .filter((score): score is number => typeof score === 'number');
+  const hardestTechniqueCounts: Partial<Record<TechniqueId, number>> = {};
+  const stuckReasonCounts: Record<string, number> = {};
+  for (const result of results) {
+    if (result.hardestTechnique) {
+      hardestTechniqueCounts[result.hardestTechnique] = (hardestTechniqueCounts[result.hardestTechnique] ?? 0) + 1;
+    }
+    if (result.stuckReason) {
+      stuckReasonCounts[result.stuckReason] = (stuckReasonCounts[result.stuckReason] ?? 0) + 1;
+    }
+  }
+  return {
+    puzzles: results.length,
+    solved,
+    unsolved: results.length - solved,
+    failed,
+    solveRate: results.length === 0 ? 0 : solved / results.length,
+    totalElapsedMs,
+    avgElapsedMs: results.length === 0 ? 0 : totalElapsedMs / results.length,
+    ...(scores.length > 0 ? {
+      scoreMin: Math.min(...scores),
+      scoreMax: Math.max(...scores),
+      scoreAvg: scores.reduce((sum, score) => sum + score, 0) / scores.length,
+    } : {}),
+    hardestTechniqueCounts,
+    stuckReasonCounts,
+  };
+}
+
+function normalizeBatchFormat(raw: string | null): 'json' | 'jsonl' | 'csv' | 'text' {
+  if (raw === null) {
+    return 'json';
+  }
+  if (raw === 'json' || raw === 'jsonl' || raw === 'csv' || raw === 'text') {
+    return raw;
+  }
+  throw new Error('--format 只能是 json、jsonl、csv 或 text。');
+}
+
+function writeBatchOutput(path: string, results: readonly BatchPuzzleResult[], format: 'json' | 'jsonl' | 'csv' | 'text'): void {
+  const output = formatBatchOutput(results, format);
+  if (typeof output === 'string') {
+    writeTextAtomic(path, output);
+    return;
+  }
+  writeJsonAtomic(path, output);
+}
+
+function writeJsonAtomic(path: string, value: unknown): void {
+  writeAtomic(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeTextAtomic(path: string, value: string): void {
+  writeAtomic(path, value.endsWith('\n') ? value : `${value}\n`);
+}
+
+function writeAtomic(path: string, content: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tempPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  const fd = openSync(tempPath, 'wx', 0o600);
+  try {
+    writeFileSync(fd, content, 'utf8');
+    closeSync(fd);
+    renameSync(tempPath, path);
+  } catch (error) {
+    try {
+      closeSync(fd);
+    } catch {
+      // fd may already be closed after a successful write.
+    }
+    rmSync(tempPath, { force: true });
+    throw error;
+  }
+}
+
+function assertUniqueOutputPaths(paths: Array<string | null>): void {
+  const seen = new Map<string, string>();
+  for (const path of paths) {
+    if (!path) {
+      continue;
+    }
+    const normalized = resolve(path);
+    const previous = seen.get(normalized);
+    if (previous) {
+      throw new Error(`输出路径不能重复：${previous} 和 ${path}`);
+    }
+    seen.set(normalized, path);
+  }
+}
+
+function acquireLock(path: string): () => void {
+  const lockPath = `${resolve(path)}.lock`;
+  mkdirSync(dirname(lockPath), { recursive: true });
+  let fd: number;
+  try {
+    fd = openSync(lockPath, 'wx');
+  } catch {
+    throw new Error(`输出文件正在被另一个进程使用：${path}`);
+  }
+  return () => {
+    closeSync(fd);
+    rmSync(lockPath, { force: true });
+  };
+}
+
+function acquireLocks(paths: Array<string | null>): () => void {
+  const normalizedPaths = [...new Set(paths.filter((path): path is string => Boolean(path)).map((path) => resolve(path)))]
+    .sort();
+  const releases: Array<() => void> = [];
+  try {
+    for (const path of normalizedPaths) {
+      releases.push(acquireLock(path));
+    }
+  } catch (error) {
+    for (const release of releases.reverse()) {
+      release();
+    }
+    throw error;
+  }
+  return () => {
+    for (const release of releases.reverse()) {
+      release();
+    }
+  };
+}
+
+function formatBatchOutput(results: readonly BatchPuzzleResult[], format: 'json' | 'jsonl' | 'csv' | 'text'): unknown {
+  if (format === 'json') {
+    return results;
+  }
+  if (format === 'jsonl') {
+    return `${results.map((result) => JSON.stringify(result)).join('\n')}\n`;
+  }
+  if (format === 'csv') {
+    return formatBatchCsv(results);
+  }
+  return formatBatchText(results);
+}
+
+function formatBatchCsv(results: readonly BatchPuzzleResult[]): string {
+  const header = [
+    'puzzleId',
+    'solved',
+    'score',
+    'grade',
+    'hardestTechnique',
+    'hardestScore',
+    'stepCount',
+    'placementCount',
+    'eliminationCount',
+    'stuckReason',
+    'elapsedMs',
+    'puzzle',
+    'sourceIndex',
+    'ok',
+    'error',
+  ];
+  const rows = results.map((result) => [
+    result.puzzleId,
+    String(result.solved),
+    result.score ?? '',
+    result.grade ?? '',
+    result.hardestTechnique ?? '',
+    result.hardestScore ?? '',
+    result.stepCount,
+    result.placementCount,
+    result.eliminationCount,
+    result.stuckReason ?? '',
+    result.elapsedMs,
+    result.puzzle,
+    result.sourceIndex ?? '',
+    result.ok === false ? 'false' : 'true',
+    result.error ?? '',
+  ].map((value) => csvEscape(String(value))).join(','));
+  return `${header.join(',')}\n${rows.join('\n')}\n`;
+}
+
+function csvEscape(value: string): string {
+  const dangerous = /^[\t\r\n =+\-@]/.test(value);
+  const hardened = dangerous ? `'${value}` : value;
+  return dangerous || /[",\n\r\t]/.test(hardened) ? `"${hardened.replaceAll('"', '""')}"` : hardened;
+}
+
+function formatBatchText(results: readonly BatchPuzzleResult[]): string {
+  return `${results.map((result) => [
+    result.puzzleId,
+    result.solved ? 'solved' : 'unsolved',
+    `score=${result.score ?? ''}`,
+    `hardest=${result.hardestTechnique ?? ''}`,
+    `steps=${result.stepCount}`,
+    `elapsedMs=${result.elapsedMs}`,
+  ].join('\t')).join('\n')}\n`;
+}
+
+function aggregateBatchUsage(reports: readonly SolverUsageReport[]): SolverUsageReport {
+  const output: SolverUsageReport = {
+    totalElapsedMs: 0,
+    totalCalls: 0,
+    totalHits: 0,
+    totalPlacements: 0,
+    totalEliminations: 0,
+    byTechnique: {},
+  };
+  for (const report of reports) {
+    output.totalElapsedMs += report.totalElapsedMs;
+    output.totalCalls += report.totalCalls;
+    output.totalHits += report.totalHits;
+    output.totalPlacements += report.totalPlacements;
+    output.totalEliminations += report.totalEliminations;
+    for (const [technique, stats] of Object.entries(report.byTechnique) as Array<[TechniqueId, NonNullable<SolverUsageReport['byTechnique'][TechniqueId]>]>) {
+      const current = output.byTechnique[technique] ?? {
+        technique,
+        calls: 0,
+        hits: 0,
+        placements: 0,
+        eliminations: 0,
+        actions: 0,
+        totalScore: 0,
+        maxScore: 0,
+        elapsedMs: 0,
+      };
+      current.calls += stats.calls;
+      current.hits += stats.hits;
+      current.placements += stats.placements;
+      current.eliminations += stats.eliminations;
+      current.actions += stats.actions;
+      current.totalScore += stats.totalScore;
+      current.maxScore = Math.max(current.maxScore, stats.maxScore);
+      current.elapsedMs += stats.elapsedMs;
+      output.byTechnique[technique] = current;
+    }
+  }
+  return output;
+}
+
 function parseJsonArgument(source: string): unknown {
-  const text = source.trim().startsWith('{')
-    ? source
-    : readFileSync(source, 'utf8');
+  if (existsSync(source)) {
+    return JSON.parse(readFileSync(source, 'utf8'));
+  }
+  const trimmed = source.trim();
+  const text = trimmed.startsWith('{') || trimmed.startsWith('[') ? source : readFileSync(source, 'utf8');
   return JSON.parse(text);
 }
 
@@ -553,6 +1277,24 @@ function readJsonArrayIfExists(path: string): unknown[] {
     throw new Error(`追加候选题失败，目标文件不是 JSON array：${path}`);
   }
   return parsed;
+}
+
+function readCandidateArrayIfExists(path: string): GeneratedPuzzle[] {
+  const parsed = readJsonArrayIfExists(path);
+  validateCandidatePool(parsed as GeneratedPuzzle[]);
+  return parsed as GeneratedPuzzle[];
+}
+
+function parseSearchEventFilter(value: string): Set<string> {
+  const events = value.split(',').map((item) => item.trim()).filter(Boolean);
+  if (events.length === 0) {
+    throw new Error('--events 至少需要一个事件类型。');
+  }
+  const invalid = events.filter((event) => !SEARCH_EVENT_TYPES.has(event));
+  if (invalid.length > 0) {
+    throw new Error(`--events 包含未知事件类型：${invalid.join(', ')}`);
+  }
+  return new Set(events);
 }
 
 function readSearchManifest(path: string): SearchRunManifest {
@@ -577,7 +1319,7 @@ function isSearchManifest(value: unknown): value is SearchRunManifest {
 
 function assertManifestMatchesRequest(manifest: SearchRunManifest, requestHash: string): void {
   if (manifest.requestHash !== requestHash) {
-    throw new Error('续跑 manifest 与当前搜索请求不匹配。请确认分数范围、技巧约束、canonicalize、minimality 和时间预算没有变化。');
+    throw new Error('续跑 manifest 与当前搜索请求的生成身份字段不匹配。seed、maxResults、scoreBucketSize 和 budget.maxAttempts 不参与身份；其他生成约束、minimality、canonicalize、ratingPolicy、relaxation 和 budget.maxElapsedMs 变化会拒绝续跑。');
   }
 }
 
@@ -720,6 +1462,7 @@ function buildSearchRequestIdentity(request: GenerationRequest): unknown {
     ...input,
     seed: undefined,
     maxResults: undefined,
+    scoreBucketSize: undefined,
     budget,
   };
 }
@@ -751,16 +1494,20 @@ function buildParallelSearchPlan(
   candidatesPath: string;
   summaryPath: string;
   manifestPath: string;
+  argv: string[];
   command: string;
 }> {
-  const cliPath = process.argv[1]?.endsWith('index.js')
-    ? process.argv[1]
-    : 'dist/src/cli/index.js';
+  const cliCommandPrefix = buildCliCommandPrefix();
+  const totalAttempts = workers * attemptsPerWorker;
+  if (!Number.isSafeInteger(totalAttempts) || seedStart < 1 || seedStart + totalAttempts - 1 > MAX_SEED) {
+    throw new Error('parallel-search-plan seed range exceeds 32-bit seed limit.');
+  }
   return Array.from({ length: workers }, (_, index) => {
     const worker = index + 1;
     const workerSeedStart = seedStart + index * attemptsPerWorker;
     const shardRequest: GenerationRequest = {
       ...request,
+      maxResults: attemptsPerWorker,
       seed: workerSeedStart,
       budget: {
         ...request.budget,
@@ -772,20 +1519,20 @@ function buildParallelSearchPlan(
     const summaryPath = join(outputDir, `${prefix}-summary.json`);
     const manifestPath = join(outputDir, `${prefix}-manifest.json`);
     const requestJson = JSON.stringify(shardRequest);
-    const command = [
-      'node',
-      shellQuote(cliPath),
+    const argv = [
+      ...cliCommandPrefix,
       'search',
-      shellQuote(requestJson),
+      requestJson,
       '--summary-only',
       '--write-candidates',
-      shellQuote(candidatesPath),
+      candidatesPath,
       '--write-summary',
-      shellQuote(summaryPath),
+      summaryPath,
       '--write-manifest',
-      shellQuote(manifestPath),
+      manifestPath,
       '--overwrite-manifest',
-    ].join(' ');
+    ];
+    const command = argv.map(shellQuote).join(' ');
     return {
       worker,
       seedStart: workerSeedStart,
@@ -794,12 +1541,40 @@ function buildParallelSearchPlan(
       candidatesPath,
       summaryPath,
       manifestPath,
+      argv,
       command,
     };
   });
 }
 
+function buildCliCommandPrefix(): string[] {
+  const argvEntry = process.argv[1];
+  if (!argvEntry) {
+    return ['sudoku'];
+  }
+  try {
+    const realEntry = realpathSync(argvEntry);
+    const normalizedEntry = realEntry.replaceAll('\\', '/');
+    if (normalizedEntry.endsWith('/dist/src/cli/index.js') || normalizedEntry.endsWith('/src/cli/index.js')) {
+      return [process.execPath, realEntry];
+    }
+    const normalizedArgvEntry = argvEntry.replaceAll('\\', '/');
+    if (normalizedEntry.endsWith('/node_modules/.bin/sudoku') || normalizedArgvEntry.endsWith('/sudoku') || argvEntry === 'sudoku') {
+      return ['sudoku'];
+    }
+  } catch {
+    const normalizedArgvEntry = argvEntry.replaceAll('\\', '/');
+    if (normalizedArgvEntry.endsWith('/sudoku') || argvEntry === 'sudoku') {
+      return ['sudoku'];
+    }
+  }
+  return ['sudoku'];
+}
+
 function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_./:=@%+-]+$/.test(value)) {
+    return value;
+  }
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
@@ -815,6 +1590,7 @@ function mergeCandidateFiles(paths: readonly string[], dedupeCanonical: boolean)
     }
     rawCandidates.push(...parsed as GeneratedPuzzle[]);
   }
+  validateCandidatePool(rawCandidates);
   if (!dedupeCanonical) {
     return { candidates: rawCandidates, duplicatesSkipped: 0 };
   }
@@ -834,15 +1610,21 @@ function asGenerationRequest(value: unknown): GenerationRequest {
 
 if (isMainModule()) {
   const result = runCli(process.argv.slice(2));
-  process.stdout.write(typeof result.output === 'string'
+  const stream = result.exitCode === 0 ? process.stdout : process.stderr;
+  stream.write(typeof result.output === 'string'
     ? `${result.output}\n`
     : `${JSON.stringify(result.output, null, 2)}\n`);
   process.exitCode = result.exitCode;
 }
 
 function isMainModule(): boolean {
-  if (!process.argv[1]) {
+  const argvEntry = process.argv[1];
+  if (!argvEntry || argvEntry === '-' || argvEntry === '[eval]') {
     return false;
   }
-  return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  try {
+    return pathToFileURL(realpathSync(argvEntry)).href === pathToFileURL(realpathSync(fileURLToPath(import.meta.url))).href;
+  } catch {
+    return false;
+  }
 }

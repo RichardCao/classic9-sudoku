@@ -32,9 +32,9 @@ npm run pack:dry-run
 6. 有 focused test。
 7. 文档更新 `TECHNIQUES.md`。
 
-高级技巧迁移路线见：
+高级技巧实现和维护要求见：
 
-- [docs/ADVANCED_TECHNIQUE_MIGRATION.md](./docs/ADVANCED_TECHNIQUE_MIGRATION.md)
+- [docs/TECHNIQUES.md](./docs/TECHNIQUES.md)
 
 ## 生成器变更
 

@@ -1,12 +1,14 @@
-import { getDefaultRatingPolicy, type RatingPolicy } from '../rating/index.js';
+import { getDefaultRatingPolicy, validateRatingPolicy, type RatingPolicy } from '../rating/index.js';
 import { rate } from '../rating/index.js';
 import { getTechniqueDefinitions } from '../solver/techniques.js';
-import type { TechniqueId } from '../solver/types.js';
+import type { SolveAnalysis, TechniqueId } from '../solver/types.js';
 import type { Board } from '../core/types.js';
-import { canonicalizePair } from '../canonical/index.js';
+import { ALL_HOUSES, assertBoardValues, getHouseCells } from '../core/grid.js';
+import { canonicalizeBoard, canonicalizePair } from '../canonical/index.js';
 import { SolutionGridFactory } from './solution-grid.js';
 import { ClueRemover } from './clue-remover.js';
 import { PuzzleMinimizer } from './minimizer.js';
+import { MAX_SEED, defaultSeed } from './random.js';
 
 export interface ScoreConstraint {
   min?: number;
@@ -66,12 +68,18 @@ export interface GenerationRequest {
   canonicalize?: boolean;
   minimality?: 'none' | 'strict';
   relaxation?: GenerationRelaxation;
+  /** Search-only field. generateOne accepts and validates it for request reuse, then ignores it. */
+  maxResults?: number;
+  /** Search-only field. generateOne accepts and validates it for request reuse, then ignores it. */
+  scoreBucketSize?: number;
 }
 
 export interface GeneratedPuzzle {
   puzzle: Board;
   solution: Board;
   seed: number;
+  solved: boolean;
+  stuckReason?: SolveAnalysis['stuckReason'];
   clueCount: number;
   score: number;
   grade: string | null;
@@ -121,6 +129,11 @@ export type GenerationEvent =
     };
 
 export interface SearchRequest extends GenerationRequest {
+  /**
+   * Number of accepted puzzles to return. `budget.maxAttempts` remains the
+   * outer attempt limit, while `budget.maxElapsedMs` is passed to each
+   * individual generateOne call rather than used as a global search deadline.
+   */
   maxResults?: number;
   scoreBucketSize?: number;
 }
@@ -231,7 +244,8 @@ export interface GenerationSuggestion {
     | 'raise-score-max'
     | 'expand-techniques'
     | 'increase-budget'
-    | 'move-to-preferred-techniques';
+    | 'move-to-preferred-techniques'
+    | 'review-required-technique-alternatives';
   message: string;
   details?: Record<string, unknown>;
 }
@@ -261,35 +275,104 @@ const techniqueDefinitions = getTechniqueDefinitions();
 const techniqueFamilies = new Map<TechniqueId, string>(
   techniqueDefinitions.map((definition) => [definition.id, definition.family]),
 );
-
+const knownTechniqueIds = new Set<TechniqueId>(
+  techniqueDefinitions.map((definition) => definition.id),
+);
 const solutionFactory = new SolutionGridFactory();
 const clueRemover = new ClueRemover();
 const puzzleMinimizer = new PuzzleMinimizer();
 
+const GENERATION_REQUEST_FIELDS = new Set([
+  'seed',
+  'ratingPolicy',
+  'constraints',
+  'budget',
+  'canonicalize',
+  'minimality',
+  'relaxation',
+  'maxResults',
+  'scoreBucketSize',
+]);
+const SEARCH_REQUEST_FIELDS = new Set([...GENERATION_REQUEST_FIELDS]);
+const GENERATION_CONSTRAINT_FIELDS = new Set([
+  'score',
+  'clues',
+  'allowedTechniques',
+  'forbiddenTechniques',
+  'requiredTechniques',
+  'preferredTechniques',
+  'symmetry',
+  'uniqueness',
+]);
+const SCORE_CONSTRAINT_FIELDS = new Set(['min', 'max', 'target', 'tolerance']);
+const CLUE_CONSTRAINT_FIELDS = new Set(['min', 'max', 'target']);
+const GENERATION_BUDGET_FIELDS = new Set(['maxAttempts', 'maxElapsedMs']);
+const GENERATION_RELAXATION_FIELDS = new Set([
+  'enabled',
+  'maxRounds',
+  'scoreExpansionPerRound',
+  'clueExpansionPerRound',
+  'attemptMultiplierPerRound',
+]);
+const REQUIRED_TECHNIQUE_FIELDS: Record<RequiredTechniqueRule['type'], Set<string>> = {
+  appears: new Set(['type', 'techniques', 'minCount']),
+  'hardest-in': new Set(['type', 'techniques']),
+  'family-coverage': new Set(['type', 'families']),
+};
+
 export function analyzeGenerationRequest(request: GenerationRequest): GenerationRequestAnalysis {
-  const policy = request.ratingPolicy ?? getDefaultRatingPolicy();
-  const constraints = request.constraints ?? {};
   const errors: GenerationRequestIssue[] = [];
   const warnings: GenerationRequestIssue[] = [];
   const suggestions: GenerationSuggestion[] = [];
-  const knownTechniques = new Set(policy.techniqueOrder);
+  if (!isPlainObject(request)) {
+    errors.push({
+      code: 'invalid-generation-request',
+      message: '生成请求必须是 object。',
+      details: { value: request },
+    });
+    const policy = getDefaultRatingPolicy();
+    const allowed = new Set<TechniqueId>([...policy.techniqueOrder, ...(policy.fallbackTechniques ?? [])]);
+    return {
+      status: 'invalid',
+      errors,
+      warnings,
+      suggestions,
+      estimatedDifficulty: estimateDifficulty(undefined, allowed, policy),
+      feasibility: estimateFeasibility({} as GenerationRequest, allowed, new Set<TechniqueId>(), policy),
+    };
+  }
+  const constraints = isPlainObject(request.constraints) ? request.constraints as GenerationConstraint : {};
   validateGenerationRequestShape(request, errors);
-  const allowedTechniques = readTechniqueArray(constraints.allowedTechniques, policy.techniqueOrder);
+  const ratingPolicy = (request as GenerationRequest).ratingPolicy;
+  const ratingPolicyErrors = typeof ratingPolicy === 'undefined'
+    ? []
+    : validateRatingPolicy(ratingPolicy);
+  const policy = isRatingPolicyLike(ratingPolicy) && ratingPolicyErrors.length === 0
+    ? ratingPolicy
+    : getDefaultRatingPolicy();
+  const defaultAllowedTechniques = [...policy.techniqueOrder, ...(policy.fallbackTechniques ?? [])];
+  const knownTechniques = new Set(policy.techniqueOrder);
+  for (const technique of policy.fallbackTechniques ?? []) {
+    knownTechniques.add(technique);
+  }
+  const allowedTechniques = readTechniqueArray(constraints.allowedTechniques, defaultAllowedTechniques);
   const forbiddenTechniques = readTechniqueArray(constraints.forbiddenTechniques, []);
   const preferredTechniques = readTechniqueArray(constraints.preferredTechniques, []);
   const allowed = new Set(allowedTechniques);
   const forbidden = new Set(forbiddenTechniques);
+  const available = new Set(allowedTechniques.filter((technique) => !forbidden.has(technique)));
   const score = constraints.score;
   const feasibility = estimateFeasibility(request, allowed, forbidden, policy);
 
   validateScoreRange(score, errors);
-  validateClueRange(constraints.clues, errors);
+  validateClueRange(constraints.clues, errors, warnings);
   validateTechniqueSet('allowedTechniques', allowedTechniques, knownTechniques, errors);
   validateTechniqueSet('forbiddenTechniques', forbiddenTechniques, knownTechniques, errors);
   validateTechniqueSet('preferredTechniques', preferredTechniques, knownTechniques, errors);
   if (Array.isArray(constraints.allowedTechniques)) {
     validateAllowedForbiddenOverlap(new Set(allowedTechniques), forbidden, errors);
   }
+  validateAvailableTechniques(available, errors);
   validateRequiredTechniques(constraints.requiredTechniques, knownTechniques, allowed, forbidden, policy, score, errors, warnings, suggestions);
   analyzeScoreTechniqueFit(request, feasibility, warnings, suggestions);
 
@@ -299,13 +382,13 @@ export function analyzeGenerationRequest(request: GenerationRequest): Generation
     errors,
     warnings,
     suggestions,
-    estimatedDifficulty: estimateDifficulty(score, allowed, policy),
+    estimatedDifficulty: estimateDifficulty(score, available, policy),
     feasibility,
   };
 }
 
 export function generateOne(request: GenerationRequest): GenerationResult {
-  if (request.relaxation?.enabled) {
+  if (isPlainObject(request) && (request as GenerationRequest).relaxation?.enabled) {
     return generateOneWithRelaxation(request);
   }
   return generateOneStrict(request);
@@ -333,13 +416,26 @@ function generateOneStrict(request: GenerationRequest, relaxationsApplied?: Gene
 
   const policy = request.ratingPolicy ?? getDefaultRatingPolicy();
   const constraints = request.constraints ?? {};
-  const baseSeed = request.seed ?? Date.now();
+  const baseSeed = request.seed ?? defaultSeed();
   const targetClues = constraints.clues?.target
     ?? constraints.clues?.max
     ?? constraints.clues?.min
     ?? 28;
   const maxAttempts = request.budget?.maxAttempts ?? (requestAnalysis.status === 'unlikely' ? 500 : 200);
   const maxElapsedMs = request.budget?.maxElapsedMs ?? (requestAnalysis.status === 'unlikely' ? 4000 : 2000);
+  if (baseSeed + maxAttempts - 1 > MAX_SEED) {
+    diagnostics.elapsedMs = Date.now() - startedAt;
+    return {
+      status: 'invalid-request',
+      requestAnalysis: addGenerationRequestError(requestAnalysis, {
+        code: 'invalid-seed',
+        message: 'seed 范围超过 32-bit 上限。',
+        details: { seed: baseSeed, maxAttempts },
+      }),
+      diagnostics,
+      ...(relaxationsApplied ? { relaxationsApplied } : {}),
+    };
+  }
   let bestCandidate: GeneratedPuzzle | undefined;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -356,13 +452,46 @@ function generateOneStrict(request: GenerationRequest, relaxationsApplied?: Gene
 
     const seed = baseSeed + attempt;
     const solution = solutionFactory.create(seed);
+    const remainingBeforeCarve = maxElapsedMs - (Date.now() - startedAt);
+    if (remainingBeforeCarve <= 0) {
+      diagnostics.elapsedMs = Date.now() - startedAt;
+      return withBestCandidate({
+        status: 'timeout',
+        requestAnalysis,
+        diagnostics,
+        ...(relaxationsApplied ? { relaxationsApplied } : {}),
+      }, bestCandidate);
+    }
     const carved = clueRemover.carve(solution, {
       targetClues: Math.max(17, Math.min(81, targetClues)),
       seed,
       symmetry: constraints.symmetry ?? 'none',
-      maxElapsedMs: Math.max(250, maxElapsedMs - (Date.now() - startedAt)),
+      maxElapsedMs: remainingBeforeCarve,
     });
-    const puzzle = request.minimality === 'strict' ? puzzleMinimizer.minimize(carved) : carved;
+    const remainingBeforeMinimize = maxElapsedMs - (Date.now() - startedAt);
+    if (remainingBeforeMinimize <= 0) {
+      diagnostics.elapsedMs = Date.now() - startedAt;
+      return withBestCandidate({
+        status: 'timeout',
+        requestAnalysis,
+        diagnostics,
+        ...(relaxationsApplied ? { relaxationsApplied } : {}),
+      }, bestCandidate);
+    }
+    const minimized = request.minimality === 'strict'
+      ? puzzleMinimizer.minimize(carved, { maxElapsedMs: remainingBeforeMinimize })
+      : { puzzle: carved, aborted: false };
+    if (minimized.aborted) {
+      diagnostics.rejectedByReason['minimality-timeout'] = (diagnostics.rejectedByReason['minimality-timeout'] ?? 0) + 1;
+      diagnostics.elapsedMs = Date.now() - startedAt;
+      return withBestCandidate({
+        status: 'timeout',
+        requestAnalysis,
+        diagnostics,
+        ...(relaxationsApplied ? { relaxationsApplied } : {}),
+      }, bestCandidate);
+    }
+    const puzzle = minimized.puzzle;
     const rated = rate(puzzle, buildPolicyForConstraints(policy, constraints));
     const candidate = buildGeneratedPuzzle(puzzle, solution, seed, rated, request.canonicalize === true);
 
@@ -404,14 +533,14 @@ function generateOneWithRelaxation(request: GenerationRequest): GenerationResult
     },
   };
 
-  let result = generateOneStrict(currentRequest, applied);
+  let result = generateOneStrict(currentRequest, [...applied]);
   if (result.status === 'success' || result.status === 'invalid-request') {
     return result;
   }
 
   for (let round = 1; round <= maxRounds; round += 1) {
     currentRequest = relaxRequest(currentRequest, relaxation, round, applied);
-    result = generateOneStrict(currentRequest, applied);
+    result = generateOneStrict(currentRequest, [...applied]);
     if (result.status === 'success' || result.status === 'invalid-request') {
       return result.status === 'success'
         ? { ...result, status: 'success', relaxationsApplied: [...applied] }
@@ -422,6 +551,17 @@ function generateOneWithRelaxation(request: GenerationRequest): GenerationResult
   return {
     ...result,
     relaxationsApplied: [...applied],
+  };
+}
+
+function addGenerationRequestError(
+  analysis: GenerationRequestAnalysis,
+  issue: GenerationRequestIssue,
+): GenerationRequestAnalysis {
+  return {
+    ...analysis,
+    status: 'invalid',
+    errors: [...analysis.errors, issue],
   };
 }
 
@@ -445,36 +585,50 @@ function relaxRequest(
 
   if (constraints.score) {
     const before = { ...constraints.score };
+    let changed = false;
     if (typeof constraints.score.min === 'number') {
-      constraints.score.min = Math.max(0, constraints.score.min - scoreExpansion);
+      const nextMin = Math.max(0, constraints.score.min - scoreExpansion);
+      changed = changed || nextMin !== constraints.score.min;
+      constraints.score.min = nextMin;
     }
     if (typeof constraints.score.max === 'number') {
-      constraints.score.max += scoreExpansion;
+      const nextMax = constraints.score.max + scoreExpansion;
+      changed = changed || nextMax !== constraints.score.max;
+      constraints.score.max = nextMax;
     }
-    applied.push({
-      round,
-      type: 'score-range-expanded',
-      message: '扩大分数范围。',
-      before,
-      after: { ...constraints.score },
-    });
+    if (changed) {
+      applied.push({
+        round,
+        type: 'score-range-expanded',
+        message: '扩大分数范围。',
+        before,
+        after: { ...constraints.score },
+      });
+    }
   }
 
   if (constraints.clues) {
     const before = { ...constraints.clues };
+    let changed = false;
     if (typeof constraints.clues.min === 'number') {
-      constraints.clues.min = Math.max(0, constraints.clues.min - clueExpansion);
+      const nextMin = Math.max(0, constraints.clues.min - clueExpansion);
+      changed = changed || nextMin !== constraints.clues.min;
+      constraints.clues.min = nextMin;
     }
     if (typeof constraints.clues.max === 'number') {
-      constraints.clues.max = Math.min(81, constraints.clues.max + clueExpansion);
+      const nextMax = Math.min(81, constraints.clues.max + clueExpansion);
+      changed = changed || nextMax !== constraints.clues.max;
+      constraints.clues.max = nextMax;
     }
-    applied.push({
-      round,
-      type: 'clue-range-expanded',
-      message: '扩大线索数范围。',
-      before,
-      after: { ...constraints.clues },
-    });
+    if (changed) {
+      applied.push({
+        round,
+        type: 'clue-range-expanded',
+        message: '扩大线索数范围。',
+        before,
+        after: { ...constraints.clues },
+      });
+    }
   }
 
   if (typeof budget.maxAttempts === 'number') {
@@ -497,8 +651,19 @@ function relaxRequest(
 }
 
 export function* search(request: SearchRequest): Iterable<GenerationEvent> {
+  assertValidSearchRequest(request);
+  if (request.relaxation?.enabled) {
+    throw new Error('search does not support relaxation because it would break seed range accounting.');
+  }
   const maxResults = request.maxResults ?? 10;
   const budgetAttempts = request.budget?.maxAttempts ?? maxResults;
+  const baseSeed = request.seed ?? defaultSeed();
+  if (baseSeed + budgetAttempts - 1 > MAX_SEED) {
+    throw new Error('search seed range exceeds 32-bit seed limit.');
+  }
+  const { maxResults: _maxResults, scoreBucketSize: _scoreBucketSize, ...generationRequest } = request;
+  void _maxResults;
+  void _scoreBucketSize;
   let accepted = 0;
   let rejected = 0;
   const summary: SearchSummary = {
@@ -513,8 +678,8 @@ export function* search(request: SearchRequest): Iterable<GenerationEvent> {
 
   for (let index = 0; index < budgetAttempts && accepted < maxResults; index += 1) {
     const result = generateOne({
-      ...request,
-      seed: (request.seed ?? Date.now()) + index,
+      ...generationRequest,
+      seed: baseSeed + index,
       budget: {
         ...request.budget,
         maxAttempts: 1,
@@ -556,6 +721,7 @@ export function selectFromCandidates(
   candidates: readonly GeneratedPuzzle[],
   plan: CandidateSelectionPlan,
 ): CandidateSelectionResult {
+  validateCandidatePool(candidates);
   validateCandidateSelectionPlan(plan);
 
   const selected: GeneratedPuzzle[] = [];
@@ -574,14 +740,6 @@ export function selectFromCandidates(
       continue;
     }
 
-    if (plan.dedupeCanonical && puzzle.canonicalKey) {
-      if (seenCanonical.has(puzzle.canonicalKey)) {
-        rejectCandidate(rejected, rejectedByReason, puzzle, 'canonical-duplicate');
-        continue;
-      }
-      seenCanonical.add(puzzle.canonicalKey);
-    }
-
     const bucketIndex = findScoreBucket(plan.scoreBuckets, puzzle.score);
     if (plan.scoreBuckets && bucketIndex < 0) {
       rejectCandidate(rejected, rejectedByReason, puzzle, 'score-out-of-buckets');
@@ -594,10 +752,21 @@ export function selectFromCandidates(
         rejectCandidate(rejected, rejectedByReason, puzzle, 'score-bucket-full');
         continue;
       }
-      bucketCounts.set(bucketIndex, currentCount + 1);
     }
 
-    selected.push(puzzle);
+    if (plan.dedupeCanonical) {
+      const dedupeKey = puzzle.canonicalKey ?? puzzleKey(puzzle);
+      if (seenCanonical.has(dedupeKey)) {
+        rejectCandidate(rejected, rejectedByReason, puzzle, 'canonical-duplicate');
+        continue;
+      }
+      seenCanonical.add(dedupeKey);
+    }
+
+    if (bucketIndex >= 0) {
+      bucketCounts.set(bucketIndex, (bucketCounts.get(bucketIndex) ?? 0) + 1);
+    }
+    selected.push(cloneGeneratedPuzzle(puzzle));
     recordPreferredTechniqueHits(preferredTechniqueHits, puzzle, plan.preferredTechniques);
   }
 
@@ -618,8 +787,11 @@ export function analyzeCandidatePool(
   candidates: readonly GeneratedPuzzle[],
   options: CandidatePoolStatsOptions = {},
 ): CandidatePoolStats {
+  validateCandidatePool(candidates);
   const scoreBucketSize = options.scoreBucketSize ?? 100;
   const clueBucketSize = options.clueBucketSize ?? 5;
+  validatePositiveIntegerOption('scoreBucketSize', scoreBucketSize);
+  validatePositiveIntegerOption('clueBucketSize', clueBucketSize);
   const stats: CandidatePoolStats = {
     total: candidates.length,
     score: {
@@ -707,6 +879,7 @@ export function dedupeCandidates(
   candidates: readonly GeneratedPuzzle[],
   options: CandidateDedupeOptions = {},
 ): CandidateDedupeResult {
+  validateCandidatePool(candidates);
   const keyMode = options.key ?? 'canonical';
   const kept: GeneratedPuzzle[] = [];
   const rejected: CandidateDedupeResult['rejected'] = [];
@@ -718,14 +891,14 @@ export function dedupeCandidates(
       : puzzleKey(candidate);
     if (seen.has(key)) {
       rejected.push({
-        puzzle: candidate,
+        puzzle: cloneGeneratedPuzzle(candidate),
         reason: keyMode === 'canonical' && candidate.canonicalKey ? 'canonical-duplicate' : 'puzzle-duplicate',
         key,
       });
       continue;
     }
     seen.add(key);
-    kept.push(candidate);
+    kept.push(cloneGeneratedPuzzle(candidate));
   }
 
   return {
@@ -738,6 +911,113 @@ export function dedupeCandidates(
       key: keyMode,
     },
   };
+}
+
+export function validateCandidatePool(candidates: readonly GeneratedPuzzle[]): void {
+  if (!Array.isArray(candidates)) {
+    throw new Error('候选池必须是 GeneratedPuzzle JSON array。');
+  }
+  for (const [index, candidate] of candidates.entries()) {
+    validateGeneratedPuzzle(candidate, index);
+  }
+}
+
+export function validateGeneratedPuzzle(candidate: GeneratedPuzzle, index?: number): void {
+  const label = typeof index === 'number' ? `候选题第 ${index + 1} 项` : '候选题';
+  if (!isPlainObject(candidate)) {
+    throw new Error(`${label} 必须是 object。`);
+  }
+  validateCandidateBoard(candidate.puzzle, `${label}.puzzle`);
+  validateCandidateBoard(candidate.solution, `${label}.solution`);
+  validateCandidateSolution(candidate.puzzle, candidate.solution, label);
+  if (!Number.isInteger(candidate.seed) || candidate.seed < 1 || candidate.seed > MAX_SEED) {
+    throw new Error(`${label}.seed 必须是 1 到 0xffffffff 之间的整数。`);
+  }
+  if (typeof candidate.solved !== 'boolean') {
+    throw new Error(`${label}.solved 必须是 boolean。`);
+  }
+  if (
+    typeof candidate.stuckReason !== 'undefined'
+    && candidate.stuckReason !== 'contradiction'
+    && candidate.stuckReason !== 'no-technique-match'
+    && candidate.stuckReason !== 'step-limit'
+  ) {
+    throw new Error(`${label}.stuckReason 无效。`);
+  }
+  if (!Number.isInteger(candidate.clueCount) || candidate.clueCount < 0 || candidate.clueCount > 81) {
+    throw new Error(`${label}.clueCount 必须是 0 到 81 之间的整数。`);
+  }
+  const actualClueCount = candidate.puzzle.filter((value) => value !== 0).length;
+  if (candidate.clueCount !== actualClueCount) {
+    throw new Error(`${label}.clueCount 与 puzzle 中的线索数不一致。`);
+  }
+  if (typeof candidate.score !== 'number' || !Number.isFinite(candidate.score)) {
+    throw new Error(`${label}.score 必须是有限数字。`);
+  }
+  if (candidate.grade !== null && typeof candidate.grade !== 'string') {
+    throw new Error(`${label}.grade 必须是 string 或 null。`);
+  }
+  if (candidate.hardestTechnique !== null && !knownTechniqueIds.has(candidate.hardestTechnique)) {
+    throw new Error(`${label}.hardestTechnique 包含未知技巧：${String(candidate.hardestTechnique)}`);
+  }
+  validateTechniqueCounts(candidate.techniqueCounts, `${label}.techniqueCounts`);
+  if (
+    typeof candidate.canonicalKey !== 'undefined'
+    && (typeof candidate.canonicalKey !== 'string' || !/^[0-9]{81}$/.test(candidate.canonicalKey))
+  ) {
+    throw new Error(`${label}.canonicalKey 必须是 81 位数字字符串。`);
+  }
+  if (typeof candidate.canonicalKey === 'string') {
+    const expectedKey = canonicalizeBoard(candidate.puzzle).key;
+    if (candidate.canonicalKey !== expectedKey) {
+      throw new Error(`${label}.canonicalKey 与 puzzle 的 canonical key 不一致。`);
+    }
+  }
+}
+
+function validateCandidateBoard(value: unknown, label: string): asserts value is Board {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} 必须是 board array。`);
+  }
+  assertBoardValues(value, label);
+}
+
+function validateCandidateSolution(puzzle: Board, solution: Board, label: string): void {
+  for (let cell = 0; cell < solution.length; cell += 1) {
+    const value = solution[cell] ?? 0;
+    if (value === 0) {
+      throw new Error(`${label}.solution 必须是完整解盘，不能包含空格。`);
+    }
+    const clue = puzzle[cell] ?? 0;
+    if (clue !== 0 && clue !== value) {
+      throw new Error(`${label}.solution 与 puzzle 给定数不一致。`);
+    }
+  }
+
+  for (const house of ALL_HOUSES) {
+    const seen = new Set<number>();
+    for (const cell of getHouseCells(house)) {
+      const value = solution[cell] ?? 0;
+      if (seen.has(value)) {
+        throw new Error(`${label}.solution 存在行列宫冲突。`);
+      }
+      seen.add(value);
+    }
+  }
+}
+
+function validateTechniqueCounts(value: unknown, label: string): void {
+  if (!isPlainObject(value)) {
+    throw new Error(`${label} 必须是 object。`);
+  }
+  for (const [technique, count] of Object.entries(value)) {
+    if (!knownTechniqueIds.has(technique as TechniqueId)) {
+      throw new Error(`${label} 包含未知技巧：${technique}`);
+    }
+    if (typeof count !== 'number' || !Number.isInteger(count) || count < 0) {
+      throw new Error(`${label}.${technique} 必须是非负整数。`);
+    }
+  }
 }
 
 function validateCandidateSelectionPlan(plan: CandidateSelectionPlan): void {
@@ -753,8 +1033,8 @@ function validateCandidateSelectionPlan(plan: CandidateSelectionPlan): void {
   }
 
   for (const [index, bucket] of (plan.scoreBuckets ?? []).entries()) {
-    if (typeof bucket.min !== 'number' || typeof bucket.max !== 'number') {
-      throw new Error(`选择计划第 ${index + 1} 个分数桶必须包含数字 min 和 max。`);
+    if (typeof bucket.min !== 'number' || !Number.isFinite(bucket.min) || typeof bucket.max !== 'number' || !Number.isFinite(bucket.max)) {
+      throw new Error(`选择计划第 ${index + 1} 个分数桶必须包含有限数字 min 和 max。`);
     }
     if (bucket.min > bucket.max) {
       throw new Error(`选择计划第 ${index + 1} 个分数桶的 min 不能大于 max。`);
@@ -767,6 +1047,48 @@ function validateCandidateSelectionPlan(plan: CandidateSelectionPlan): void {
         throw new Error(`选择计划第 ${previousIndex + 1} 个和第 ${index + 1} 个分数桶不能重叠。`);
       }
     }
+  }
+}
+
+function validatePositiveIntegerOption(field: string, value: number): void {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${field} 必须是大于 0 的整数。`);
+  }
+}
+
+function assertValidSearchGenerationRequest(request: GenerationRequest): void {
+  const analysis = analyzeGenerationRequest(request);
+  if (analysis.status !== 'invalid') {
+    return;
+  }
+  const codes = analysis.errors.map((error) => error.code).join(', ');
+  throw new Error(`search generation request invalid: ${codes}`);
+}
+
+export function assertValidSearchRequest(request: SearchRequest): void {
+  validateSearchRequest(request);
+  const { maxResults: _maxResults, scoreBucketSize: _scoreBucketSize, ...generationRequest } = request;
+  void _maxResults;
+  void _scoreBucketSize;
+  assertValidSearchGenerationRequest(generationRequest);
+}
+
+function validateSearchRequest(request: SearchRequest): void {
+  if (!isPlainObject(request)) {
+    throw new Error('search request 必须是 object。');
+  }
+  for (const field of Object.keys(request as Record<string, unknown>)) {
+    if (!SEARCH_REQUEST_FIELDS.has(field)) {
+      throw new Error(`search request 包含未知字段：${field}`);
+    }
+  }
+  const maxResults = (request as SearchRequest).maxResults;
+  if (typeof maxResults !== 'undefined' && (!Number.isInteger(maxResults) || maxResults < 1)) {
+    throw new Error('search.maxResults 必须是大于等于 1 的整数。');
+  }
+  const scoreBucketSize = (request as SearchRequest).scoreBucketSize;
+  if (typeof scoreBucketSize !== 'undefined' && (!Number.isInteger(scoreBucketSize) || scoreBucketSize < 1)) {
+    throw new Error('search.scoreBucketSize 必须是大于等于 1 的整数。');
   }
 }
 
@@ -788,8 +1110,17 @@ function rejectCandidate(
   puzzle: GeneratedPuzzle,
   reason: string,
 ): void {
-  rejected.push({ puzzle, reason });
+  rejected.push({ puzzle: cloneGeneratedPuzzle(puzzle), reason });
   rejectedByReason[reason] = (rejectedByReason[reason] ?? 0) + 1;
+}
+
+function cloneGeneratedPuzzle(puzzle: GeneratedPuzzle): GeneratedPuzzle {
+  return {
+    ...puzzle,
+    puzzle: [...puzzle.puzzle],
+    solution: [...puzzle.solution],
+    techniqueCounts: { ...puzzle.techniqueCounts },
+  };
 }
 
 function rangesOverlap(leftMin: number, leftMax: number, rightMin: number, rightMax: number): boolean {
@@ -822,9 +1153,18 @@ function recordPreferredTechniqueHits(
 }
 
 function validateScoreRange(score: ScoreConstraint | undefined, errors: GenerationRequestIssue[]): void {
-  if (!score) {
+  if (typeof score === 'undefined') {
     return;
   }
+  if (!isPlainObject(score)) {
+    errors.push({
+      code: 'invalid-score-constraint',
+      message: 'score 必须是 object。',
+      details: { score },
+    });
+    return;
+  }
+  collectUnknownFields(score, SCORE_CONSTRAINT_FIELDS, 'unknown-generation-score-field', '分数约束包含未知字段。', errors);
   for (const [key, value] of Object.entries(score)) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       errors.push({
@@ -850,10 +1190,23 @@ function validateScoreRange(score: ScoreConstraint | undefined, errors: Generati
   }
 }
 
-function validateClueRange(clues: ClueConstraint | undefined, errors: GenerationRequestIssue[]): void {
-  if (!clues) {
+function validateClueRange(
+  clues: ClueConstraint | undefined,
+  errors: GenerationRequestIssue[],
+  warnings: GenerationRequestIssue[],
+): void {
+  if (typeof clues === 'undefined') {
     return;
   }
+  if (!isPlainObject(clues)) {
+    errors.push({
+      code: 'invalid-clue-constraint',
+      message: 'clues 必须是 object。',
+      details: { clues },
+    });
+    return;
+  }
+  collectUnknownFields(clues, CLUE_CONSTRAINT_FIELDS, 'unknown-generation-clue-field', '线索数约束包含未知字段。', errors);
   for (const [key, value] of Object.entries(clues)) {
     if (!Number.isInteger(value)) {
       errors.push({
@@ -886,6 +1239,20 @@ function validateClueRange(clues: ClueConstraint | undefined, errors: Generation
       details: { max: clues.max },
     });
   }
+  if (typeof clues.min === 'number' && clues.min < 17) {
+    warnings.push({
+      code: 'clue-min-below-unique-minimum-clamped',
+      message: '当前生成器始终保证唯一解，线索数下限低于 17 时实际候选仍不会低于唯一题常见下界。',
+      details: { min: clues.min },
+    });
+  }
+  if (typeof clues.target === 'number' && clues.target < 17) {
+    errors.push({
+      code: 'clue-target-below-unique-minimum',
+      message: '当前生成器始终保证唯一解，线索数目标不能低于 17。',
+      details: { target: clues.target },
+    });
+  }
 }
 
 function validateTechniqueSet(
@@ -906,44 +1273,114 @@ function validateTechniqueSet(
 }
 
 function validateGenerationRequestShape(request: GenerationRequest, errors: GenerationRequestIssue[]): void {
-  if (typeof request.seed !== 'undefined' && !Number.isInteger(request.seed)) {
+  if (!isPlainObject(request)) {
+    errors.push({
+      code: 'invalid-generation-request',
+      message: '生成请求必须是 object。',
+      details: { value: request },
+    });
+    return;
+  }
+  const rawRequest = request as Record<string, unknown>;
+  collectUnknownFields(rawRequest, GENERATION_REQUEST_FIELDS, 'unknown-generation-field', '生成请求包含未知字段。', errors);
+  const rawSeed = rawRequest.seed;
+  if (typeof rawSeed !== 'undefined' && (
+    typeof rawSeed !== 'number'
+    || !Number.isInteger(rawSeed)
+    || rawSeed < 1
+    || rawSeed > MAX_SEED
+  )) {
     errors.push({
       code: 'invalid-seed',
-      message: 'seed 必须是整数。',
-      details: { seed: request.seed },
+      message: 'seed 必须是 1 到 0xffffffff 之间的整数。',
+      details: { seed: rawSeed },
     });
   }
-  if (typeof request.canonicalize !== 'undefined' && typeof request.canonicalize !== 'boolean') {
+  if (typeof rawRequest.canonicalize !== 'undefined' && typeof rawRequest.canonicalize !== 'boolean') {
     errors.push({
       code: 'invalid-canonicalize',
       message: 'canonicalize 必须是 boolean。',
-      details: { canonicalize: request.canonicalize },
+      details: { canonicalize: rawRequest.canonicalize },
     });
   }
   if (
-    typeof request.minimality !== 'undefined'
-    && request.minimality !== 'none'
-    && request.minimality !== 'strict'
+    typeof rawRequest.minimality !== 'undefined'
+    && rawRequest.minimality !== 'none'
+    && rawRequest.minimality !== 'strict'
   ) {
     errors.push({
       code: 'invalid-minimality',
       message: 'minimality 只能是 none 或 strict。',
-      details: { minimality: request.minimality },
+      details: { minimality: rawRequest.minimality },
     });
   }
 
-  validateBudget(request.budget, errors);
-  validateRelaxation(request.relaxation, errors);
-  validateGenerationConstraintShape(request.constraints, errors);
+  validateBudget(rawRequest.budget as GenerationBudget | undefined, errors);
+  validateRelaxation(rawRequest.relaxation as GenerationRelaxation | undefined, errors);
+  validateRatingPolicyForGeneration(rawRequest.ratingPolicy as RatingPolicy | undefined, errors);
+  validateSearchOnlyRequestFields(request, errors);
+  validateGenerationConstraintShape(rawRequest.constraints as GenerationConstraint | undefined, errors);
+}
+
+function validateSearchOnlyRequestFields(request: GenerationRequest, errors: GenerationRequestIssue[]): void {
+  const rawRequest = request as Record<string, unknown>;
+  const maxResults = rawRequest.maxResults;
+  if (typeof maxResults !== 'undefined' && (!Number.isInteger(maxResults) || (maxResults as number) < 1)) {
+    errors.push({
+      code: 'invalid-search-max-results',
+      message: 'maxResults 必须是大于等于 1 的整数。',
+      details: { maxResults },
+    });
+  }
+  const scoreBucketSize = rawRequest.scoreBucketSize;
+  if (typeof scoreBucketSize !== 'undefined' && (!Number.isInteger(scoreBucketSize) || (scoreBucketSize as number) < 1)) {
+    errors.push({
+      code: 'invalid-search-score-bucket-size',
+      message: 'scoreBucketSize 必须是大于等于 1 的整数。',
+      details: { scoreBucketSize },
+    });
+  }
+}
+
+function collectUnknownFields(
+  value: object,
+  allowedFields: ReadonlySet<string>,
+  code: string,
+  message: string,
+  errors: GenerationRequestIssue[],
+  details: Record<string, unknown> = {},
+  ignoredFields: ReadonlySet<string> = new Set(),
+): void {
+  for (const field of Object.keys(value as Record<string, unknown>)) {
+    if (ignoredFields.has(field)) {
+      continue;
+    }
+    if (!allowedFields.has(field)) {
+      errors.push({
+        code,
+        message,
+        details: { ...details, field },
+      });
+    }
+  }
 }
 
 function validateGenerationConstraintShape(
   constraints: GenerationConstraint | undefined,
   errors: GenerationRequestIssue[],
 ): void {
-  if (!constraints) {
+  if (typeof constraints === 'undefined') {
     return;
   }
+  if (!isPlainObject(constraints)) {
+    errors.push({
+      code: 'invalid-generation-constraints',
+      message: 'constraints 必须是 object。',
+      details: { constraints },
+    });
+    return;
+  }
+  collectUnknownFields(constraints, GENERATION_CONSTRAINT_FIELDS, 'unknown-generation-constraint-field', '生成约束包含未知字段。', errors);
   if (
     typeof constraints.symmetry !== 'undefined'
     && constraints.symmetry !== 'none'
@@ -962,36 +1399,58 @@ function validateGenerationConstraintShape(
       details: { uniqueness: constraints.uniqueness },
     });
   }
-  validateTechniqueArrayShape('allowedTechniques', constraints.allowedTechniques, errors);
-  validateTechniqueArrayShape('forbiddenTechniques', constraints.forbiddenTechniques, errors);
-  validateTechniqueArrayShape('preferredTechniques', constraints.preferredTechniques, errors);
-  validateRequiredTechniqueRuleShape(constraints.requiredTechniques, errors);
+  const rawConstraints = constraints as Record<string, unknown>;
+  validateTechniqueArrayShape('allowedTechniques', rawConstraints.allowedTechniques as TechniqueId[] | undefined, errors);
+  validateTechniqueArrayShape('forbiddenTechniques', rawConstraints.forbiddenTechniques as TechniqueId[] | undefined, errors);
+  validateTechniqueArrayShape('preferredTechniques', rawConstraints.preferredTechniques as TechniqueId[] | undefined, errors);
+  validateRequiredTechniqueRuleShape(rawConstraints.requiredTechniques as RequiredTechniqueRule[] | undefined, errors);
 }
 
 function validateBudget(budget: GenerationBudget | undefined, errors: GenerationRequestIssue[]): void {
-  if (!budget) {
+  if (typeof budget === 'undefined') {
     return;
   }
-  if (typeof budget.maxAttempts !== 'undefined' && (!Number.isInteger(budget.maxAttempts) || budget.maxAttempts < 1)) {
+  if (!isPlainObject(budget)) {
+    errors.push({
+      code: 'invalid-generation-budget',
+      message: 'budget 必须是 object。',
+      details: { budget },
+    });
+    return;
+  }
+  const rawBudget = budget as Record<string, unknown>;
+  collectUnknownFields(rawBudget, GENERATION_BUDGET_FIELDS, 'unknown-generation-budget-field', '生成预算包含未知字段。', errors);
+  const maxAttempts = rawBudget.maxAttempts;
+  if (typeof maxAttempts !== 'undefined' && (typeof maxAttempts !== 'number' || !Number.isInteger(maxAttempts) || maxAttempts < 1)) {
     errors.push({
       code: 'invalid-budget-max-attempts',
       message: 'budget.maxAttempts 必须是大于等于 1 的整数。',
-      details: { maxAttempts: budget.maxAttempts },
+      details: { maxAttempts },
     });
   }
-  if (typeof budget.maxElapsedMs !== 'undefined' && (!Number.isInteger(budget.maxElapsedMs) || budget.maxElapsedMs < 1)) {
+  const maxElapsedMs = rawBudget.maxElapsedMs;
+  if (typeof maxElapsedMs !== 'undefined' && (typeof maxElapsedMs !== 'number' || !Number.isInteger(maxElapsedMs) || maxElapsedMs < 1)) {
     errors.push({
       code: 'invalid-budget-max-elapsed-ms',
       message: 'budget.maxElapsedMs 必须是大于等于 1 的整数。',
-      details: { maxElapsedMs: budget.maxElapsedMs },
+      details: { maxElapsedMs },
     });
   }
 }
 
 function validateRelaxation(relaxation: GenerationRelaxation | undefined, errors: GenerationRequestIssue[]): void {
-  if (!relaxation) {
+  if (typeof relaxation === 'undefined') {
     return;
   }
+  if (!isPlainObject(relaxation)) {
+    errors.push({
+      code: 'invalid-generation-relaxation',
+      message: 'relaxation 必须是 object。',
+      details: { relaxation },
+    });
+    return;
+  }
+  collectUnknownFields(relaxation, GENERATION_RELAXATION_FIELDS, 'unknown-generation-relaxation-field', '生成 relaxation 包含未知字段。', errors);
   if (typeof relaxation.enabled !== 'boolean') {
     errors.push({
       code: 'invalid-relaxation-enabled',
@@ -1038,6 +1497,25 @@ function validateRelaxation(relaxation: GenerationRelaxation | undefined, errors
   }
 }
 
+function validateRatingPolicyForGeneration(policy: RatingPolicy | undefined, errors: GenerationRequestIssue[]): void {
+  if (typeof policy === 'undefined') {
+    return;
+  }
+  errors.push(...validateRatingPolicy(policy));
+}
+
+function isRatingPolicyLike(value: RatingPolicy | undefined): value is RatingPolicy {
+  return isPlainObject(value)
+    && typeof value.id === 'string'
+    && typeof value.version === 'string'
+    && Array.isArray(value.techniqueOrder)
+    && isPlainObject(value.techniqueScores);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function validateTechniqueArrayShape(
   field: string,
   techniques: TechniqueId[] | undefined,
@@ -1053,6 +1531,13 @@ function validateTechniqueArrayShape(
       details: { field, value: techniques },
     });
     return;
+  }
+  if (field === 'allowedTechniques' && techniques.length === 0) {
+    errors.push({
+      code: 'empty-allowed-techniques',
+      message: 'allowedTechniques 不能为空；生成器至少需要一个可用技巧。',
+      details: { field },
+    });
   }
   for (const [index, technique] of techniques.entries()) {
     if (typeof technique !== 'string') {
@@ -1098,12 +1583,26 @@ function validateRequiredTechniqueRuleShape(
       });
       continue;
     }
+    collectUnknownFields(
+      rule as Record<string, unknown>,
+      REQUIRED_TECHNIQUE_FIELDS[ruleType],
+      'unknown-required-technique-field',
+      'requiredTechniques 规则包含未知字段。',
+      errors,
+      { index },
+    );
     if (rule.type === 'family-coverage') {
       if (!Array.isArray(rule.families) || rule.families.some((family) => typeof family !== 'string')) {
         errors.push({
           code: 'invalid-required-family-list',
           message: 'family-coverage 规则必须提供字符串 families 数组。',
           details: { index, families: rule.families },
+        });
+      } else if (rule.families.length === 0) {
+        errors.push({
+          code: 'empty-required-family-list',
+          message: 'family-coverage 规则的 families 不能为空。',
+          details: { index },
         });
       }
       continue;
@@ -1113,6 +1612,12 @@ function validateRequiredTechniqueRuleShape(
         code: 'invalid-required-technique-list',
         message: 'requiredTechniques 规则必须提供字符串 techniques 数组。',
         details: { index, techniques: rule.techniques },
+      });
+    } else if (rule.techniques.length === 0) {
+      errors.push({
+        code: 'empty-required-technique-list',
+        message: 'requiredTechniques 规则的 techniques 不能为空。',
+        details: { index },
       });
     }
     if (rule.type === 'appears' && typeof rule.minCount !== 'undefined' && (!Number.isInteger(rule.minCount) || rule.minCount < 1)) {
@@ -1145,6 +1650,19 @@ function validateAllowedForbiddenOverlap(
   }
 }
 
+function validateAvailableTechniques(
+  available: Set<TechniqueId>,
+  errors: GenerationRequestIssue[],
+): void {
+  if (available.size > 0) {
+    return;
+  }
+  errors.push({
+    code: 'no-available-techniques',
+    message: '过滤 allowedTechniques / forbiddenTechniques 后没有可用技巧，生成器至少需要一个可执行技巧。',
+  });
+}
+
 function validateRequiredTechniques(
   rules: RequiredTechniqueRule[] | undefined,
   knownTechniques: Set<TechniqueId>,
@@ -1164,6 +1682,9 @@ function validateRequiredTechniques(
       continue;
     }
     if (rule.type === 'family-coverage') {
+      if (rule.families.length === 0) {
+        continue;
+      }
       for (const family of rule.families) {
         const hasFamily = [...allowed].some((technique) => techniqueFamilies.get(technique) === family);
         if (!hasFamily) {
@@ -1176,43 +1697,40 @@ function validateRequiredTechniques(
       }
       continue;
     }
-
-    for (const technique of rule.techniques) {
-      if (!knownTechniques.has(technique)) {
-        errors.push({
-          code: 'unknown-required-technique',
-          message: `要求出现未知技巧：${technique}`,
-          details: { technique },
-        });
-        continue;
-      }
-      if (!allowed.has(technique)) {
-        errors.push({
-          code: 'required-technique-not-allowed',
-          message: `要求出现的技巧不在允许技巧范围内：${technique}`,
-          details: { technique },
-        });
-      }
-      if (forbidden.has(technique)) {
-        errors.push({
-          code: 'required-technique-forbidden',
-          message: `要求出现的技巧被禁止：${technique}`,
-          details: { technique },
-        });
-      }
-      const techniqueScore = policy.techniqueScores[technique] ?? 0;
-      if (typeof score?.max === 'number' && techniqueScore > score.max) {
-        errors.push({
-          code: 'required-technique-score-above-max',
-          message: `要求出现的技巧单步分值高于分数上限：${technique}`,
-          details: { technique, techniqueScore, scoreMax: score.max },
-        });
-      }
+    if (rule.techniques.length === 0) {
+      continue;
     }
+
+    if (rule.type === 'appears') {
+      const availableTechniques = getAvailableAppearsTechniques(rule, knownTechniques, allowed, forbidden, policy, score);
+      if (availableTechniques.length === 0) {
+        errors.push({
+          code: 'required-technique-not-available',
+          message: 'appears 规则中没有任何可用技巧。',
+          details: { techniques: rule.techniques },
+        });
+      } else {
+        const unavailableAlternatives = rule.techniques.filter((technique) => !availableTechniques.includes(technique));
+        if (unavailableAlternatives.length > 0) {
+          suggestions.push({
+            type: 'review-required-technique-alternatives',
+            message: 'appears 规则中有备选技巧当前不可用；如果不是故意的，请检查拼写、allowedTechniques、forbiddenTechniques 或 score.max。',
+            details: { techniques: unavailableAlternatives },
+          });
+        }
+      }
+      continue;
+    }
+
+    validateRequiredTechniqueList(rule.techniques, knownTechniques, allowed, forbidden, policy, score, errors);
   }
 
   const requiredCount = (rules ?? []).filter((rule) => rule.type !== 'family-coverage').length;
-  if (requiredCount > 0 && typeof score?.max === 'number' && score.max < estimateRequiredMinimumScore(rules ?? [], policy)) {
+  if (
+    requiredCount > 0
+    && typeof score?.max === 'number'
+    && score.max < estimateRequiredMinimumScore(rules ?? [], policy, knownTechniques, allowed, forbidden, score)
+  ) {
     warnings.push({
       code: 'score-max-low-for-required-techniques',
       message: '分数上限可能过低，难以容纳要求出现的技巧。',
@@ -1222,6 +1740,65 @@ function validateRequiredTechniques(
       type: 'raise-score-max',
       message: '提高分数上限，或把部分技巧从 requiredTechniques 移到 preferredTechniques。',
     });
+  }
+}
+
+function getAvailableAppearsTechniques(
+  rule: Extract<RequiredTechniqueRule, { type: 'appears' }>,
+  knownTechniques: Set<TechniqueId>,
+  allowed: Set<TechniqueId>,
+  forbidden: Set<TechniqueId>,
+  policy: RatingPolicy,
+  score: ScoreConstraint | undefined,
+): TechniqueId[] {
+  return rule.techniques.filter((technique) => (
+    knownTechniques.has(technique)
+    && allowed.has(technique)
+    && !forbidden.has(technique)
+    && (typeof score?.max !== 'number' || (policy.techniqueScores[technique] ?? 0) <= score.max)
+  ));
+}
+
+function validateRequiredTechniqueList(
+  techniques: readonly TechniqueId[],
+  knownTechniques: Set<TechniqueId>,
+  allowed: Set<TechniqueId>,
+  forbidden: Set<TechniqueId>,
+  policy: RatingPolicy,
+  score: ScoreConstraint | undefined,
+  errors: GenerationRequestIssue[],
+): void {
+  for (const technique of techniques) {
+    if (!knownTechniques.has(technique)) {
+      errors.push({
+        code: 'unknown-required-technique',
+        message: `要求出现未知技巧：${technique}`,
+        details: { technique },
+      });
+      continue;
+    }
+    if (!allowed.has(technique)) {
+      errors.push({
+        code: 'required-technique-not-allowed',
+        message: `要求出现的技巧不在允许技巧范围内：${technique}`,
+        details: { technique },
+      });
+    }
+    if (forbidden.has(technique)) {
+      errors.push({
+        code: 'required-technique-forbidden',
+        message: `要求出现的技巧被禁止：${technique}`,
+        details: { technique },
+      });
+    }
+    const techniqueScore = policy.techniqueScores[technique] ?? 0;
+    if (typeof score?.max === 'number' && techniqueScore > score.max) {
+      errors.push({
+        code: 'required-technique-score-above-max',
+        message: `要求出现的技巧单步分值高于分数上限：${technique}`,
+        details: { technique, techniqueScore, scoreMax: score.max },
+      });
+    }
   }
 }
 
@@ -1388,14 +1965,27 @@ function estimateFeasibility(
   };
 }
 
-function estimateRequiredMinimumScore(rules: RequiredTechniqueRule[], policy: RatingPolicy): number {
+function estimateRequiredMinimumScore(
+  rules: RequiredTechniqueRule[],
+  policy: RatingPolicy,
+  knownTechniques: Set<TechniqueId>,
+  allowed: Set<TechniqueId>,
+  forbidden: Set<TechniqueId>,
+  score: ScoreConstraint | undefined,
+): number {
   let total = 0;
   for (const rule of rules) {
     if (rule.type === 'family-coverage') {
       continue;
     }
     const minCount = rule.type === 'appears' ? rule.minCount ?? 1 : 1;
-    const minTechniqueScore = Math.min(...rule.techniques.map((technique) => policy.techniqueScores[technique] ?? 0));
+    const techniques = rule.type === 'appears'
+      ? getAvailableAppearsTechniques(rule, knownTechniques, allowed, forbidden, policy, score)
+      : rule.techniques.filter((technique) => knownTechniques.has(technique) && allowed.has(technique) && !forbidden.has(technique));
+    if (techniques.length === 0) {
+      continue;
+    }
+    const minTechniqueScore = Math.min(...techniques.map((technique) => policy.techniqueScores[technique] ?? 0));
     total += minTechniqueScore * minCount;
   }
   return total;
@@ -1406,6 +1996,9 @@ function estimateDifficulty(
   allowed: Set<TechniqueId>,
   policy: RatingPolicy,
 ): GenerationRequestAnalysis['estimatedDifficulty'] {
+  if (allowed.size === 0) {
+    return 'very-high';
+  }
   const scoreMin = score?.min ?? score?.target ?? 0;
   const maxAllowedScore = Math.max(...[...allowed].map((technique) => policy.techniqueScores[technique] ?? 0));
   if (scoreMin >= 3000 || maxAllowedScore >= 150) {
@@ -1433,11 +2026,15 @@ function buildGeneratedPuzzle(
     solution: pair?.solution ?? solution,
     seed,
     clueCount: puzzle.filter((value) => value !== 0).length,
+    solved: rated.solved,
     score: rated.score,
     grade: rated.grade,
     hardestTechnique: rated.hardestTechnique,
     techniqueCounts: rated.techniqueCounts,
   };
+  if (rated.stuckReason) {
+    generated.stuckReason = rated.stuckReason;
+  }
   if (pair) {
     generated.canonicalKey = pair.key;
   }
@@ -1458,6 +2055,9 @@ function withBestCandidate(
 }
 
 function matchesConstraints(candidate: GeneratedPuzzle, constraints: GenerationConstraint): string | null {
+  if (!candidate.solved) {
+    return 'unsolved-by-rating-policy';
+  }
   if (
     typeof constraints.score?.target === 'number'
     && typeof constraints.score?.tolerance === 'number'
@@ -1483,6 +2083,9 @@ function matchesConstraints(candidate: GeneratedPuzzle, constraints: GenerationC
   }
   if (typeof constraints.clues?.max === 'number' && candidate.clueCount > constraints.clues.max) {
     return 'clue-count-too-high';
+  }
+  if (typeof constraints.clues?.target === 'number' && candidate.clueCount !== constraints.clues.target) {
+    return 'clue-count-target-mismatch';
   }
   const techniqueCounts = candidate.techniqueCounts ?? {};
   for (const technique of constraints.forbiddenTechniques ?? []) {
@@ -1525,6 +2128,10 @@ function chooseBetterCandidate(
 ): GeneratedPuzzle {
   if (!current) {
     return next;
+  }
+
+  if (current.solved !== next.solved) {
+    return next.solved ? next : current;
   }
 
   const targetScore = constraints.score?.target ?? constraints.score?.min ?? constraints.score?.max ?? next.score;
@@ -1589,15 +2196,24 @@ function recordRejected(summary: SearchSummary, reason: string): void {
 
 function buildPolicyForConstraints(policy: RatingPolicy, constraints: GenerationConstraint): RatingPolicy {
   const forbidden = new Set(constraints.forbiddenTechniques ?? []);
-  const allowed = constraints.allowedTechniques
-    ? policy.techniqueOrder.filter((technique) => constraints.allowedTechniques?.includes(technique) && !forbidden.has(technique))
-    : policy.techniqueOrder.filter((technique) => !forbidden.has(technique));
+  const allowedFilter = (technique: TechniqueId): boolean => (
+    !forbidden.has(technique)
+    && (!constraints.allowedTechniques || constraints.allowedTechniques.includes(technique))
+  );
+  const allowedPrimary = policy.techniqueOrder.filter(allowedFilter);
+  const allowedFallback = (policy.fallbackTechniques ?? []).filter(allowedFilter);
+  const allowed = [...allowedPrimary, ...allowedFallback];
   const preferred = constraints.preferredTechniques
     ? constraints.preferredTechniques.filter((technique) => allowed.includes(technique))
     : [];
+  const preferredPrimary = preferred.filter((technique) => allowedPrimary.includes(technique));
+  const preferredFallback = preferred.filter((technique) => allowedFallback.includes(technique));
+  const techniqueOrder = allowedPrimary.length > 0
+    ? [...preferredPrimary, ...allowedPrimary.filter((technique) => !preferredPrimary.includes(technique))]
+    : [...preferredFallback, ...allowedFallback.filter((technique) => !preferredFallback.includes(technique))];
   const constrainedPolicy: RatingPolicy = {
     ...policy,
-    techniqueOrder: [...preferred, ...allowed.filter((technique) => !preferred.includes(technique))],
+    techniqueOrder,
     techniqueScores: { ...policy.techniqueScores },
   };
   if (policy.gradeRules) {
@@ -1605,6 +2221,11 @@ function buildPolicyForConstraints(policy: RatingPolicy, constraints: Generation
       ...rule,
       ...(rule.allowedTechniques ? { allowedTechniques: rule.allowedTechniques.filter((technique) => allowed.includes(technique)) } : {}),
     }));
+  }
+  if (allowedPrimary.length > 0 && allowedFallback.length > 0) {
+    constrainedPolicy.fallbackTechniques = allowedFallback;
+  } else {
+    delete constrainedPolicy.fallbackTechniques;
   }
   return constrainedPolicy;
 }

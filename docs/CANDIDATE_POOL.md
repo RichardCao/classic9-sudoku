@@ -21,6 +21,7 @@
   "puzzle": [0, 0, 0],
   "solution": [1, 2, 3],
   "seed": 1,
+  "solved": true,
   "clueCount": 40,
   "score": 610,
   "grade": "basic",
@@ -34,6 +35,12 @@
 ```
 
 实际 `puzzle` 和 `solution` 必须是 81 长度数组。
+
+`solution` 必须是完整无冲突解盘，并且必须与 `puzzle` 中所有给定数一致。
+
+`solved: true` 表示该候选已经能被生成时使用的评分策略解出。`search` 和 `generateOne` 只有在满足当前约束且 `solved === true` 时才会把候选作为成功结果输出；失败时的 `bestCandidate` 只用于诊断。
+
+如果候选包含 `canonicalKey`，候选池 API 会校验它是否等于当前 `puzzle` 的 canonical key。外部导入候选池时，不要手工伪造或复用其他题面的 key。
 
 ## 选择计划
 
@@ -70,7 +77,7 @@ node dist/src/cli/index.js schema candidateSelectionResult
    最多选择多少题。
 
 2. `dedupeCanonical`
-   如果候选题带 `canonicalKey`，则按 canonical key 去重。
+   优先按 `canonicalKey` 去重；没有 `canonicalKey` 的候选会退回题面字符串去重。
 
 3. `preferredTechniques`
    不是硬约束，只用于排序。命中这些技巧越多，越优先。

@@ -48,6 +48,7 @@ node dist/src/cli/index.js techniques
 | `finned-jellyfish` | 带鳍水母 | `fish` | 210 |
 | `sashimi-swordfish` | 刺身剑鱼 | `fish` | 176 |
 | `sashimi-jellyfish` | 刺身水母 | `fish` | 218 |
+| `nishio-forcing-chains` | Nishio 强制链 | `forcing` | 222 |
 | `xy-wing` | XY-Wing | `wing` | 115 |
 | `xyz-wing` | XYZ-Wing | `wing` | 165 |
 | `wxyz-wing` | WXYZ-Wing | `wing` | 174 |
@@ -57,7 +58,6 @@ node dist/src/cli/index.js techniques
 | `almost-locked-triple` | 准锁定三数组 | `als` | 144 |
 | `als-xz` | ALS-XZ | `als` | 182 |
 | `als-xy-wing` | ALS-XY-Wing | `als` | 188 |
-| `aic-als` | ALS-AIC | `als` | 214 |
 | `fireworks` | Fireworks | `als` | 211 |
 | `twinned-xy-chains` | 双生 XY-Chains | `als` | 213 |
 | `sue-de-coq` | Sue-de-Coq | `als` | 207 |
@@ -69,6 +69,7 @@ node dist/src/cli/index.js techniques
 | `tridagons` | Tridagons | `pattern` | 232 |
 | `sk-loops` | SK Loops | `pattern` | 236 |
 | `simple-coloring` | 简单染色 | `coloring` | 170 |
+| `x-coloring` | 扩展染色 | `coloring` | 174 |
 | `multi-colors` | 多重染色 | `coloring` | 178 |
 | `three-d-medusa` | 3D Medusa | `coloring` | 202 |
 | `grouped-x-cycles` | 分组 X-Cycles | `single-digit-chain` | 168 |
@@ -95,11 +96,13 @@ node dist/src/cli/index.js techniques
 
 | id | 中文名 | 技巧族 | 默认单步分 |
 | --- | --- | --- | --- |
+| `aic-als` | ALS-AIC | `als` | 214 |
+| `big-wings` | BigWings | `als` | 179 |
 | `forcing-nets` | Forcing Nets | `forcing` | 220 |
 | `digit-forcing-chains` | 数字强制链 | `forcing` | 221 |
-| `nishio-forcing-chains` | Nishio 强制链 | `forcing` | 222 |
 | `cell-forcing-chains` | 单元格强制链 | `forcing` | 223 |
 | `unit-forcing-chains` | 区域强制链 | `forcing` | 224 |
+| `table-chain` | Table Chain | `forcing` | 226 |
 | `bowmans-bingo` | Bowman's Bingo | `forcing` | 248 |
 ## 技巧族
 
@@ -111,15 +114,19 @@ node dist/src/cli/index.js techniques
 
 `fish` 表示鱼类结构，目前稳定支持 X-Wing、Swordfish、Franken Swordfish、Jellyfish、带鳍鱼和刺身鱼。
 
+当前 `franken-swordfish` 采用稳定保守口径：允许 line basis 与 box basis 混合，但每个 basis 候选格只能属于一个 basis。若某个候选格同时属于两个 basis，它会形成 endofin / overlap 场景，公开库暂不把它当作普通 Franken Swordfish 删除；这类复杂 mixed fish 后续应作为单独技巧补充。
+
 `wing` 表示翼类结构，目前稳定支持 XY-Wing、XYZ-Wing、WXYZ-Wing、W-Wing 和宫带远程数对。
 
-`als` 表示 Almost Locked Set 相关技巧，目前稳定支持准锁定数对、准锁定三数组、ALS-XZ、ALS-XY-Wing、ALS-AIC、Fireworks、双生 XY-Chains、Sue-de-Coq、Death Blossom 和对齐数对排除。
+`als` 表示 Almost Locked Set 相关技巧，目前稳定支持准锁定数对、准锁定三数组、ALS-XZ、ALS-XY-Wing、Fireworks、双生 XY-Chains、Sue-de-Coq、Death Blossom 和对齐数对排除；`aic-als` 与 `big-wings` 现在保留为 experimental，供显式调用和回归。
+
+当前 `aic-als` 仍在 experimental。真实题库回归中发现此前的简化实现会把 ALS 内部关系误当作普通候选链，从而在某些候选态下误删真值候选。因此公开库暂时保留 `aic-als` 的 definition 与技巧 ID，但在按 ALS / RCC 链模型重写前，不默认进入 stable 管线，也不会对外产出步骤。
 
 `pattern` 表示更高阶的结构型模式，目前稳定支持 Exocet、Double Exocet、Pattern Overlay、Tridagons 和 SK Loops。
 
-`forcing` 表示显式分支、试探或多分支共同结论类技巧。当前这组技巧以 experimental 形式提供。
+`forcing` 表示显式分支、试探或多分支共同结论类技巧。当前 `nishio-forcing-chains` 已进入 stable；其余 forcing 技巧仍以 experimental 形式提供。其中 `table-chain` 可显式调用，但不会默认进入 `walkthrough()` 或 `rate()`，`classic-extended` 当前也仍只默认兜底 `bowmans-bingo`。`table-chain` 目前更接近一个安全的通用分支 reduction，和 SE 的原始 TableChain 仍不是逐步同构的完全移植。它可能非常慢，不建议默认用于批量评分或生成，更适合离线审计、人工研究或少量疑难题复核。
 
-`coloring` 表示基于强链分色的技巧，目前稳定支持简单染色、多重染色和 3D Medusa。
+`coloring` 表示基于强链分色的技巧，目前稳定支持简单染色、扩展染色、多重染色和 3D Medusa。
 
 `chain` 表示一般链式技巧，目前稳定支持 X-Chain、XY-Chain、AIC、AIC with Exotic Links 和分组 AIC。
 
@@ -148,6 +155,8 @@ node dist/src/cli/index.js generator-analyze request.json
 ## 生成器约束建议
 
 如果目标是“必须出现某些技巧”，使用 `requiredTechniques`。
+
+`requiredTechniques` 的 `appears.techniques` 是 OR 语义：列表里任意一个技巧达到 `minCount` 即满足该规则。这里的 `minCount` 作用在单个备选技巧上，不是多个备选技巧的合计次数。如果需要多个技巧都出现，应拆成多条 `appears` 规则。
 
 如果目标是“优先保留某些技巧，但不要让生成器过早失败”，使用 `preferredTechniques`。
 
@@ -180,23 +189,23 @@ node dist/src/cli/index.js generator-analyze request.json
 | `wing` | `xy-wing`、`xyz-wing`、`w-wing`、`chute-remote-pairs` | `eliminate` | 当前为空数组或只标出强链 house | `reason` 表示 pivot、wing 或远程数对端点；`link` 表示第三宫 yellow cells；`target` 表示被删候选 |
 | `als` | `almost-locked-pair`、`almost-locked-triple`、`als-xz`、`als-xy-wing`、`aic-als`、`fireworks`、`twinned-xy-chains`、`sue-de-coq`、`death-blossom`、`aligned-pair-exclusion` | `eliminate` | 标出 ALS 所在 house、交叉区域或 ALS-AIC/Fireworks/双生 XY-Chains/Sue-de-Coq/Death Blossom/Aligned Pair Exclusion 相关区域 | `reason` 表示 ALS/AHS 格、Fireworks 三格、双生 XY-Chains 六格、Sue-de-Coq 交集与翼格、Death Blossom 的 pivot 与花瓣、对齐基础对或链端候选；`link` 表示交叉、限制公共候选或 ALS 单元；`target` 表示被删候选 |
 | `pattern` | `exocet`、`double-exocet`、`pattern-overlay`、`tridagons`、`sk-loops` | `place` 或 `eliminate` | 标出 base cells、target cells、模板支撑格、guardian 或 loop houses | `reason` 表示结构支撑格；`pivot` 表示 target cells 或模板结点；`target` 表示落子或被删候选 |
-| `coloring` | `simple-coloring`、`multi-colors`、`three-d-medusa` | `eliminate` | 标出强链所在 house | `reason` 表示染色链格子；`target` 表示被删候选；`links` 表示强链和跨组件弱链 |
+| `coloring` | `simple-coloring`、`x-coloring`、`multi-colors`、`three-d-medusa` | `eliminate` | 标出强链所在 house | `reason` 表示染色链格子；`target` 表示被删候选；`links` 表示强链和跨组件弱链 |
 | `chain` | `x-chain`、`xy-chain`、`aic`、`aic-exotic`、`grouped-aic` | `eliminate` | 标出链经过的相关 house | `reason` 表示链上的格子；`target` 表示被删候选；`links` 表示链上的强弱关系 |
-| `forcing` | `forcing-nets`、`digit-forcing-chains`、`nishio-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`bowmans-bingo` | `place` 或 `eliminate` | 标出分支来源或结论相关区域 | `reason` 表示分支起点；`target` 表示最终结论；`branches` 表示每条分支的假设、矛盾状态、穷尽状态和分支内动作摘要 |
+| `forcing` | `forcing-nets`、`digit-forcing-chains`、`nishio-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain`、`bowmans-bingo` | `place` 或 `eliminate` | 标出分支来源或结论相关区域 | `reason` 表示分支起点；`target` 表示最终结论；`branches` 表示每条分支的假设、矛盾状态、穷尽状态和分支内动作摘要 |
 | `single-digit-chain` | `grouped-x-cycles`、`skyscraper`、`turbot-fish`、`two-string-kite`、`empty-rectangle` | `eliminate` | 标出强链所在行列、相关宫或 cover line | `reason` 表示链结构候选格；`target` 表示被删候选 |
 | `uniqueness` | `unique-rectangle`、`avoidable-rectangle`、`rectangle-elimination`、`extended-rectangle`、`hidden-unique-rectangle`、`aic-ur`、`bug-plus-one` | `place` 或 `eliminate` | 标出矩形、强链或 BUG 相关区域 | `reason` 表示唯一性结构；`link` 表示 UR-AIC 中的链节点；`target` 表示落子或被删候选 |
 
 `evidence.note` 当前只用于调试和内部说明，不建议调用方直接展示。面向用户的文案应使用 `formatStep` 生成。
 
-`evidence.branches` 主要用于公开库调用方解释 experimental forcing 技巧。`assumption` 是分支入口动作；`contradiction` 表示该分支是否导向矛盾；`contradictionAt` 在可定位时记录矛盾点，包括某格候选耗尽、某区域内数字重复、某区域内数字无处可放；`exhausted` 表示当前分支是否已经在步数上限内无法继续推出稳定步骤；`actions` 是分支内推导动作的有限摘要，不承诺包含完整证明树。forcing 技巧仍默认保持 `experimental`，调用方需要通过 `allowedTechniques` 显式启用。
+`evidence.branches` 主要用于公开库调用方解释 forcing / 试探类技巧。`assumption` 是分支入口动作；`contradiction` 表示该分支是否导向矛盾；`contradictionAt` 在可定位时记录矛盾点，包括某格候选耗尽、某区域内数字重复、某区域内数字无处可放；`exhausted` 表示当前分支是否已经在步数上限内无法继续推出稳定步骤；`actions` 是分支内推导动作的有限摘要，不承诺包含完整证明树。除 `nishio-forcing-chains` 外，其他 forcing 技巧仍默认保持 `experimental`，调用方需要通过 `allowedTechniques` 显式启用。默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`；`table-chain` 不在默认 fallback 列表中，需要调用方显式放入 `preferredTechniques` 或 `fallbackTechniques`。
 
-## Golden 覆盖
+## 样例覆盖
 
 当前测试为每个 stable 技巧保留一个最小候选态样例，并验证：
 
 1. `nextStep` 能命中指定技巧。
 2. 返回的 `actions` 包含预期落子或删候选。
-3. stable 技巧清单和 golden 覆盖清单一致。
+3. stable 技巧清单和样例覆盖清单一致。
 
 如果后续新增 stable 技巧，需要同时补：
 
@@ -210,7 +219,7 @@ experimental 技巧当前至少要求：
 1. `getTechniqueDefinitions()` 中可见。
 2. `nextStep(..., { allowedTechniques: [...] })` 可显式命中。
 3. 默认 `walkthrough()` 不会自动运行它们。
-4. 如果技巧来自外部教学来源，必须区分“原题面可复现”和“依赖中途候选态”的样例；forcing / 试探类更适合把后者保存为 `trusted` 候选态 golden。
+4. 如果技巧来自外部教学来源，必须区分“原题面可复现”和“依赖中途候选态”的样例；forcing / 试探类更适合把后者保存为 `trusted` 候选态样例。
 
 ## 公开稳定性
 

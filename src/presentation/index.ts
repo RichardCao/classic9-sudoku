@@ -30,11 +30,13 @@ export function formatStep(step: SolveStep, options: FormatStepOptions = {}): st
   const reasonText = formatReason(step, locale, style);
 
   const colon = locale === 'zh-CN' ? '：' : ': ';
-  const period = locale === 'zh-CN' ? '。' : '.';
+  const actionSentence = appendSentence(`${prefix}${colon}${actionText}`, locale);
   if (reasonText) {
-    return `${prefix}${colon}${actionText}${period}${reasonText}${period}`;
+    return locale === 'zh-CN'
+      ? `${actionSentence}${appendSentence(reasonText, locale)}`
+      : `${actionSentence} ${appendSentence(reasonText, locale)}`;
   }
-  return `${prefix}${colon}${actionText}${period}`;
+  return actionSentence;
 }
 
 function formatActions(step: SolveStep, locale: 'zh-CN' | 'en-US'): string {
@@ -43,15 +45,22 @@ function formatActions(step: SolveStep, locale: 'zh-CN' | 'en-US'): string {
 }
 
 function formatAction(action: SolveStep['actions'][number], locale: 'zh-CN' | 'en-US'): string {
-  const cell = formatCell(action.cell);
-  if (action.type === 'place') {
-    return locale === 'zh-CN'
-      ? `${cell} 填 ${action.digit}`
-      : `${cell} = ${action.digit}`;
+  const rawAction = action as { type?: unknown; cell?: unknown; digit?: unknown };
+  const cell = typeof rawAction.cell === 'number' ? formatCell(rawAction.cell) : String(rawAction.cell);
+  switch (rawAction.type) {
+    case 'place':
+      return locale === 'zh-CN'
+        ? `${cell} 填 ${rawAction.digit}`
+        : `${cell} = ${rawAction.digit}`;
+    case 'eliminate':
+      return locale === 'zh-CN'
+        ? `${cell} 删除候选 ${rawAction.digit}`
+        : `remove ${rawAction.digit} from ${cell}`;
+    default:
+      return locale === 'zh-CN'
+        ? `[无效动作：${String(rawAction.type)}]`
+        : `[invalid action: ${String(rawAction.type)}]`;
   }
-  return locale === 'zh-CN'
-    ? `${cell} 删除候选 ${action.digit}`
-    : `remove ${action.digit} from ${cell}`;
 }
 
 function formatReason(
@@ -72,7 +81,7 @@ function formatReason(
 
   if (style === 'short') {
     if (templateReason) {
-    return locale === 'zh-CN' ? `依据：${templateReason}` : `Reason: ${templateReason}`;
+      return locale === 'zh-CN' ? `依据：${templateReason}` : `Reason: ${templateReason}`;
     }
     if (step.evidence.note) {
       return locale === 'zh-CN' ? '依据：见结构化证据' : `Reason: ${step.evidence.note}`;
@@ -241,6 +250,8 @@ function formatTechniqueReason(
         return reasonCells
           ? `${reasonCells} 构成 W-Wing，因此共同影响范围内的候选 ${digit} 可以删除`
           : `W-Wing 会删除共同影响范围内的候选 ${digit}`;
+      case 'big-wings':
+        return `BigWings 将 ALS 与双值 stem 连接起来，因此受限候选可以删除`;
       case 'chute-remote-pairs':
         return `同一 chute 中的远程数对使第三宫 yellow cells 缺少一个数字，因此公共可见区可删除另一候选`;
       case 'almost-locked-pair':
@@ -282,10 +293,14 @@ function formatTechniqueReason(
         return `同一格所有候选分支共同推出的外部结论可以直接采用`;
       case 'unit-forcing-chains':
         return `同一区域内某数字的所有位置分支共同推出的外部结论可以直接采用`;
+      case 'table-chain':
+        return `Table Chain 汇总静态分支推出的矛盾或共同结论，因此可以采用该目标动作`;
       case 'bowmans-bingo':
         return `对某个候选做有界试探后若稳定导向矛盾，则该候选可以删除`;
       case 'simple-coloring':
         return `候选 ${digit} 的强链形成简单染色，因此可删除违反染色结论的候选`;
+      case 'x-coloring':
+        return `候选 ${digit} 的强链经扩展染色后形成矛盾或夹击，因此可删除目标候选`;
       case 'multi-colors':
         return `候选 ${digit} 的多组强链形成多重染色，因此可删除同时受两组颜色约束的候选`;
       case 'three-d-medusa':
@@ -372,6 +387,8 @@ function formatTechniqueReason(
       return 'The WXYZ-Wing removes restricted common candidates seen outside the wing.';
     case 'w-wing':
       return `The W-Wing removes ${digit} from cells seeing both bivalue endpoints.`;
+    case 'big-wings':
+      return 'BigWings connects an ALS with a bivalue stem, removing linked candidates and, when both stem digits are linked, ALS-exclusive candidates.';
     case 'chute-remote-pairs':
       return 'Chute Remote Pairs remove the opposite digit when the yellow cells in the third box miss one digit of the remote pair.';
     case 'almost-locked-pair':
@@ -413,10 +430,14 @@ function formatTechniqueReason(
       return 'Cell Forcing Chains keeps only the shared conclusion from all candidate branches of one cell.';
     case 'unit-forcing-chains':
       return 'Unit Forcing Chains keeps only the shared conclusion from all position branches of one digit in one house.';
+    case 'table-chain':
+      return 'Table Chain keeps a contradiction or shared conclusion from static implication branches.';
     case 'bowmans-bingo':
       return 'Bowman\'s Bingo removes a candidate whose bounded trial branch reaches contradiction.';
     case 'simple-coloring':
       return `${digit} forms a coloring chain, eliminating candidates that violate the coloring result.`;
+    case 'x-coloring':
+      return `${digit} forms an extended coloring chain, eliminating candidates by contradiction or trap.`;
     case 'multi-colors':
       return `${digit} forms multiple coloring chains, eliminating candidates constrained by both components.`;
     case 'three-d-medusa':
@@ -464,6 +485,11 @@ function formatCell(cell: number): string {
   const row = Math.floor(cell / 9) + 1;
   const col = (cell % 9) + 1;
   return `r${row}c${col}`;
+}
+
+function appendSentence(text: string, locale: 'zh-CN' | 'en-US'): string {
+  const trimmed = text.trim().replace(locale === 'zh-CN' ? /[。！？]+$/u : /[.!?]+$/u, '');
+  return `${trimmed}${locale === 'zh-CN' ? '。' : '.'}`;
 }
 
 function formatHouse(type: 'row' | 'col' | 'box', index: number, locale: 'zh-CN' | 'en-US'): string {

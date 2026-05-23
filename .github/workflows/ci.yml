@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: ${{ matrix.os }} / Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        node-version:
+          - 20
+          - 22
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Examples Typecheck
+        run: npm run examples:typecheck
+
+      - name: Dist Smoke
+        run: npm run smoke:dist
+
+      - name: CLI Smoke
+        run: npm run smoke:cli
+
+      - name: Pack Smoke
+        run: npm run smoke:pack
+
+      - name: Release Smoke Audit
+        run: npm run verify:release -- --input tests/fixtures/release-smoke-corpus.json

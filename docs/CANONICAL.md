@@ -20,9 +20,11 @@ version = 1
 
 这意味着：
 
-1. 当前 key 是版本化的。
+1. 当前返回值中的 `algorithm` 和 `version` 是版本化信息。
+2. 当前 `key` 字段本身是裸 81 位 canonical key，不带 `canonical.classic9.v1:` 前缀。
 2. 以后如果 canonical 算法变化，必须升级 version。
 3. 不能静默改变旧 key。
+4. `canonicalizeBoard()` 返回的 `transform.digitMap` 保持为完整双射，便于直接回放和反向还原。
 
 ## 当前支持的变换
 

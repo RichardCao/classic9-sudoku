@@ -1,11 +1,19 @@
+export const MAX_SEED = 0xffffffff;
+
+export function defaultSeed(now = Date.now()): number {
+  const seed = Math.trunc(now) % MAX_SEED;
+  return seed >= 1 ? seed : 1;
+}
+
 export class SeededRandom {
   private state: number;
 
   public constructor(seed: number) {
-    this.state = (Math.trunc(seed) || 1) >>> 0;
-    if (this.state === 0) {
-      this.state = 1;
+    const normalizedSeed = Math.trunc(seed);
+    if (!Number.isInteger(normalizedSeed) || normalizedSeed < 1 || normalizedSeed > MAX_SEED) {
+      throw new Error('seed must be an integer between 1 and 0xffffffff');
     }
+    this.state = normalizedSeed >>> 0;
   }
 
   public next(): number {
@@ -14,7 +22,7 @@ export class SeededRandom {
     x ^= x >>> 17;
     x ^= x << 5;
     this.state = x >>> 0;
-    return this.state / 0xffffffff;
+    return this.state / 0x100000000;
   }
 }
 

@@ -17,16 +17,28 @@ export interface ValidationResult {
 }
 
 export function validate(input: StateInput): ValidationResult {
+  if (
+    typeof input !== 'string'
+    && !Array.isArray(input)
+    && (typeof input !== 'object' || input === null)
+  ) {
+    return buildValidationResult([], ['State input must be a puzzle string, board array, or puzzle state object.']);
+  }
   if (typeof input === 'string' || Array.isArray(input)) {
     const parsed = tryParsePuzzle(input as PuzzleInput);
     if (!parsed.ok || !parsed.board) {
-      const board = Array.isArray(input) ? [...input] : [];
-      return buildValidationResult(board, parsed.errors);
+      const board = parsed.board ?? (Array.isArray(input) ? [...input] : []);
+      return buildValidationResult(board, parsed.errors, [], parsed.invalidIndexes);
     }
     return buildValidationResult(parsed.board, []);
   }
 
-  const normalized = normalizeState(input);
+  let normalized;
+  try {
+    normalized = normalizeState(input);
+  } catch (error) {
+    return buildValidationResult([], [error instanceof Error ? error.message : String(error)]);
+  }
   return buildValidationResult(
     normalized.board,
     normalized.contradictions.map((item) => item.message),
@@ -38,9 +50,13 @@ function buildValidationResult(
   board: readonly number[],
   contradictions: string[],
   warnings: string[] = [],
+  parsedInvalidValueIndexes: readonly number[] = [],
 ): ValidationResult {
   const boardLengthValid = board.length === CELL_COUNT;
-  const invalidValueIndexes = collectInvalidValueIndexes(board as Board);
+  const invalidValueIndexes = Array.from(new Set([
+    ...parsedInvalidValueIndexes,
+    ...collectInvalidValueIndexes(board as Board),
+  ])).sort((left, right) => left - right);
   const conflictIndexes = boardLengthValid && invalidValueIndexes.length === 0
     ? collectConflictIndexes(board as Board)
     : [];
