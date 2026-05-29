@@ -206,6 +206,11 @@ function formatTechniqueReason(
         return reasonCells
           ? `候选 ${digit} 被锁定在 ${reasonCells} 所在的交叉区域，因此可从目标格删除`
           : `候选 ${digit} 被锁定在同一交叉区域，因此可从目标格删除`;
+      case 'direct-pointing':
+      case 'direct-claiming':
+        return reasonCells
+          ? `候选 ${digit} 被锁定在 ${reasonCells} 所在的交叉区域，删除后可直接落子`
+          : `候选 ${digit} 被锁定在同一交叉区域，删除后可直接落子`;
       case 'naked-pair':
       case 'naked-triple':
       case 'naked-quad':
@@ -218,6 +223,11 @@ function formatTechniqueReason(
         return reasonCells
           ? `这些数字只会出现在 ${reasonCells}，因此这些格子的其他候选数可以删除`
           : '隐性数组会删除数组格中的其他候选数';
+      case 'direct-hidden-pair':
+      case 'direct-hidden-triplet':
+        return reasonCells
+          ? `这些数字只会出现在 ${reasonCells}，删除其他候选后可直接落子`
+          : '直接隐性数组会在删除其他候选后直接形成落子';
       case 'x-wing':
         return `候选 ${digit} 在两条基线和两条覆盖线之间形成 X-Wing，因此可删除覆盖线上其他位置的候选`;
       case 'swordfish':
@@ -309,11 +319,16 @@ function formatTechniqueReason(
         return `候选 ${digit} 形成分组 X-Cycles，因此链端共同看到的位置可以删除该候选`;
       case 'grouped-aic':
         return `候选之间形成分组 AIC，因此可根据链端关系删除目标候选`;
+      case 'bidirectional-x-cycle':
+        return `候选 ${digit} 形成双向 X 环，因此可根据相反着色结论删除目标候选`;
       case 'x-chain':
+      case 'forcing-x-chain':
         return `候选 ${digit} 形成 X-Chain，因此链端共同看到的位置可以删除该候选`;
       case 'xy-chain':
+      case 'bidirectional-y-cycle':
         return `双值格形成 XY-Chain，因此链端共同看到的位置可以删除候选 ${digit}`;
       case 'aic':
+      case 'forcing-chain':
         return `交替强弱链形成 AIC，因此可根据链端关系删除目标候选`;
       case 'aic-exotic':
         return `把 ALS 等异构强链接纳入交替推理链后，可以根据链端关系删除目标候选`;
@@ -353,6 +368,9 @@ function formatTechniqueReason(
       return houses ? `${digit} can only appear in the target cell in ${houses}.` : `${digit} can only appear in the target cell.`;
     case 'locked-candidates':
       return `${digit} is locked to the intersection, so it can be removed from the targets.`;
+    case 'direct-pointing':
+    case 'direct-claiming':
+      return `${digit} is locked to the intersection; after the removal, a placement is forced.`;
     case 'naked-pair':
     case 'naked-triple':
     case 'naked-quad':
@@ -361,6 +379,9 @@ function formatTechniqueReason(
     case 'hidden-triple':
     case 'hidden-quad':
       return 'The hidden subset removes other candidates from the subset cells.';
+    case 'direct-hidden-pair':
+    case 'direct-hidden-triplet':
+      return 'The direct hidden subset removes other candidates and immediately forces a placement.';
     case 'x-wing':
       return `${digit} forms an X-Wing, removing other cover-line candidates.`;
     case 'swordfish':
@@ -446,11 +467,16 @@ function formatTechniqueReason(
       return `${digit} forms a Grouped X-Cycles chain, removing candidates seen by both endpoints.`;
     case 'grouped-aic':
       return 'The Grouped AIC alternates strong and weak links, removing candidates from endpoint implications.';
+    case 'bidirectional-x-cycle':
+      return `${digit} forms a Bidirectional X-Cycle, removing candidates implied false by both colors.`;
     case 'x-chain':
+    case 'forcing-x-chain':
       return `${digit} forms an X-Chain, removing candidates seen by both endpoints.`;
     case 'xy-chain':
+    case 'bidirectional-y-cycle':
       return `The XY-Chain removes ${digit} from cells seeing both endpoints.`;
     case 'aic':
+    case 'forcing-chain':
       return 'The AIC alternates strong and weak links, removing candidates from endpoint implications.';
     case 'aic-exotic':
       return 'AIC with Exotic Links extends the alternating inference chain through exotic strong links such as ALS relationships.';

@@ -425,6 +425,16 @@ export const TECHNIQUE_DEFINITION_SCHEMA: JsonSchema = {
     stability: {
       enum: ['stable', 'experimental'],
     },
+    aliases: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    seDifficulty: {
+      type: 'string',
+    },
+    seStatus: {
+      enum: ['covered', 'covered-as-variant', 'partial', 'non-se-extension'],
+    },
   },
 };
 

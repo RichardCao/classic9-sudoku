@@ -1,6 +1,6 @@
 # 兼容性策略
 
-第一版兼容策略以“稳定核心、实验生成器”为原则。
+当前兼容策略以“稳定核心、实验生成器”为原则。
 
 ## 稳定核心
 
@@ -27,7 +27,7 @@
 
 ## 实验能力
 
-这些能力第一版仍可能调整：
+这些能力仍可能调整：
 
 1. `generateOne`
 2. `search`
@@ -37,6 +37,10 @@
 6. 多进程生成协调。
 
 原因是生成器需要根据真实题库任务继续调参。
+
+## Sudoku Explainer 兼容
+
+Sudoku Explainer / Sukaku Explainer 风格的技巧扩展属于外部参考映射，不会直接改变 `classic-stable` 的既有顺序和评分。后续应通过本包自己的 policy、技巧 metadata、fixture corpus 和 release audit 分阶段引入。详细计划见 [SE_COMPATIBILITY.md](./SE_COMPATIBILITY.md)。
 
 ## canonical 版本
 

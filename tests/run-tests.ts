@@ -9,6 +9,7 @@ import {
   checkUniqueness,
   buildSolveOptionsFromRatingPolicy,
   CLASSIC_EXTENDED_TECHNIQUE_ORDER,
+  CLASSIC_GALAXY_TECHNIQUE_ORDER,
   CLASSIC_STABLE_POLICY,
   CLASSIC_STABLE_TECHNIQUE_ORDER,
   ALL_HOUSES,
@@ -50,10 +51,11 @@ import {
   verifyWalkthrough,
   walkthrough,
 } from '../src/index.js';
-import type { TechniqueId } from '../src/index.js';
+import type { StateInput, TechniqueId } from '../src/index.js';
 import { runCli } from '../src/cli/index.js';
 import { PuzzleMinimizer } from '../src/generator/minimizer.js';
 import { SolutionGridFactory } from '../src/generator/solution-grid.js';
+import { buildDefaultTechniques } from '../src/solver/techniques.js';
 
 const STABLE_TECHNIQUE_GOLDEN_IDS = [
   'full-house',
@@ -121,6 +123,14 @@ const STABLE_TECHNIQUE_GOLDEN_IDS = [
 const EXPERIMENTAL_TECHNIQUE_GOLDEN_IDS = [
   'aic-als',
   'big-wings',
+  'direct-pointing',
+  'direct-claiming',
+  'direct-hidden-pair',
+  'direct-hidden-triplet',
+  'bidirectional-x-cycle',
+  'bidirectional-y-cycle',
+  'forcing-x-chain',
+  'forcing-chain',
   'forcing-nets',
   'digit-forcing-chains',
   'cell-forcing-chains',
@@ -191,7 +201,7 @@ function testPackageExportsDist(): void {
   assert.equal(packageJson.private, false);
   assert.equal(packageJson.license, 'MIT');
   assert.equal(packageJson.author, 'Cao Ruichuang');
-  assert.equal(packageJson.version, '0.2.0');
+  assert.equal(packageJson.version, '0.3.0');
   assert.equal(packageJson.publishConfig?.access, 'public');
   assert.equal(packageJson.main, './dist/src/index.js');
   assert.equal(packageJson.types, './dist/src/index.d.ts');
@@ -216,7 +226,10 @@ function testPackageExportsDist(): void {
   assert.ok(packageJson.scripts?.['smoke:dist']?.includes("import('./dist/src/index.js')"));
   assert.equal(packageJson.scripts?.['smoke:pack'], 'npm run build && node scripts/smoke-packed-package.mjs');
   assert.ok(packageJson.scripts?.verify?.includes('npm run typecheck'));
+  assert.ok(packageJson.scripts?.verify?.includes('npm run audit:reference'));
   assert.ok(packageJson.scripts?.verify?.includes('npm run smoke:pack'));
+  assert.ok(packageJson.scripts?.['audit:reference']?.includes('scripts/audit-reference-techniques.mjs'));
+  assert.ok(packageJson.scripts?.['audit:technique-priority']?.includes('scripts/audit-technique-priority.mjs'));
   assert.ok(packageJson.scripts?.['audit:stable']?.includes('scripts/audit-stable-puzzles.mjs'));
   assert.ok(packageJson.scripts?.['verify:release']?.includes('scripts/verify-release.mjs'));
   for (const scriptName of Object.keys(packageJson.scripts ?? {})) {
@@ -241,6 +254,9 @@ function testPublicRepoMaintenanceFiles(): void {
   assert.match(readme, /release-smoke-corpus\.json/);
   const contributing = readFileSync(join(process.cwd(), 'CONTRIBUTING.md'), 'utf8');
   assert.doesNotMatch(contributing, /ADVANCED_TECHNIQUE_MIGRATION/);
+  const ci = readFileSync(join(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+  assert.match(ci, /Reference Technique Smoke Audit/);
+  assert.match(ci, /npm run audit:reference/);
 }
 
 function testForbiddenCandidates(): void {
@@ -554,13 +570,13 @@ function testCli(): void {
   const helpResult = runCli(['help']);
   assert.equal(helpResult.exitCode, 0);
   assert.equal((helpResult.output as { package?: string }).package, '@sudoku-tools/classic9');
-  assert.equal((helpResult.output as { version?: string }).version, '0.2.0');
+  assert.equal((helpResult.output as { version?: string }).version, '0.3.0');
 
   const versionResult = runCli(['version']);
   assert.equal(versionResult.exitCode, 0);
   assert.deepEqual(versionResult.output, {
     name: '@sudoku-tools/classic9',
-    version: '0.2.0',
+    version: '0.3.0',
   });
 }
 
@@ -568,7 +584,12 @@ function testTechniquesCli(): void {
   const result = runCli(['techniques']);
   assert.equal(result.exitCode, 0);
   assert.ok(Array.isArray(result.output));
-  assert.ok((result.output as Array<{ id?: string }>).some((item) => item.id === 'full-house'));
+  const techniques = result.output as Array<{ id?: string; aliases?: string[]; seStatus?: string; seDifficulty?: string }>;
+  const fullHouse = techniques.find((item) => item.id === 'full-house');
+  assert.ok(fullHouse);
+  assert.ok(fullHouse.aliases?.includes('Last value'));
+  assert.equal(fullHouse.seStatus, 'covered');
+  assert.equal(fullHouse.seDifficulty, '1.0');
 }
 
 function testStableTechniqueGoldenCoverage(): void {
@@ -622,6 +643,12 @@ function testTechniqueDefinitionBoundaryIntegrity(): void {
 
   const stableSet = new Set<TechniqueId>(STABLE_TECHNIQUE_GOLDEN_IDS);
   const experimentalSet = new Set<TechniqueId>(EXPERIMENTAL_TECHNIQUE_GOLDEN_IDS);
+  for (const definition of getTechniqueDefinitions()) {
+    assert.ok(definition.seStatus, `${definition.id} 应声明 SE 兼容状态。`);
+    if (definition.seStatus !== 'non-se-extension') {
+      assert.ok(definition.aliases?.length, `${definition.id} 应声明 SE alias。`);
+    }
+  }
   for (const id of stableSet) {
     assert.equal(experimentalSet.has(id), false, `${id} 不应同时属于 stable 和 experimental。`);
   }
@@ -644,6 +671,14 @@ function testTechniqueDefinitionBoundaryIntegrity(): void {
     true,
     'classic-extended fallback 只能包含 experimental 技巧。',
   );
+
+  const galaxyPolicy = getRatingPolicy('classic-galaxy');
+  assert.deepEqual(galaxyPolicy.techniqueOrder, CLASSIC_GALAXY_TECHNIQUE_ORDER);
+  assert.equal(galaxyPolicy.techniqueOrder.includes('bowmans-bingo'), false);
+  assert.equal(galaxyPolicy.fallbackTechniques?.includes('bowmans-bingo'), true);
+  assert.equal(galaxyPolicy.fallbackTechniques?.includes('table-chain'), true);
+  assertTechniqueBefore(galaxyPolicy.techniqueOrder, 'direct-pointing', 'naked-pair');
+  assertTechniqueBefore(galaxyPolicy.techniqueOrder, 'bidirectional-x-cycle', 'exocet');
 }
 
 function testSolverFullHouse(): void {
@@ -1089,6 +1124,23 @@ function testExperimentalForcingDefaultsToFallback(): void {
     allowedTechniques: ['forcing-nets', 'full-house'],
     preferredTechniques: ['forcing-nets'],
   })?.technique, 'forcing-nets');
+
+  const primaryFindSteps = findSteps(forcingState, {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: ['full-house', 'naked-single', 'hidden-single', 'forcing-nets'],
+    includeDiagnostics: true,
+    sort: 'score-desc',
+  });
+  assert.equal(primaryFindSteps.steps.some((step) => step.technique === 'forcing-nets'), false);
+  assert.equal(primaryFindSteps.diagnostics?.techniqueCalls['forcing-nets'], undefined);
+
+  const fallbackFindSteps = findSteps(forcingState, {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: ['forcing-nets'],
+    includeDiagnostics: true,
+  });
+  assert.equal(fallbackFindSteps.steps[0]?.technique, 'forcing-nets');
+  assert.equal(fallbackFindSteps.diagnostics?.techniqueCalls['forcing-nets'], 1);
 }
 
 function testSolverMaxStepsAndScenarioContradictionGuards(): void {
@@ -1199,6 +1251,11 @@ function testProfileCli(): void {
   assert.equal(rateResult.exitCode, 0);
   assert.equal((rateResult.output as { solved?: boolean }).solved, true);
   assert.equal((rateResult.output as { ratingPolicyId?: string }).ratingPolicyId, 'classic-extended');
+
+  const galaxyRateResult = runCli(['rate', puzzle, '--profile', 'galaxy']);
+  assert.equal(galaxyRateResult.exitCode, 0);
+  assert.equal((galaxyRateResult.output as { solved?: boolean }).solved, true);
+  assert.equal((galaxyRateResult.output as { ratingPolicyId?: string }).ratingPolicyId, 'classic-galaxy');
 }
 
 function testCliAllowAndPreferValidation(): void {
@@ -1865,6 +1922,27 @@ function testDefaultTechniqueOrderPolicy(): void {
   const extendedPolicy = getRatingPolicy('classic-extended');
   assert.deepEqual(extendedPolicy.techniqueOrder, CLASSIC_EXTENDED_TECHNIQUE_ORDER);
   assert.deepEqual(extendedPolicy.fallbackTechniques, ['bowmans-bingo']);
+
+  const galaxyPolicy = getRatingPolicy('classic-galaxy');
+  assert.deepEqual(galaxyPolicy.techniqueOrder, CLASSIC_GALAXY_TECHNIQUE_ORDER);
+  assert.equal(galaxyPolicy.id, 'classic-galaxy');
+  assert.deepEqual(galaxyPolicy.fallbackTechniques, [
+    'forcing-nets',
+    'digit-forcing-chains',
+    'cell-forcing-chains',
+    'unit-forcing-chains',
+    'table-chain',
+    'bowmans-bingo',
+  ]);
+  const galaxyPrimarySet = new Set(galaxyPolicy.techniqueOrder);
+  const galaxyFallbackSet = new Set(galaxyPolicy.fallbackTechniques ?? []);
+  assert.equal(galaxyPolicy.techniqueOrder.length, galaxyPrimarySet.size);
+  assert.equal((galaxyPolicy.fallbackTechniques ?? []).length, galaxyFallbackSet.size);
+  assert.equal((galaxyPolicy.fallbackTechniques ?? []).some((technique) => galaxyPrimarySet.has(technique)), false);
+  const galaxyEnabled = [...galaxyPolicy.techniqueOrder, ...(galaxyPolicy.fallbackTechniques ?? [])].sort();
+  assert.deepEqual(galaxyEnabled, getTechniqueDefinitions().map((definition) => definition.id).sort());
+  assert.deepEqual(galaxyEnabled, buildDefaultTechniques().map((technique) => technique.id).sort());
+  assertTechniqueBefore(galaxyPolicy.techniqueOrder, 'direct-pointing', 'naked-pair');
 }
 
 function assertTechniqueBefore(order: readonly TechniqueId[], left: TechniqueId, right: TechniqueId): void {
@@ -3064,6 +3142,12 @@ function testHiddenPair(): void {
   assert.ok(step?.actions.some((action) => action.type === 'eliminate' && action.cell === 1 && action.digit === 4));
 }
 
+function testDirectTechniques(): void {
+  for (const fixture of loadReferenceTechniqueFixtures().direct.map(toReferenceDirectFixture)) {
+    assertReferenceDirectFixture(fixture);
+  }
+}
+
 function testNakedTriple(): void {
   const board = parsePuzzle('000000000000000000000000000000000000000000000000000000000000000000000000000000000');
   const step = nextStep({
@@ -3186,6 +3270,316 @@ function hasElimination(step: ReturnType<typeof nextStep>, cell: number, digit: 
   return step?.actions.some((action) => action.type === 'eliminate' && action.cell === cell && action.digit === digit) ?? false;
 }
 
+interface ReferenceDirectFixture {
+  technique: Extract<TechniqueId, 'direct-pointing' | 'direct-claiming' | 'direct-hidden-pair' | 'direct-hidden-triplet'>;
+  state: StateInput;
+  expectedElimination: { cell: number; digit: number };
+  expectedPlacement: { cell: number; digit: number };
+}
+
+interface ReferenceChainFixture {
+  technique: Extract<TechniqueId, 'bidirectional-x-cycle' | 'bidirectional-y-cycle' | 'forcing-x-chain' | 'forcing-chain'>;
+  state: StateInput;
+  minLinks: number;
+}
+
+interface ReferenceTechniqueFixtureFile {
+  direct: ReferenceDirectFixtureRecord[];
+  chains: ReferenceChainFixtureRecord[];
+}
+
+interface ReferenceDirectFixtureRecord {
+  technique: ReferenceDirectFixture['technique'];
+  candidates: Array<[number, number[]]>;
+  expectedElimination: { cell: number; digit: number };
+  expectedPlacement: { cell: number; digit: number };
+}
+
+interface ReferenceChainFixtureRecord {
+  technique: ReferenceChainFixture['technique'];
+  stateKind: 'exact' | 'mask';
+  candidates: Array<[number, number[]]>;
+  minLinks: number;
+}
+
+const EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES: ReferenceDirectFixture['technique'][] = [
+  'direct-pointing',
+  'direct-claiming',
+  'direct-hidden-pair',
+  'direct-hidden-triplet',
+];
+
+const EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES: ReferenceChainFixture['technique'][] = [
+  'bidirectional-x-cycle',
+  'forcing-x-chain',
+  'bidirectional-y-cycle',
+  'forcing-chain',
+];
+
+function loadReferenceTechniqueFixtures(): ReferenceTechniqueFixtureFile {
+  const raw = JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures/reference-techniques/reference-smoke.json'), 'utf8')) as unknown;
+  assertReferenceTechniqueFixtureFile(raw);
+  return raw;
+}
+
+function toReferenceDirectFixture(record: ReferenceDirectFixtureRecord): ReferenceDirectFixture {
+  return {
+    technique: record.technique,
+    state: buildExactCandidateState(record.candidates),
+    expectedElimination: record.expectedElimination,
+    expectedPlacement: record.expectedPlacement,
+  };
+}
+
+function toReferenceChainFixture(record: ReferenceChainFixtureRecord): ReferenceChainFixture {
+  return {
+    technique: record.technique,
+    state: record.stateKind === 'exact'
+      ? buildExactCandidateState(record.candidates)
+      : buildCandidateMaskState(record.candidates),
+    minLinks: record.minLinks,
+  };
+}
+
+function assertReferenceTechniqueFixtureFile(value: unknown): asserts value is ReferenceTechniqueFixtureFile {
+  assert.ok(isRecord(value), 'Reference fixture file should be an object');
+  assert.ok(Array.isArray(value.direct), 'Reference fixture direct should be an array');
+  assert.ok(Array.isArray(value.chains), 'Reference fixture chains should be an array');
+  assert.deepEqual(value.direct.map((record) => assertReferenceDirectFixtureRecord(record)), EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES);
+  assert.deepEqual(value.chains.map((record) => assertReferenceChainFixtureRecord(record)), EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES);
+}
+
+function assertReferenceDirectFixtureRecord(value: unknown): ReferenceDirectFixture['technique'] {
+  assert.ok(isRecord(value), 'Reference direct fixture should be an object');
+  assert.ok(EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES.includes(value.technique as ReferenceDirectFixture['technique']), `Unknown reference direct technique: ${String(value.technique)}`);
+  assertCandidateTuples(value.candidates, `${String(value.technique)} candidates`);
+  assertCellDigitRef(value.expectedElimination, `${String(value.technique)} expectedElimination`);
+  assertCellDigitRef(value.expectedPlacement, `${String(value.technique)} expectedPlacement`);
+  return value.technique as ReferenceDirectFixture['technique'];
+}
+
+function assertReferenceChainFixtureRecord(value: unknown): ReferenceChainFixture['technique'] {
+  assert.ok(isRecord(value), 'Reference chain fixture should be an object');
+  assert.ok(EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES.includes(value.technique as ReferenceChainFixture['technique']), `Unknown reference chain technique: ${String(value.technique)}`);
+  assert.ok(value.stateKind === 'exact' || value.stateKind === 'mask', `${String(value.technique)} stateKind should be exact or mask`);
+  assertCandidateTuples(value.candidates, `${String(value.technique)} candidates`);
+  assert.equal(typeof value.minLinks, 'number', `${String(value.technique)} minLinks should be a number`);
+  const minLinks = value.minLinks as number;
+  assert.ok(Number.isInteger(minLinks) && minLinks >= 1, `${String(value.technique)} minLinks should be a positive integer`);
+  return value.technique as ReferenceChainFixture['technique'];
+}
+
+function assertCandidateTuples(value: unknown, label: string): asserts value is Array<[number, number[]]> {
+  assert.ok(Array.isArray(value), `${label} should be an array`);
+  const seenCells = new Set<number>();
+  for (const entry of value) {
+    assert.ok(Array.isArray(entry) && entry.length === 2, `${label} entries should be [cell, digits] tuples`);
+    const [cell, digits] = entry as [unknown, unknown];
+    assert.equal(typeof cell, 'number', `${label} cell should be a number`);
+    const cellIndex = cell as number;
+    assert.ok(Number.isInteger(cellIndex) && cellIndex >= 0 && cellIndex < 81, `${label} cell should be 0..80`);
+    assert.equal(seenCells.has(cellIndex), false, `${label} should not repeat cell ${cellIndex}`);
+    seenCells.add(cellIndex);
+    assert.ok(Array.isArray(digits) && digits.length > 0, `${label} digits should be a non-empty array`);
+    for (const digit of digits) {
+      assert.equal(typeof digit, 'number', `${label} digit should be a number`);
+      const candidateDigit = digit as number;
+      assert.ok(Number.isInteger(candidateDigit) && candidateDigit >= 1 && candidateDigit <= 9, `${label} digit should be 1..9`);
+    }
+  }
+}
+
+function assertCellDigitRef(value: unknown, label: string): void {
+  assert.ok(isRecord(value), `${label} should be an object`);
+  assert.equal(typeof value.cell, 'number', `${label}.cell should be a number`);
+  assert.equal(typeof value.digit, 'number', `${label}.digit should be a number`);
+  const cell = value.cell as number;
+  const digit = value.digit as number;
+  assert.ok(Number.isInteger(cell) && cell >= 0 && cell < 81, `${label}.cell should be 0..80`);
+  assert.ok(Number.isInteger(digit) && digit >= 1 && digit <= 9, `${label}.digit should be 1..9`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function assertReferenceDirectFixture(fixture: ReferenceDirectFixture): void {
+  const step = nextStep(fixture.state, {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: [fixture.technique],
+  });
+  assert.equal(step?.technique, fixture.technique);
+  assert.ok(
+    step?.actions.some((action) =>
+      action.type === 'eliminate'
+      && action.cell === fixture.expectedElimination.cell
+      && action.digit === fixture.expectedElimination.digit,
+    ),
+    `${fixture.technique} should include expected elimination`,
+  );
+  assert.ok(
+    step?.actions.some((action) =>
+      action.type === 'place'
+      && action.cell === fixture.expectedPlacement.cell
+      && action.digit === fixture.expectedPlacement.digit,
+    ),
+    `${fixture.technique} should include expected placement`,
+  );
+  assertReferenceDirectStepReplayable(fixture.state, step!, fixture.technique);
+}
+
+function assertReferenceChainFixture(fixture: ReferenceChainFixture): void {
+  const step = nextStep(fixture.state, {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: [fixture.technique],
+  });
+  assert.equal(step?.technique, fixture.technique);
+  assert.ok((step?.evidence.links?.length ?? 0) >= fixture.minLinks);
+  assertReferenceChainStepReplayable(fixture.state, step!, fixture.technique, fixture.minLinks);
+}
+
+function assertReferenceDirectStepReplayable(
+  state: StateInput,
+  step: NonNullable<ReturnType<typeof nextStep>>,
+  technique: TechniqueId,
+): void {
+  assert.equal(step.technique, technique);
+  const placement = step.actions.find((action) => action.type === 'place');
+  assert.ok(placement, `${technique} should include a direct placement`);
+  assert.ok(step.actions.some((action) => action.type === 'eliminate'), `${technique} should include eliminations`);
+  const replayed = replaySteps(state, [step]);
+  assert.equal(replayed[placement.cell], placement.digit);
+}
+
+function assertReferenceChainStepReplayable(
+  state: StateInput,
+  step: NonNullable<ReturnType<typeof nextStep>>,
+  technique: TechniqueId,
+  minLinks: number,
+): void {
+  assert.equal(step.technique, technique);
+  assert.ok((step.evidence.links?.length ?? 0) >= minLinks, `${technique} should expose chain links`);
+  assert.ok(step.actions.length > 0, `${technique} should have at least one action`);
+  replaySteps(state, [step]);
+}
+
+function testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy(): void {
+  const fixtures = loadReferenceTechniqueFixtures();
+  const expectedTechniques = [
+    ...fixtures.direct.map((fixture) => fixture.technique),
+    ...fixtures.chains.map((fixture) => fixture.technique),
+  ];
+  const definitionsById = new Map(getTechniqueDefinitions().map((definition) => [definition.id, definition]));
+  const galaxyPolicy = getRatingPolicy('classic-galaxy');
+  const enabledGalaxyTechniques = new Set([
+    ...galaxyPolicy.techniqueOrder,
+    ...(galaxyPolicy.fallbackTechniques ?? []),
+  ]);
+
+  for (const technique of expectedTechniques) {
+    const definition = definitionsById.get(technique);
+    assert.ok(definition, `${technique} should exist in technique definitions`);
+    assert.equal(definition?.stability, 'experimental', `${technique} should remain an experimental reference technique`);
+    assert.ok(enabledGalaxyTechniques.has(technique), `${technique} should remain in classic-galaxy enabled techniques`);
+  }
+
+  assert.deepEqual(
+    expectedTechniques,
+    [...EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES, ...EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES],
+    'Reference smoke fixtures should track the current v1 smoke technique set.',
+  );
+}
+
+function testReferenceSmokeFixturesReachableViaExplicitOptions(): void {
+  const fixtures = loadReferenceTechniqueFixtures();
+  const cases: Array<{
+    technique: TechniqueId;
+    state: StateInput;
+  }> = [
+    ...fixtures.direct.map((fixture) => ({
+      technique: fixture.technique,
+      state: toReferenceDirectFixture(fixture).state,
+    })),
+    ...fixtures.chains.map((fixture) => ({
+      technique: fixture.technique,
+      state: toReferenceChainFixture(fixture).state,
+    })),
+  ];
+  const allowedTechniques = cases.map((fixture) => fixture.technique);
+
+  for (const fixture of cases) {
+    const step = nextStep(fixture.state, {
+      allowedTechniques,
+      fallbackTechniques: [],
+      allowContradictoryCandidateState: true,
+      preferredTechniques: [fixture.technique],
+    });
+    assert.equal(
+      step?.technique,
+      fixture.technique,
+      `${fixture.technique} should remain reachable via explicit reference options + preferredTechniques`,
+    );
+  }
+}
+
+function testReferenceSmokeFixturesListedByTechniquesCli(): void {
+  const result = runCli(['techniques']);
+  assert.equal(result.exitCode, 0);
+  assert.ok(Array.isArray(result.output));
+  const techniques = result.output as Array<{
+    id?: string;
+    aliases?: string[];
+    seStatus?: string;
+    seDifficulty?: string;
+  }>;
+  const fixtures = loadReferenceTechniqueFixtures();
+  const expectedTechniques = [
+    ...fixtures.direct.map((fixture) => fixture.technique),
+    ...fixtures.chains.map((fixture) => fixture.technique),
+  ];
+
+  for (const technique of expectedTechniques) {
+    const item = techniques.find((entry) => entry.id === technique);
+    assert.ok(item, `${technique} should be listed by techniques CLI`);
+    assert.ok((item?.aliases?.length ?? 0) >= 1, `${technique} should keep aliases in CLI output`);
+  }
+}
+
+function testReferenceAuditScript(): void {
+  const output = execFileSync(process.execPath, ['scripts/audit-reference-techniques.mjs', '--json'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const payload = JSON.parse(output) as {
+    summary?: { total?: number; passed?: number; failed?: number; auditId?: string; corpusKind?: string; note?: string };
+  };
+  assert.equal(payload.summary?.auditId, 'reference-techniques.v1');
+  assert.equal(payload.summary?.corpusKind, 'reference-smoke');
+  assert.match(payload.summary?.note ?? '', /not a full external rating corpus/);
+  assert.equal(payload.summary?.total, 8);
+  assert.equal(payload.summary?.passed, 8);
+  assert.equal(payload.summary?.failed, 0);
+
+  const tmpDir = join(process.cwd(), 'dist', 'tmp');
+  mkdirSync(tmpDir, { recursive: true });
+  const invalidPath = join(tmpDir, 'invalid-reference-fixture.json');
+  writeFileSync(invalidPath, JSON.stringify({
+    direct: [{
+      technique: 'direct-pointing',
+      candidates: [[81, [1]]],
+      expectedElimination: { cell: 3, digit: 1 },
+      expectedPlacement: { cell: 3, digit: 4 },
+    }],
+    chains: [],
+  }), 'utf8');
+  const invalid = spawnSync(process.execPath, ['scripts/audit-reference-techniques.mjs', '--input', invalidPath], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  assert.equal(invalid.status, 1);
+  assert.match(invalid.stderr, /cell must be 0\.\.80/);
+}
+
 function hasCandidate(candidateMasks: readonly number[], cell: number, digit: number): boolean {
   return ((candidateMasks[cell] ?? 0) & (1 << (digit - 1))) !== 0;
 }
@@ -3200,7 +3594,7 @@ function getHouseCandidateCells(
 }
 
 function sameNumberSet(left: readonly number[], right: readonly number[]): boolean {
-  const normalize = (items: readonly number[]) => [...new Set(items)].sort((a, b) => a - b);
+  const normalize = (items: readonly number[]) => Array.from(new Set(items)).sort((a, b) => a - b);
   return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
 }
 
@@ -3831,12 +4225,14 @@ function testAlsXYWing(): void {
 
 function testAicAls(): void {
   const step = nextStep(buildCandidateMaskState([
-    [0, [1, 2, 3]],
+    [0, [1, 2]],
     [1, [2, 3]],
-    [9, [1, 3]],
-    [10, [3]],
+    [2, [1, 3]],
+    [3, [1, 4]],
   ]), { allowContradictoryCandidateState: true, allowedTechniques: ['aic-als'] });
-  assert.equal(step, null);
+  assert.equal(step?.technique, 'aic-als');
+  assert.ok(step?.actions.some((action) => action.type === 'eliminate' && action.cell === 3 && action.digit === 1));
+  assert.ok((step?.evidence.links?.length ?? 0) >= 2);
 }
 
 function testFireworks(): void {
@@ -4048,6 +4444,12 @@ function testAicDifferentDigitEndpoint(): void {
     (step?.evidence.cells ?? []).some((cell) => cell.role === 'reason' && cell.cell === 26 && cell.digit === 4),
     false,
   );
+}
+
+function testReferenceChainEntryPoints(): void {
+  for (const fixture of loadReferenceTechniqueFixtures().chains.map(toReferenceChainFixture)) {
+    assertReferenceChainFixture(fixture);
+  }
 }
 
 function testSkyscraper(): void {
@@ -4308,6 +4710,11 @@ function run(): void {
   testLockedCandidates();
   testNakedPair();
   testHiddenPair();
+  testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy();
+  testReferenceSmokeFixturesReachableViaExplicitOptions();
+  testReferenceSmokeFixturesListedByTechniquesCli();
+  testReferenceAuditScript();
+  testDirectTechniques();
   testNakedTriple();
   testHiddenTriple();
   testNakedQuad();
@@ -4359,6 +4766,7 @@ function run(): void {
   testXYChain();
   testAicSameDigitEndpoint();
   testAicDifferentDigitEndpoint();
+  testReferenceChainEntryPoints();
   testSkyscraper();
   testTurbotFish();
   testEmptyRectangle();

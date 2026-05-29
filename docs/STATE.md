@@ -92,3 +92,5 @@
 候选约束不是原始题目的新规则，而是中间求解状态的表达。
 
 公开库后续接入更复杂的假设链、forcing、AIC 时，仍应先通过 `normalizeState` 统一语义。
+
+Sudoku Explainer 兼容计划中的 dynamic / nested forcing 也必须遵守这一原则：分支、假设和候选约束先进入统一 `PuzzleState` / `NormalizedState` 模型，再交给具体技巧 finder。相关阶段见 [SE_COMPATIBILITY.md](./SE_COMPATIBILITY.md)。

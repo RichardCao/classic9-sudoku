@@ -17,6 +17,7 @@ import type {
   SolveStep,
   SolverContextLike,
   SolverTechnique,
+  StepPlacement,
   TechniqueDefinition,
   TechniqueId,
 } from './types.js';
@@ -56,6 +57,30 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'stable',
   },
   {
+    id: 'direct-pointing',
+    nameZh: '直接指向',
+    nameEn: 'Direct Pointing',
+    family: 'intersection',
+    defaultScore: 17,
+    stability: 'experimental',
+  },
+  {
+    id: 'direct-claiming',
+    nameZh: '直接声明',
+    nameEn: 'Direct Claiming',
+    family: 'intersection',
+    defaultScore: 19,
+    stability: 'experimental',
+  },
+  {
+    id: 'direct-hidden-pair',
+    nameZh: '直接隐性数对',
+    nameEn: 'Direct Hidden Pair',
+    family: 'subset',
+    defaultScore: 20,
+    stability: 'experimental',
+  },
+  {
     id: 'naked-pair',
     nameZh: '显性数对',
     nameEn: 'Naked Pair',
@@ -78,6 +103,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'subset',
     defaultScore: 80,
     stability: 'stable',
+  },
+  {
+    id: 'direct-hidden-triplet',
+    nameZh: '直接隐性三数组',
+    nameEn: 'Direct Hidden Triplet',
+    family: 'subset',
+    defaultScore: 25,
+    stability: 'experimental',
   },
   {
     id: 'hidden-triple',
@@ -302,6 +335,38 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'als',
     defaultScore: 209,
     stability: 'stable',
+  },
+  {
+    id: 'bidirectional-x-cycle',
+    nameZh: '双向 X 环',
+    nameEn: 'Bidirectional X-Cycle',
+    family: 'coloring',
+    defaultScore: 165,
+    stability: 'experimental',
+  },
+  {
+    id: 'bidirectional-y-cycle',
+    nameZh: '双向 Y 环',
+    nameEn: 'Bidirectional Y-Cycle',
+    family: 'chain',
+    defaultScore: 166,
+    stability: 'experimental',
+  },
+  {
+    id: 'forcing-x-chain',
+    nameZh: '强制 X 链',
+    nameEn: 'Forcing X-Chain',
+    family: 'single-digit-chain',
+    defaultScore: 176,
+    stability: 'experimental',
+  },
+  {
+    id: 'forcing-chain',
+    nameZh: '强制链',
+    nameEn: 'Forcing Chain',
+    family: 'chain',
+    defaultScore: 205,
+    stability: 'experimental',
   },
   {
     id: 'exocet',
@@ -569,8 +634,96 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
   },
 ];
 
+type TechniqueSeMetadata = Pick<TechniqueDefinition, 'aliases' | 'seDifficulty' | 'seStatus'>;
+
+const SE_METADATA_BY_ID: Partial<Record<TechniqueId, TechniqueSeMetadata>> = {
+  'full-house': { aliases: ['Last value'], seDifficulty: '1.0', seStatus: 'covered' },
+  'hidden-single': { aliases: ['Hidden Single in block', 'Hidden Single in row/column'], seDifficulty: '1.2..1.5', seStatus: 'covered-as-variant' },
+  'direct-pointing': { aliases: ['Direct Pointing'], seDifficulty: '1.7', seStatus: 'covered' },
+  'direct-claiming': { aliases: ['Direct Claiming'], seDifficulty: '1.9', seStatus: 'covered' },
+  'direct-hidden-pair': { aliases: ['Direct Hidden Pair'], seDifficulty: '2.0', seStatus: 'covered' },
+  'locked-candidates': { aliases: ['Pointing', 'Claiming'], seDifficulty: '2.6..2.8', seStatus: 'covered-as-variant' },
+  'naked-single': { aliases: ['Naked Single'], seDifficulty: '2.3', seStatus: 'covered' },
+  'direct-hidden-triplet': { aliases: ['Direct Hidden Triplet'], seDifficulty: '2.5', seStatus: 'covered' },
+  'naked-pair': { aliases: ['Naked Pair'], seDifficulty: '3.0', seStatus: 'covered' },
+  'x-wing': { aliases: ['X-Wing'], seDifficulty: '3.2', seStatus: 'covered' },
+  'hidden-pair': { aliases: ['Hidden Pair'], seDifficulty: '3.4', seStatus: 'covered' },
+  'naked-triple': { aliases: ['Naked Triplet'], seDifficulty: '3.6', seStatus: 'covered' },
+  'swordfish': { aliases: ['Swordfish'], seDifficulty: '3.8', seStatus: 'covered' },
+  'hidden-triple': { aliases: ['Hidden Triplet'], seDifficulty: '4.0', seStatus: 'covered' },
+  'xy-wing': { aliases: ['XY-Wing'], seDifficulty: '4.2', seStatus: 'covered' },
+  'xyz-wing': { aliases: ['XYZ-Wing'], seDifficulty: '4.4', seStatus: 'covered' },
+  'unique-rectangle': { aliases: ['Unique Rectangle'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'extended-rectangle': { aliases: ['Unique Loop'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'hidden-unique-rectangle': { aliases: ['Hidden Unique Rectangle'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'aic-ur': { aliases: ['Unique Rectangle AIC'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'rectangle-elimination': { aliases: ['Unique Rectangle elimination'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'avoidable-rectangle': { aliases: ['Avoidable Rectangle'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'naked-quad': { aliases: ['Naked Quad'], seDifficulty: '5.0', seStatus: 'covered' },
+  'jellyfish': { aliases: ['Jellyfish'], seDifficulty: '5.2', seStatus: 'covered' },
+  'hidden-quad': { aliases: ['Hidden Quad'], seDifficulty: '5.4', seStatus: 'covered' },
+  'bug-plus-one': { aliases: ['BUG+1', 'Bivalue Universal Grave +1'], seDifficulty: '5.6..6.0', seStatus: 'partial' },
+  'aligned-pair-exclusion': { aliases: ['Aligned Pair Exclusion'], seDifficulty: '6.2', seStatus: 'covered' },
+  'bidirectional-x-cycle': { aliases: ['Bidirectional X-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'covered-as-variant' },
+  'bidirectional-y-cycle': { aliases: ['Bidirectional Y-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'covered-as-variant' },
+  'forcing-x-chain': { aliases: ['Forcing X-Chain'], seDifficulty: '6.6..7.6', seStatus: 'covered-as-variant' },
+  'forcing-chain': { aliases: ['Forcing Chain', 'Bidirectional Cycle'], seDifficulty: '7.0..8.0', seStatus: 'covered-as-variant' },
+  'simple-coloring': { aliases: ['Bidirectional X-Cycle', 'Simple Coloring'], seDifficulty: '6.5..7.5', seStatus: 'partial' },
+  'x-coloring': { aliases: ['Bidirectional X-Cycle', 'X-Coloring'], seDifficulty: '6.5..7.5', seStatus: 'partial' },
+  'grouped-x-cycles': { aliases: ['Grouped Bidirectional X-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'partial' },
+  'x-chain': { aliases: ['Forcing X-Chain'], seDifficulty: '6.6..7.6', seStatus: 'partial' },
+  'xy-chain': { aliases: ['Bidirectional Y-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'partial' },
+  aic: { aliases: ['Forcing Chain', 'Bidirectional Cycle'], seDifficulty: '7.0..8.0', seStatus: 'partial' },
+  'grouped-aic': { aliases: ['Grouped Forcing Chain', 'Grouped Bidirectional Cycle'], seDifficulty: '7.0..8.0', seStatus: 'partial' },
+  'nishio-forcing-chains': { aliases: ['Nishio'], seDifficulty: '7.5..8.5', seStatus: 'covered' },
+  'cell-forcing-chains': { aliases: ['Cell Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
+  'unit-forcing-chains': { aliases: ['Region Forcing Chains', 'Unit Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
+  'forcing-nets': { aliases: ['Forcing Nets'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
+  'digit-forcing-chains': { aliases: ['Digit Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
+  'table-chain': { aliases: ['Table Chain'], seDifficulty: '8.5..9.5', seStatus: 'partial' },
+  'bowmans-bingo': { aliases: ["Bowman's Bingo"], seStatus: 'non-se-extension' },
+  'franken-swordfish': { aliases: ['Franken Swordfish'], seStatus: 'non-se-extension' },
+  'finned-x-wing': { aliases: ['Finned X-Wing'], seStatus: 'non-se-extension' },
+  'finned-swordfish': { aliases: ['Finned Swordfish'], seStatus: 'non-se-extension' },
+  'finned-jellyfish': { aliases: ['Finned Jellyfish'], seStatus: 'non-se-extension' },
+  'sashimi-swordfish': { aliases: ['Sashimi Swordfish'], seStatus: 'non-se-extension' },
+  'sashimi-jellyfish': { aliases: ['Sashimi Jellyfish'], seStatus: 'non-se-extension' },
+  'wxyz-wing': { aliases: ['WXYZ-Wing'], seStatus: 'non-se-extension' },
+  'w-wing': { aliases: ['W-Wing'], seStatus: 'non-se-extension' },
+  'big-wings': { aliases: ['BigWings'], seStatus: 'non-se-extension' },
+  'chute-remote-pairs': { aliases: ['Chute Remote Pairs'], seStatus: 'non-se-extension' },
+  'almost-locked-pair': { aliases: ['Almost Locked Pair'], seStatus: 'non-se-extension' },
+  'almost-locked-triple': { aliases: ['Almost Locked Triple'], seStatus: 'non-se-extension' },
+  'als-xz': { aliases: ['ALS-XZ'], seStatus: 'non-se-extension' },
+  'als-xy-wing': { aliases: ['ALS-XY-Wing'], seStatus: 'non-se-extension' },
+  'aic-als': { aliases: ['ALS-AIC'], seStatus: 'non-se-extension' },
+  fireworks: { aliases: ['Fireworks'], seStatus: 'non-se-extension' },
+  'twinned-xy-chains': { aliases: ['Twinned XY-Chains'], seStatus: 'non-se-extension' },
+  'sue-de-coq': { aliases: ['Sue de Coq'], seStatus: 'non-se-extension' },
+  'death-blossom': { aliases: ['Death Blossom'], seStatus: 'non-se-extension' },
+  exocet: { aliases: ['Exocet'], seStatus: 'non-se-extension' },
+  'double-exocet': { aliases: ['Double Exocet'], seStatus: 'non-se-extension' },
+  'pattern-overlay': { aliases: ['Pattern Overlay'], seStatus: 'non-se-extension' },
+  tridagons: { aliases: ['Tridagons'], seStatus: 'non-se-extension' },
+  'sk-loops': { aliases: ['SK Loops'], seStatus: 'non-se-extension' },
+  'multi-colors': { aliases: ['Multi Colors'], seStatus: 'non-se-extension' },
+  'three-d-medusa': { aliases: ['3D Medusa'], seStatus: 'non-se-extension' },
+  'aic-exotic': { aliases: ['AIC with Exotic Links'], seStatus: 'non-se-extension' },
+  skyscraper: { aliases: ['Skyscraper'], seStatus: 'non-se-extension' },
+  'two-string-kite': { aliases: ['Two-String Kite'], seStatus: 'non-se-extension' },
+  'turbot-fish': { aliases: ['Turbot Fish'], seStatus: 'non-se-extension' },
+  'empty-rectangle': { aliases: ['Empty Rectangle'], seStatus: 'non-se-extension' },
+};
+
 export function getTechniqueDefinitions(): TechniqueDefinition[] {
-  return TECHNIQUE_DEFINITIONS.map((definition) => ({ ...definition }));
+  return TECHNIQUE_DEFINITIONS.map((definition) => {
+    const metadata = SE_METADATA_BY_ID[definition.id] ?? { seStatus: 'non-se-extension' as const };
+    return {
+      ...definition,
+      ...metadata,
+      ...(metadata.aliases ? { aliases: [...metadata.aliases] } : {}),
+    };
+  });
 }
 
 const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
@@ -578,9 +731,13 @@ const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
   'naked-single',
   'hidden-single',
   'locked-candidates',
+  'direct-pointing',
+  'direct-claiming',
   'naked-pair',
+  'direct-hidden-pair',
   'hidden-pair',
   'naked-triple',
+  'direct-hidden-triplet',
   'hidden-triple',
   'naked-quad',
   'hidden-quad',
@@ -618,6 +775,10 @@ const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
   'fireworks',
   'twinned-xy-chains',
   'aligned-pair-exclusion',
+  'bidirectional-x-cycle',
+  'bidirectional-y-cycle',
+  'forcing-x-chain',
+  'forcing-chain',
   'death-blossom',
   'nishio-forcing-chains',
   'forcing-nets',
@@ -650,9 +811,13 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new NakedSingleTechnique(),
     new HiddenSingleTechnique(),
     new LockedCandidatesTechnique(),
+    new DirectLockedCandidatesTechnique('direct-pointing'),
+    new DirectLockedCandidatesTechnique('direct-claiming'),
     new NakedSubsetTechnique(2),
+    new DirectHiddenSubsetTechnique(2),
     new HiddenSubsetTechnique(2),
     new NakedSubsetTechnique(3),
+    new DirectHiddenSubsetTechnique(3),
     new HiddenSubsetTechnique(3),
     new NakedSubsetTechnique(4),
     new HiddenSubsetTechnique(4),
@@ -681,6 +846,10 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new SueDeCoqTechnique(),
     new DeathBlossomTechnique(),
     new AlignedPairExclusionTechnique(),
+    new SimpleColoringTechnique('bidirectional-x-cycle', 165),
+    new XYChainTechnique('bidirectional-y-cycle', 166),
+    new XChainTechnique('forcing-x-chain', 176),
+    new AICTechnique('forcing-chain', 205),
     new ExocetTechnique(),
     new DoubleExocetTechnique(),
     new PatternOverlayTechnique(),
@@ -890,6 +1059,98 @@ class LockedCandidatesTechnique implements SolverTechnique {
   }
 }
 
+class DirectLockedCandidatesTechnique implements SolverTechnique {
+  public readonly score: number;
+
+  public constructor(public readonly id: 'direct-pointing' | 'direct-claiming') {
+    this.score = id === 'direct-pointing' ? 17 : 19;
+  }
+
+  public find(context: SolverContextLike): SolveStep | null {
+    return this.id === 'direct-pointing'
+      ? this.findBoxPointing(context)
+      : this.findLineClaiming(context);
+  }
+
+  private findBoxPointing(context: SolverContextLike): SolveStep | null {
+    for (let box = 0; box < 9; box += 1) {
+      const boxHouse: HouseRef = { type: 'box', index: box };
+      for (let digit = 1; digit <= 9; digit += 1) {
+        const reasonCells = context.getHouseCandidateCells(boxHouse, digit as Digit);
+        if (reasonCells.length < 2) {
+          continue;
+        }
+
+        const rows = new Set(reasonCells.map((cell) => context.getCellRow(cell)));
+        if (rows.size === 1) {
+          const rowHouse: HouseRef = { type: 'row', index: context.getCellRow(reasonCells[0]!) };
+          const targets = context.getHouseCandidateCells(rowHouse, digit as Digit)
+            .filter((cell) => context.getCellBox(cell) !== box);
+          const step = this.buildDirectStep(context, digit as Digit, [boxHouse, rowHouse], reasonCells, targets, 'Direct pointing removes locked candidates and immediately creates a placement.');
+          if (step) {
+            return step;
+          }
+        }
+
+        const cols = new Set(reasonCells.map((cell) => context.getCellCol(cell)));
+        if (cols.size === 1) {
+          const colHouse: HouseRef = { type: 'col', index: context.getCellCol(reasonCells[0]!) };
+          const targets = context.getHouseCandidateCells(colHouse, digit as Digit)
+            .filter((cell) => context.getCellBox(cell) !== box);
+          const step = this.buildDirectStep(context, digit as Digit, [boxHouse, colHouse], reasonCells, targets, 'Direct pointing removes locked candidates and immediately creates a placement.');
+          if (step) {
+            return step;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private findLineClaiming(context: SolverContextLike): SolveStep | null {
+    for (const type of ['row', 'col'] as const) {
+      for (let index = 0; index < 9; index += 1) {
+        const lineHouse: HouseRef = { type, index };
+        for (let digit = 1; digit <= 9; digit += 1) {
+          const reasonCells = context.getHouseCandidateCells(lineHouse, digit as Digit);
+          if (reasonCells.length < 2) {
+            continue;
+          }
+
+          const boxes = new Set(reasonCells.map((cell) => context.getCellBox(cell)));
+          if (boxes.size !== 1) {
+            continue;
+          }
+
+          const boxHouse: HouseRef = { type: 'box', index: context.getCellBox(reasonCells[0]!) };
+          const targets = context.getHouseCandidateCells(boxHouse, digit as Digit)
+            .filter((cell) => type === 'row' ? context.getCellRow(cell) !== index : context.getCellCol(cell) !== index);
+          const step = this.buildDirectStep(context, digit as Digit, [lineHouse, boxHouse], reasonCells, targets, 'Direct claiming removes locked candidates and immediately creates a placement.');
+          if (step) {
+            return step;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private buildDirectStep(
+    context: SolverContextLike,
+    digit: Digit,
+    houses: HouseRef[],
+    reasonCells: readonly number[],
+    targetCells: readonly number[],
+    note: string,
+  ): SolveStep | null {
+    if (targetCells.length === 0) {
+      return null;
+    }
+    const eliminations = targetCells.map((cell) => ({ type: 'eliminate' as const, cell, digit }));
+    return directPlacementStep(this.id, this.score, context, houses, reasonCells, eliminations, note);
+  }
+}
+
 class NakedSubsetTechnique implements SolverTechnique {
   public readonly id: TechniqueId;
   public readonly score: number;
@@ -977,7 +1238,67 @@ class HiddenSubsetTechnique implements SolverTechnique {
           }
         }
         if (actions.length > 0) {
-          return subsetStep(this.id, this.score, house, [...cells], actions, 'Hidden subset removes other digits from the subset cells.');
+          return subsetStep(this.id, this.score, house, Array.from(cells), actions, 'Hidden subset removes other digits from the subset cells.');
+        }
+      }
+    }
+    return null;
+  }
+}
+
+class DirectHiddenSubsetTechnique implements SolverTechnique {
+  public readonly id: TechniqueId;
+  public readonly score: number;
+
+  public constructor(private readonly subsetSize: 2 | 3) {
+    this.id = subsetSize === 2 ? 'direct-hidden-pair' : 'direct-hidden-triplet';
+    this.score = subsetSize === 2 ? 20 : 25;
+  }
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const digits: Digit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    for (const house of ALL_HOUSES) {
+      for (const digitCombo of createCombinations(digits, this.subsetSize)) {
+        const cells = new Set<number>();
+        let valid = true;
+        for (const digit of digitCombo) {
+          const digitCells = context.getHouseCandidateCells(house, digit);
+          if (digitCells.length === 0 || digitCells.length > this.subsetSize) {
+            valid = false;
+            break;
+          }
+          for (const cell of digitCells) {
+            cells.add(cell);
+          }
+        }
+        if (!valid || cells.size !== this.subsetSize) {
+          continue;
+        }
+
+        const allowedMask = digitCombo.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+        const eliminations: SolveStep['actions'] = [];
+        for (const cell of cells) {
+          for (const digit of context.getCandidateDigits(cell)) {
+            if ((allowedMask & maskForDigit(digit)) === 0) {
+              eliminations.push({ type: 'eliminate', cell, digit });
+            }
+          }
+        }
+        if (eliminations.length === 0) {
+          continue;
+        }
+
+        const step = directPlacementStep(
+          this.id,
+          this.score,
+          context,
+          [house],
+          Array.from(cells),
+          eliminations,
+          'Direct hidden subset removes extra candidates and immediately creates a placement.',
+        );
+        if (step) {
+          return step;
         }
       }
     }
@@ -1170,7 +1491,7 @@ class FrankenSwordfishTechnique implements SolverTechnique {
         evidence: {
           houses: [...combo, ...coverHouses],
           cells: [
-            ...[...reasonCellSet].map((cell) => ({ cell, digit, role: 'reason' as const })),
+            ...Array.from(reasonCellSet).map((cell) => ({ cell, digit, role: 'reason' as const })),
             ...uniqueNumbers(actions.map((action) => action.cell)).map((cell) => ({ cell, digit, role: 'target' as const })),
           ],
           note: 'Franken Swordfish uses mixed line and box basis houses to lock three cover lines.',
@@ -1519,7 +1840,7 @@ class FinnedFishTechnique implements SolverTechnique {
           uniqueTargets,
           digit,
           [...basisHouses, ...coverHouses, { type: 'box', index: finBox }],
-          [...reasonCells],
+          Array.from(reasonCells),
           this.sashimi
             ? 'Sashimi fish removes cover-line candidates that see the fin in the missing-corner box.'
             : 'Finned fish removes cover-line candidates that see the fin.',
@@ -1767,7 +2088,7 @@ class WXYZWingTechnique implements SolverTechnique {
         continue;
       }
 
-      const actions: SolveStep['actions'] = [...eliminations.values()]
+      const actions: SolveStep['actions'] = Array.from(eliminations.values())
         .map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
       if (actions.length === 0) {
         continue;
@@ -1847,7 +2168,7 @@ class BigWingsTechnique implements SolverTechnique {
           }
         }
 
-        const actions = [...eliminations.values()].map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
+        const actions = Array.from(eliminations.values()).map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
         if (actions.length === 0) {
           continue;
         }
@@ -2078,7 +2399,7 @@ class ChuteRemotePairsTechnique implements SolverTechnique {
         }
       }
     }
-    const actions = [...eliminationMap.values()].map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
+    const actions = Array.from(eliminationMap.values()).map((item) => ({ type: 'eliminate' as const, cell: item.cell, digit: item.digit }));
     if (actions.length === 0) {
       return null;
     }
@@ -2374,7 +2695,7 @@ class PatternOverlayTechnique implements SolverTechnique {
     const common = new Set<number>(templates[0]);
     for (let index = 1; index < templates.length; index += 1) {
       const current = new Set<number>(templates[index]);
-      for (const cell of [...common]) {
+      for (const cell of Array.from(common)) {
         if (!current.has(cell)) {
           common.delete(cell);
         }
@@ -2576,7 +2897,7 @@ class TridagonsTechnique implements SolverTechnique {
         common.add(digit as Digit);
       }
     }
-    return [...common];
+    return Array.from(common);
   }
 
   private findBoxPatterns(
@@ -2804,7 +3125,7 @@ class SKLoopsTechnique implements SolverTechnique {
       }
     }
 
-    const actions = [...actionMap.values()];
+    const actions = Array.from(actionMap.values());
     if (actions.length === 0) {
       return null;
     }
@@ -3421,13 +3742,191 @@ class AlsXYWingTechnique implements SolverTechnique {
 class AICWithAlsTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'aic-als';
   public readonly score = 214;
+  private static readonly MAX_ALS_COUNT = 180;
+  private static readonly MAX_CHAIN_NODES = 4;
+  private static readonly MAX_LINKS_PER_NODE = 12;
+  private static readonly MAX_SEARCH_STATES = 5000;
 
   public find(context: SolverContextLike): SolveStep | null {
-    void context;
-    // 当前简化实现会把 ALS 内部关系摊平成普通候选链，真实题库回归中已发现误删。
-    // 先保持 definition 与显式技巧 ID，但在按 SE 的 ALS/RCC 链模型重写前不产出步骤。
+    const allAls = enumerateAlmostLockedSets(context, 1, 3)
+      .sort((left, right) => left.cells.length - right.cells.length || left.cells[0]! - right.cells[0]!)
+      .slice(0, AICWithAlsTechnique.MAX_ALS_COUNT);
+    const graph = buildAlsRccGraph(allAls);
+    const searchBudget = { visited: 0 };
+
+    for (let start = 0; start < allAls.length; start += 1) {
+      const step = this.searchFrom(context, allAls, graph, start, searchBudget);
+      if (step) {
+        return step;
+      }
+      if (searchBudget.visited >= AICWithAlsTechnique.MAX_SEARCH_STATES) {
+        return null;
+      }
+    }
+
     return null;
   }
+
+  private searchFrom(
+    context: SolverContextLike,
+    allAls: AlmostLockedSet[],
+    graph: Map<number, AlsRccLink[]>,
+    start: number,
+    searchBudget: { visited: number },
+  ): SolveStep | null {
+    const walk = (
+      current: number,
+      path: number[],
+      links: AlsRccLink[],
+      used: Set<number>,
+    ): SolveStep | null => {
+      searchBudget.visited += 1;
+      if (searchBudget.visited >= AICWithAlsTechnique.MAX_SEARCH_STATES) {
+        return null;
+      }
+      if (path.length >= 3) {
+        const step = this.buildStep(context, allAls, path, links);
+        if (step) {
+          return step;
+        }
+      }
+      if (path.length >= AICWithAlsTechnique.MAX_CHAIN_NODES) {
+        return null;
+      }
+
+      for (const link of (graph.get(current) ?? []).slice(0, AICWithAlsTechnique.MAX_LINKS_PER_NODE)) {
+        if (used.has(link.to)) {
+          continue;
+        }
+        if (links.length > 0 && links[links.length - 1]!.digit === link.digit) {
+          continue;
+        }
+        const nextAls = allAls[link.to]!;
+        if (!areAlsDisjoint(...path.map((index) => allAls[index]!), nextAls)) {
+          continue;
+        }
+        used.add(link.to);
+        const result = walk(link.to, [...path, link.to], [...links, link], used);
+        used.delete(link.to);
+        if (result) {
+          return result;
+        }
+      }
+
+      return null;
+    };
+
+    return walk(start, [start], [], new Set([start]));
+  }
+
+  private buildStep(
+    context: SolverContextLike,
+    allAls: AlmostLockedSet[],
+    path: number[],
+    links: AlsRccLink[],
+  ): SolveStep | null {
+    const first = allAls[path[0]!]!;
+    const last = allAls[path[path.length - 1]!]!;
+    const firstLinkDigit = links[0]!.digit;
+    const lastLinkDigit = links[links.length - 1]!.digit;
+    const endpointDigits = getCommonAlsDigits(first, last)
+      .filter((digit) => digit !== firstLinkDigit && digit !== lastLinkDigit);
+    const pathCells = new Set(path.flatMap((index) => allAls[index]!.cells));
+
+    for (const digit of endpointDigits) {
+      const targetCells = getCommonSeenCellsForDigit(digit, first, last)
+        .filter((cell) => !pathCells.has(cell) && context.isCandidatePresent(cell, digit));
+      const uniqueTargets = uniqueNumbers(targetCells);
+      if (uniqueTargets.length === 0) {
+        continue;
+      }
+      const pathAls = path.map((index) => allAls[index]!);
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit })),
+        evidence: {
+          houses: uniqueHouses(pathAls.flatMap((als) => als.houses)),
+          cells: [
+            ...pathAls.flatMap((als) =>
+              als.cells.map((cell) => ({ cell, role: 'reason' as const })),
+            ),
+            ...links.flatMap((link) =>
+              [link.leftCell, link.rightCell].map((cell) => ({ cell, digit: link.digit, role: 'link' as const })),
+            ),
+            ...uniqueTargets.map((cell) => ({ cell, digit, role: 'target' as const })),
+          ],
+          links: buildAlsRccEvidenceLinks(links),
+          note: `ALS-AIC uses a ${path.length}-ALS RCC chain; endpoint digit ${digit} is removed from cells seeing both endpoint ALSs.`,
+        },
+      };
+    }
+
+    return null;
+  }
+}
+
+interface AlsRccLink {
+  from: number;
+  to: number;
+  digit: Digit;
+  leftCell: number;
+  rightCell: number;
+  house?: HouseRef;
+}
+
+function buildAlsRccGraph(allAls: AlmostLockedSet[]): Map<number, AlsRccLink[]> {
+  const graph = new Map<number, AlsRccLink[]>();
+  for (let leftIndex = 0; leftIndex < allAls.length; leftIndex += 1) {
+    const left = allAls[leftIndex]!;
+    for (let rightIndex = leftIndex + 1; rightIndex < allAls.length; rightIndex += 1) {
+      const right = allAls[rightIndex]!;
+      if (!areAlsDisjoint(left, right)) {
+        continue;
+      }
+      for (const digit of getRestrictedCommonDigits(left, right)) {
+        const leftCell = left.digitCells.get(digit)?.[0];
+        const rightCell = right.digitCells.get(digit)?.[0];
+        if (leftCell == null || rightCell == null) {
+          continue;
+        }
+        const house = housesForCellPair(leftCell, rightCell)[0];
+        const forward: AlsRccLink = {
+          from: leftIndex,
+          to: rightIndex,
+          digit,
+          leftCell,
+          rightCell,
+          ...(house ? { house } : {}),
+        };
+        const backward: AlsRccLink = {
+          from: rightIndex,
+          to: leftIndex,
+          digit,
+          leftCell: rightCell,
+          rightCell: leftCell,
+          ...(house ? { house } : {}),
+        };
+        const leftLinks = graph.get(leftIndex) ?? [];
+        leftLinks.push(forward);
+        graph.set(leftIndex, leftLinks);
+        const rightLinks = graph.get(rightIndex) ?? [];
+        rightLinks.push(backward);
+        graph.set(rightIndex, rightLinks);
+      }
+    }
+  }
+  return graph;
+}
+
+function buildAlsRccEvidenceLinks(links: readonly AlsRccLink[]): NonNullable<SolveStep['evidence']['links']> {
+  return links.map((link) => ({
+    from: link.leftCell,
+    to: link.rightCell,
+    digit: link.digit,
+    type: 'weak' as const,
+    ...(link.house ? { house: link.house } : {}),
+  }));
 }
 
 interface FireworkSignature {
@@ -3528,6 +4027,7 @@ class TwinnedXYChainsTechnique implements SolverTechnique {
   public readonly score = 213;
 
   public find(context: SolverContextLike): SolveStep | null {
+    const graphCache = new Map<Digit, SingleDigitStrongLinkGraph>();
     for (let rowA = 0; rowA < 8; rowA += 1) {
       for (let rowB = rowA + 1; rowB < 9; rowB += 1) {
         for (const cols of createCombinations([0, 1, 2, 3, 4, 5, 6, 7, 8], 3)) {
@@ -3938,32 +4438,20 @@ function buildLinkKey(left: number, right: number): string {
 }
 
 class SimpleColoringTechnique implements SolverTechnique {
-  public readonly id: TechniqueId = 'simple-coloring';
-  public readonly score = 170;
+  public readonly id: TechniqueId;
+  public readonly score: number;
+
+  public constructor(id: 'simple-coloring' | 'bidirectional-x-cycle' = 'simple-coloring', score = 170) {
+    this.id = id;
+    this.score = score;
+  }
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const adjacency = new Map<number, Set<number>>();
-      const linkHouses = new Map<string, HouseRef[]>();
-
-      for (const house of ALL_HOUSES) {
-        const cells = context.getHouseCandidateCells(house, digit as Digit);
-        if (cells.length !== 2) {
-          continue;
-        }
-        for (const cell of cells) {
-          if (!adjacency.has(cell)) {
-            adjacency.set(cell, new Set<number>());
-          }
-        }
-        adjacency.get(cells[0]!)!.add(cells[1]!);
-        adjacency.get(cells[1]!)!.add(cells[0]!);
-        const key = buildLinkKey(cells[0]!, cells[1]!);
-        linkHouses.set(key, uniqueHouses([...(linkHouses.get(key) ?? []), house]));
-      }
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
 
       const visited = new Set<number>();
-      for (const start of adjacency.keys()) {
+      for (const start of graph.adjacency.keys()) {
         if (visited.has(start)) {
           continue;
         }
@@ -3975,7 +4463,8 @@ class SimpleColoringTechnique implements SolverTechnique {
         while (queue.length > 0) {
           const current = queue.shift()!;
           const nextColor = colorMap.get(current) === 0 ? 1 : 0;
-          for (const neighbor of adjacency.get(current) ?? []) {
+          for (const edge of graph.adjacency.get(current) ?? []) {
+            const neighbor = edge.to;
             if (!colorMap.has(neighbor)) {
               colorMap.set(neighbor, nextColor);
               queue.push(neighbor);
@@ -3984,11 +4473,11 @@ class SimpleColoringTechnique implements SolverTechnique {
           }
         }
 
-        const sameColor = this.findSameColorRule(context, digit as Digit, colorMap, linkHouses);
+        const sameColor = this.findSameColorRule(context, digit as Digit, colorMap, graph.linkHouses);
         if (sameColor) {
           return sameColor;
         }
-        const trap = this.findTrapRule(context, digit as Digit, colorMap, linkHouses);
+        const trap = this.findTrapRule(context, digit as Digit, colorMap, graph.linkHouses);
         if (trap) {
           return trap;
         }
@@ -4003,7 +4492,7 @@ class SimpleColoringTechnique implements SolverTechnique {
     colorMap: Map<number, 0 | 1>,
     linkHouses: Map<string, HouseRef[]>,
   ): SolveStep | null {
-    const coloredCells = [...colorMap.keys()];
+    const coloredCells = Array.from(colorMap.keys());
     for (let leftIndex = 0; leftIndex < coloredCells.length; leftIndex += 1) {
       for (let rightIndex = leftIndex + 1; rightIndex < coloredCells.length; rightIndex += 1) {
         const left = coloredCells[leftIndex]!;
@@ -4041,7 +4530,7 @@ class SimpleColoringTechnique implements SolverTechnique {
     colorMap: Map<number, 0 | 1>,
     linkHouses: Map<string, HouseRef[]>,
   ): SolveStep | null {
-    const coloredCells = [...colorMap.keys()];
+    const coloredCells = Array.from(colorMap.keys());
     for (let cell = 0; cell < context.board.length; cell += 1) {
       if (colorMap.has(cell) || !context.isCandidatePresent(cell, digit)) {
         continue;
@@ -4077,35 +4566,18 @@ class XColoringTechnique implements SolverTechnique {
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
       const currentDigit = digit as Digit;
-      const adjacency = new Map<number, Set<number>>();
-      const linkHouses = new Map<string, HouseRef[]>();
+      const graph = buildSingleDigitStrongLinkGraph(context, currentDigit);
 
-      for (const house of ALL_HOUSES) {
-        const cells = context.getHouseCandidateCells(house, currentDigit);
-        if (cells.length !== 2) {
-          continue;
-        }
-        for (const cell of cells) {
-          if (!adjacency.has(cell)) {
-            adjacency.set(cell, new Set<number>());
-          }
-        }
-        adjacency.get(cells[0]!)!.add(cells[1]!);
-        adjacency.get(cells[1]!)!.add(cells[0]!);
-        const key = buildLinkKey(cells[0]!, cells[1]!);
-        linkHouses.set(key, uniqueHouses([...(linkHouses.get(key) ?? []), house]));
-      }
-
-      for (const component of buildColorComponents(adjacency)) {
+      for (const component of buildColorComponents(toColorAdjacency(graph.adjacency))) {
         const expanded = this.expandComponent(context, currentDigit, component);
         if (expanded.invalidColor !== null) {
-          const invalidStep = this.buildInvalidColorStep(context, currentDigit, expanded, linkHouses);
+          const invalidStep = this.buildInvalidColorStep(context, currentDigit, expanded, graph.linkHouses);
           if (invalidStep) {
             return invalidStep;
           }
         }
 
-        const trap = this.findTrap(context, currentDigit, expanded, linkHouses);
+        const trap = this.findTrap(context, currentDigit, expanded, graph.linkHouses);
         if (trap) {
           return trap;
         }
@@ -4145,16 +4617,13 @@ class XColoringTechnique implements SolverTechnique {
             continue;
           }
 
+          if (colorSets[color === 0 ? 1 : 0].has(cell)) {
+            continue;
+          }
+
           colorSets[color].add(cell);
           derivations.push({ cell, color, house });
           changed = true;
-
-          if (colorSets[color === 0 ? 1 : 0].has(cell)) {
-            invalidColor = color;
-            invalidHouse = house;
-            invalidKind = 'overlap';
-            break;
-          }
         }
       }
     }
@@ -4179,7 +4648,7 @@ class XColoringTechnique implements SolverTechnique {
 
     if (invalidColor === null) {
       for (const color of [0, 1] as const) {
-        const colorCells = [...colorSets[color]];
+        const colorCells = Array.from(colorSets[color]);
         for (const house of ALL_HOUSES) {
           const candidateCells = context.getHouseCandidateCells(house, digit);
           if (candidateCells.length === 0) {
@@ -4232,7 +4701,7 @@ class XColoringTechnique implements SolverTechnique {
       return null;
     }
     const validColor = component.invalidColor === 0 ? 1 : 0;
-    const invalidCells = [...component.baseColorMap.entries()]
+    const invalidCells = Array.from(component.baseColorMap.entries())
       .filter(([cell, color]) =>
         color === component.invalidColor
         && !component.colorSets[validColor].has(cell)
@@ -4245,18 +4714,16 @@ class XColoringTechnique implements SolverTechnique {
     }
 
     const allColoredCells = uniqueNumbers([
-      ...component.colorSets[0],
-      ...component.colorSets[1],
+      ...Array.from(component.colorSets[0]),
+      ...Array.from(component.colorSets[1]),
     ]);
-    const houses = collectLinkedHouses([...component.baseColorMap.keys()], linkHouses);
+    const houses = collectLinkedHouses(Array.from(component.baseColorMap.keys()), linkHouses);
     if (component.invalidHouse) {
       houses.push(component.invalidHouse);
     }
 
     let note = 'X-Coloring proves one color set impossible, so that color is eliminated.';
-    if (component.invalidKind === 'overlap') {
-      note = 'Extended coloring would paint one candidate with both colors, so that color is false.';
-    } else if (component.invalidKind === 'same-color-house') {
+    if (component.invalidKind === 'same-color-house') {
       note = 'Extended coloring puts the same color in one house more than once, so that color is false.';
     } else if (component.invalidKind === 'house-covered') {
       note = 'Every candidate in one house sees the same color, so that color is false.';
@@ -4285,8 +4752,8 @@ class XColoringTechnique implements SolverTechnique {
     linkHouses: Map<string, HouseRef[]>,
   ): SolveStep | null {
     const allColoredCells = uniqueNumbers([
-      ...component.colorSets[0],
-      ...component.colorSets[1],
+      ...Array.from(component.colorSets[0]),
+      ...Array.from(component.colorSets[1]),
     ]);
     const coloredSet = new Set(allColoredCells);
 
@@ -4294,9 +4761,9 @@ class XColoringTechnique implements SolverTechnique {
       if (coloredSet.has(cell) || !context.isCandidatePresent(cell, digit)) {
         continue;
       }
-      const seesZero = [...component.colorSets[0]]
+      const seesZero = Array.from(component.colorSets[0])
         .some((colored) => (CELL_TO_PEERS[cell] ?? []).includes(colored));
-      const seesOne = [...component.colorSets[1]]
+      const seesOne = Array.from(component.colorSets[1])
         .some((colored) => (CELL_TO_PEERS[cell] ?? []).includes(colored));
       if (!seesZero || !seesOne) {
         continue;
@@ -4306,7 +4773,7 @@ class XColoringTechnique implements SolverTechnique {
         score: this.score,
         actions: [{ type: 'eliminate', cell, digit }],
         evidence: {
-          houses: uniqueHouses(collectLinkedHouses([...component.baseColorMap.keys()], linkHouses)),
+          houses: uniqueHouses(collectLinkedHouses(Array.from(component.baseColorMap.keys()), linkHouses)),
           cells: [
             ...allColoredCells.map((colored) => ({ cell: colored, digit, role: 'reason' as const })),
             { cell, digit, role: 'target' as const },
@@ -4439,7 +4906,7 @@ class GroupedXCyclesTechnique implements SolverTechnique {
     nodes: Map<string, GroupedXCycleNode>,
   ): Map<string, GroupedXCycleEdge[]> {
     const adjacency = new Map<string, GroupedXCycleEdge[]>();
-    const allNodes = [...nodes.values()];
+    const allNodes = Array.from(nodes.values());
 
     const addEdge = (from: string, to: string, house: HouseRef): void => {
       const edges = adjacency.get(from) ?? [];
@@ -4538,27 +5005,41 @@ class GroupedXCyclesTechnique implements SolverTechnique {
   }
 }
 
-type GroupedAicLinkType = 'strong' | 'weak';
+type InferenceLinkType = 'strong' | 'weak';
 
-interface GroupedAicNode {
+interface CandidateGraphNode {
   key: string;
   digit: Digit;
+}
+
+interface CandidateGraphEdge {
+  to: string;
+  type: InferenceLinkType;
+  house?: HouseRef;
+}
+
+interface CandidateGraphPathEdge {
+  from: string;
+  to: string;
+  type: InferenceLinkType;
+  house?: HouseRef;
+}
+
+interface CandidateGraph<N extends CandidateGraphNode, E extends CandidateGraphEdge = CandidateGraphEdge> {
+  nodes: Map<string, N>;
+  adjacency: Map<string, E[]>;
+}
+
+type GroupedAicLinkType = InferenceLinkType;
+
+interface GroupedAicNode extends CandidateGraphNode {
   cells: number[];
   isGroup: boolean;
 }
 
-interface GroupedAicEdge {
-  to: string;
-  type: GroupedAicLinkType;
-  house?: HouseRef;
-}
+type GroupedAicEdge = CandidateGraphEdge;
 
-interface GroupedAicPathEdge {
-  from: string;
-  to: string;
-  type: GroupedAicLinkType;
-  house?: HouseRef;
-}
+type GroupedAicPathEdge = CandidateGraphPathEdge;
 
 class GroupedAICTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'grouped-aic';
@@ -4567,19 +5048,26 @@ class GroupedAICTechnique implements SolverTechnique {
   private static readonly MAX_SEARCH_STATES = 25000;
 
   public find(context: SolverContextLike): SolveStep | null {
-    const build = this.buildNodes(context);
-    const nodes = build.nodes;
-    const adjacency = this.buildAdjacency(context, nodes, build.nodesByDigit, {
+    const graph = this.buildGraph(context, {
       allowNonBivalueCellWeakLinks: false,
     });
-    return this.findInGraph(context, nodes, adjacency);
+    return this.findInGraph(context, graph);
+  }
+
+  private buildGraph(
+    context: SolverContextLike,
+    options: { allowNonBivalueCellWeakLinks: boolean },
+  ): CandidateGraph<GroupedAicNode, GroupedAicEdge> {
+    const build = this.buildNodes(context);
+    const adjacency = this.buildAdjacency(context, build.nodes, build.nodesByDigit, options);
+    return { nodes: build.nodes, adjacency };
   }
 
   private findInGraph(
     context: SolverContextLike,
-    nodes: Map<string, GroupedAicNode>,
-    adjacency: Map<string, GroupedAicEdge[]>,
+    graph: CandidateGraph<GroupedAicNode, GroupedAicEdge>,
   ): SolveStep | null {
+    const { nodes, adjacency } = graph;
     const seenCache = new Map<string, number[]>();
     let searchedStates = 0;
 
@@ -4705,28 +5193,7 @@ class GroupedAICTechnique implements SolverTechnique {
     options: { allowNonBivalueCellWeakLinks: boolean },
   ): Map<string, GroupedAicEdge[]> {
     const adjacency = new Map<string, GroupedAicEdge[]>();
-    const candidateCellsCache = new Map<string, number[]>();
-    const candidateCellSetCache = new Map<string, Set<number>>();
-    const getCandidateCells = (house: HouseRef, digit: Digit): number[] => {
-      const key = `${house.type}:${house.index}:${digit}`;
-      const cached = candidateCellsCache.get(key);
-      if (cached) {
-        return cached;
-      }
-      const cells = context.getHouseCandidateCells(house, digit);
-      candidateCellsCache.set(key, cells);
-      return cells;
-    };
-    const getCandidateCellSet = (house: HouseRef, digit: Digit): Set<number> => {
-      const key = `${house.type}:${house.index}:${digit}`;
-      const cached = candidateCellSetCache.get(key);
-      if (cached) {
-        return cached;
-      }
-      const set = new Set(getCandidateCells(house, digit));
-      candidateCellSetCache.set(key, set);
-      return set;
-    };
+    const houseCache = createCandidateHouseCache(context);
 
     for (let cell = 0; cell < context.board.length; cell += 1) {
       const digits = context.getCandidateDigits(cell);
@@ -4740,11 +5207,11 @@ class GroupedAICTechnique implements SolverTechnique {
           if (!left || !right) {
             continue;
           }
-          addGroupedAicEdge(adjacency, left, right, 'weak');
-          addGroupedAicEdge(adjacency, right, left, 'weak');
+          addCandidateGraphEdge(adjacency, left, right, 'weak');
+          addCandidateGraphEdge(adjacency, right, left, 'weak');
           if (digits.length === 2) {
-            addGroupedAicEdge(adjacency, left, right, 'strong');
-            addGroupedAicEdge(adjacency, right, left, 'strong');
+            addCandidateGraphEdge(adjacency, left, right, 'strong');
+            addCandidateGraphEdge(adjacency, right, left, 'strong');
           }
         }
       }
@@ -4753,11 +5220,11 @@ class GroupedAICTechnique implements SolverTechnique {
     for (const house of context.getAllHouses()) {
       for (let digit = 1; digit <= 9; digit += 1) {
         const currentDigit = digit as Digit;
-        const candidateCells = getCandidateCells(house, currentDigit);
+        const candidateCells = houseCache.getCells(house, currentDigit);
         if (candidateCells.length < 2) {
           continue;
         }
-        const candidateCellSet = getCandidateCellSet(house, currentDigit);
+        const candidateCellSet = houseCache.getCellSet(house, currentDigit);
         const compatibleNodes = (nodesByDigit.get(currentDigit) ?? []).filter((node) =>
           node.cells.every((cell) => candidateCellSet.has(cell))
           && nodeCellsFitHouse(node.cells, house),
@@ -4771,8 +5238,8 @@ class GroupedAICTechnique implements SolverTechnique {
               continue;
             }
 
-            addGroupedAicEdge(adjacency, left, right, 'weak', house);
-            addGroupedAicEdge(adjacency, right, left, 'weak', house);
+            addCandidateGraphEdge(adjacency, left, right, 'weak', house);
+            addCandidateGraphEdge(adjacency, right, left, 'weak', house);
 
             const union = new Set<number>([...left.cells, ...right.cells]);
             if (union.size !== candidateCells.length) {
@@ -4781,8 +5248,8 @@ class GroupedAICTechnique implements SolverTechnique {
             if (!candidateCells.every((cell) => union.has(cell))) {
               continue;
             }
-            addGroupedAicEdge(adjacency, left, right, 'strong', house);
-            addGroupedAicEdge(adjacency, right, left, 'strong', house);
+            addCandidateGraphEdge(adjacency, left, right, 'strong', house);
+            addCandidateGraphEdge(adjacency, right, left, 'strong', house);
           }
         }
       }
@@ -4937,12 +5404,17 @@ class GroupedAICTechnique implements SolverTechnique {
 }
 
 class XChainTechnique implements SolverTechnique {
-  public readonly id: TechniqueId = 'x-chain';
-  public readonly score = 176;
+  public readonly id: TechniqueId;
+  public readonly score: number;
+
+  public constructor(id: 'x-chain' | 'forcing-x-chain' = 'x-chain', score = 176) {
+    this.id = id;
+    this.score = score;
+  }
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const adjacency = buildStrongLinkAdjacency(context, digit as Digit);
+      const adjacency = buildSingleDigitStrongLinkGraph(context, digit as Digit).adjacency;
       if (adjacency.size < 4) {
         continue;
       }
@@ -5011,25 +5483,9 @@ class MultiColorsTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const adjacency = new Map<number, Set<number>>();
-      const linkHouses = new Map<string, HouseRef[]>();
-      for (const house of ALL_HOUSES) {
-        const cells = context.getHouseCandidateCells(house, digit as Digit);
-        if (cells.length !== 2) {
-          continue;
-        }
-        for (const cell of cells) {
-          if (!adjacency.has(cell)) {
-            adjacency.set(cell, new Set<number>());
-          }
-        }
-        adjacency.get(cells[0]!)!.add(cells[1]!);
-        adjacency.get(cells[1]!)!.add(cells[0]!);
-        const key = buildLinkKey(cells[0]!, cells[1]!);
-        linkHouses.set(key, uniqueHouses([...(linkHouses.get(key) ?? []), house]));
-      }
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
 
-      const components = buildColorComponents(adjacency);
+      const components = buildColorComponents(toColorAdjacency(graph.adjacency));
       if (components.length < 2) {
         continue;
       }
@@ -5063,14 +5519,14 @@ class MultiColorsTechnique implements SolverTechnique {
                 score: this.score,
                 actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: digit as Digit })),
                 evidence: {
-                  houses: collectLinkedHouses(allColored, linkHouses),
+                  houses: collectLinkedHouses(allColored, graph.linkHouses),
                   cells: [
                     ...allColored.map((cell) => ({ cell, digit: digit as Digit, role: 'reason' as const })),
                     ...uniqueTargets.map((cell) => ({ cell, digit: digit as Digit, role: 'target' as const })),
                   ],
                   links: [
-                    ...buildColorLinks(left.colorMap, digit as Digit, linkHouses),
-                    ...buildColorLinks(right.colorMap, digit as Digit, linkHouses),
+                    ...buildColorLinks(left.colorMap, digit as Digit, graph.linkHouses),
+                    ...buildColorLinks(right.colorMap, digit as Digit, graph.linkHouses),
                     { from: leftCell, to: rightCell, digit: digit as Digit, type: 'weak' as const },
                   ],
                   note: 'Two independent coloring chains are weakly connected, so cells seeing both opposite colors lose the candidate.',
@@ -5389,8 +5845,13 @@ class ThreeDMedusaTechnique implements SolverTechnique {
 }
 
 class XYChainTechnique implements SolverTechnique {
-  public readonly id: TechniqueId = 'xy-chain';
-  public readonly score = 184;
+  public readonly id: TechniqueId;
+  public readonly score: number;
+
+  public constructor(id: 'xy-chain' | 'bidirectional-y-cycle' = 'xy-chain', score = 184) {
+    this.id = id;
+    this.score = score;
+  }
 
   public find(context: SolverContextLike): SolveStep | null {
     const bivalueCells = Array.from({ length: context.board.length }, (_, cell) => cell)
@@ -5466,31 +5927,20 @@ class XYChainTechnique implements SolverTechnique {
   }
 }
 
-interface AicNode {
-  key: string;
+interface AicNode extends CandidateGraphNode {
   cell: number;
-  digit: Digit;
 }
 
-interface AicEdge {
-  to: string;
-  type: 'strong' | 'weak';
-  house?: HouseRef;
-}
+type AicEdge = CandidateGraphEdge;
 
-interface AicPathEdge {
-  from: string;
-  to: string;
-  type: 'strong' | 'weak';
-  house?: HouseRef;
-}
+type AicPathEdge = CandidateGraphPathEdge;
 
 class AICTechnique implements SolverTechnique {
   public readonly id: TechniqueId;
   public readonly score: number;
   private static readonly MAX_EDGES = 11;
 
-  public constructor(id: 'aic' | 'aic-exotic' = 'aic', score = 205) {
+  public constructor(id: 'aic' | 'aic-exotic' | 'forcing-chain' = 'aic', score = 205) {
     this.id = id;
     this.score = score;
   }
@@ -5650,11 +6100,12 @@ class SkyscraperTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const rowStep = this.findByLineType(context, digit as Digit, 'row');
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
+      const rowStep = this.findByLineType(context, digit as Digit, 'row', graph);
       if (rowStep) {
         return rowStep;
       }
-      const colStep = this.findByLineType(context, digit as Digit, 'col');
+      const colStep = this.findByLineType(context, digit as Digit, 'col', graph);
       if (colStep) {
         return colStep;
       }
@@ -5666,11 +6117,11 @@ class SkyscraperTechnique implements SolverTechnique {
     context: SolverContextLike,
     digit: Digit,
     lineType: 'row' | 'col',
+    graph: SingleDigitStrongLinkGraph,
   ): SolveStep | null {
-    const houses = Array.from({ length: 9 }, (_, index) => ({
-      house: { type: lineType, index } as HouseRef,
-      cells: context.getHouseCandidateCells({ type: lineType, index }, digit),
-    })).filter((entry) => entry.cells.length === 2);
+    const houses = graph.conjugatePairs
+      .filter((entry) => entry.house.type === lineType)
+      .map((entry) => ({ house: entry.house, cells: [...entry.cells] }));
 
     for (let leftIndex = 0; leftIndex < houses.length; leftIndex += 1) {
       for (let rightIndex = leftIndex + 1; rightIndex < houses.length; rightIndex += 1) {
@@ -5718,14 +6169,10 @@ class TwoStringKiteTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const rows = Array.from({ length: 9 }, (_, index) => ({
-        house: { type: 'row', index } as HouseRef,
-        cells: context.getHouseCandidateCells({ type: 'row', index }, digit as Digit),
-      })).filter((entry) => entry.cells.length === 2);
-      const cols = Array.from({ length: 9 }, (_, index) => ({
-        house: { type: 'col', index } as HouseRef,
-        cells: context.getHouseCandidateCells({ type: 'col', index }, digit as Digit),
-      })).filter((entry) => entry.cells.length === 2);
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
+      const rows = graph.conjugatePairs.filter((entry) => entry.house.type === 'row');
+      const cols = graph.conjugatePairs.filter((entry) => entry.house.type === 'col');
+      const boxPairs = graph.conjugatePairs.filter((entry) => entry.house.type === 'box');
 
       for (const rowEntry of rows) {
         for (const colEntry of cols) {
@@ -5736,8 +6183,12 @@ class TwoStringKiteTechnique implements SolverTechnique {
               }
 
               const boxIndex = context.getCellBox(rowCell);
-              const boxCandidates = context.getHouseCandidateCells({ type: 'box', index: boxIndex }, digit as Digit);
-              if (boxCandidates.length !== 2 || !boxCandidates.includes(rowCell) || !boxCandidates.includes(colCell)) {
+              const boxPair = boxPairs.find((entry) =>
+                entry.house.index === boxIndex
+                && entry.cells.includes(rowCell)
+                && entry.cells.includes(colCell),
+              );
+              if (!boxPair) {
                 continue;
               }
 
@@ -5781,6 +6232,7 @@ interface EmptyRectangleShape {
   row: number;
   col: number;
   boxCells: number[];
+  graph: SingleDigitStrongLinkGraph;
 }
 
 class EmptyRectangleTechnique implements SolverTechnique {
@@ -5789,8 +6241,9 @@ class EmptyRectangleTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
       for (let box = 0; box < 9; box += 1) {
-        const shape = this.findShape(context, box, digit as Digit);
+        const shape = this.findShape(context, box, digit as Digit, graph);
         if (!shape) {
           continue;
         }
@@ -5807,7 +6260,12 @@ class EmptyRectangleTechnique implements SolverTechnique {
     return null;
   }
 
-  private findShape(context: SolverContextLike, box: number, digit: Digit): EmptyRectangleShape | null {
+  private findShape(
+    context: SolverContextLike,
+    box: number,
+    digit: Digit,
+    graph: SingleDigitStrongLinkGraph,
+  ): EmptyRectangleShape | null {
     const boxCells = context.getHouseCandidateCells({ type: 'box', index: box }, digit);
     if (boxCells.length < 3) {
       return null;
@@ -5825,7 +6283,7 @@ class EmptyRectangleTechnique implements SolverTechnique {
           continue;
         }
         if (boxCells.every((cell) => (CELL_TO_ROW[cell] ?? -1) === row || (CELL_TO_COL[cell] ?? -1) === col)) {
-          return { box, row, col, boxCells };
+          return { box, row, col, boxCells, graph };
         }
       }
     }
@@ -5841,8 +6299,8 @@ class EmptyRectangleTechnique implements SolverTechnique {
       if (col === shape.col) {
         continue;
       }
-      const pairCells = context.getHouseCandidateCells({ type: 'col', index: col }, digit);
-      if (pairCells.length !== 2) {
+      const pairCells = this.getConjugatePair(shape.graph, 'col', col);
+      if (!pairCells) {
         continue;
       }
       const erRowCell = pairCells.find((cell) => (CELL_TO_ROW[cell] ?? -1) === shape.row);
@@ -5879,8 +6337,8 @@ class EmptyRectangleTechnique implements SolverTechnique {
       if (row === shape.row) {
         continue;
       }
-      const pairCells = context.getHouseCandidateCells({ type: 'row', index: row }, digit);
-      if (pairCells.length !== 2) {
+      const pairCells = this.getConjugatePair(shape.graph, 'row', row);
+      if (!pairCells) {
         continue;
       }
       const erColCell = pairCells.find((cell) => (CELL_TO_COL[cell] ?? -1) === shape.col);
@@ -5908,6 +6366,15 @@ class EmptyRectangleTechnique implements SolverTechnique {
     return null;
   }
 
+  private getConjugatePair(
+    graph: SingleDigitStrongLinkGraph,
+    type: 'row' | 'col',
+    index: number,
+  ): number[] | null {
+    const pair = graph.conjugatePairs.find((entry) => entry.house.type === type && entry.house.index === index);
+    return pair ? [...pair.cells] : null;
+  }
+
   private buildStep(
     digit: Digit,
     shape: EmptyRectangleShape,
@@ -5933,7 +6400,7 @@ class TurbotFishTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const adjacency = buildStrongLinkAdjacency(context, digit as Digit);
+      const adjacency = buildSingleDigitStrongLinkGraph(context, digit as Digit).adjacency;
       if (adjacency.size < 4) {
         continue;
       }
@@ -6065,7 +6532,11 @@ class UniqueRectangleTechnique implements SolverTechnique {
     return pairDigits;
   }
 
-  private tryType1(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+  private tryType1(
+    context: SolverContextLike,
+    cells: number[],
+    pairDigits: Digit[],
+  ): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
     const pairCells = cells.filter((cell) => context.getCandidateMask(cell) === pairMask);
     if (pairCells.length !== 3) {
@@ -6246,7 +6717,7 @@ class UniqueRectangleTechnique implements SolverTechnique {
               this.id,
               this.score,
               house,
-              [...hiddenCells],
+              Array.from(hiddenCells),
               actions,
               'Unique Rectangle Type 3 forms a hidden set with the roof cells and removes other candidates from the hidden-set cells.',
             );
@@ -6305,6 +6776,7 @@ class AvoidableRectangleTechnique implements SolverTechnique {
   public readonly score = 176;
 
   public find(context: SolverContextLike): SolveStep | null {
+    const graphCache = new Map<Digit, SingleDigitStrongLinkGraph>();
     for (let rowA = 0; rowA < 8; rowA += 1) {
       for (let rowB = rowA + 1; rowB < 9; rowB += 1) {
         for (let colA = 0; colA < 8; colA += 1) {
@@ -6383,11 +6855,12 @@ class RectangleEliminationTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const rowStep = this.findByRowStrongLink(context, digit as Digit);
+      const graph = buildSingleDigitStrongLinkGraph(context, digit as Digit);
+      const rowStep = this.findByRowStrongLink(context, digit as Digit, graph);
       if (rowStep) {
         return rowStep;
       }
-      const colStep = this.findByColStrongLink(context, digit as Digit);
+      const colStep = this.findByColStrongLink(context, digit as Digit, graph);
       if (colStep) {
         return colStep;
       }
@@ -6395,12 +6868,13 @@ class RectangleEliminationTechnique implements SolverTechnique {
     return null;
   }
 
-  private findByRowStrongLink(context: SolverContextLike, digit: Digit): SolveStep | null {
-    for (let row = 0; row < 9; row += 1) {
-      const rowCells = context.getHouseCandidateCells({ type: 'row', index: row }, digit);
-      if (rowCells.length !== 2) {
-        continue;
-      }
+  private findByRowStrongLink(
+    context: SolverContextLike,
+    digit: Digit,
+    graph: SingleDigitStrongLinkGraph,
+  ): SolveStep | null {
+    for (const pair of graph.conjugatePairs.filter((entry) => entry.house.type === 'row')) {
+      const rowCells = [...pair.cells];
       for (const hinge of rowCells) {
         const wingStrong = rowCells.find((cell) => cell !== hinge);
         if (wingStrong == null) {
@@ -6445,12 +6919,13 @@ class RectangleEliminationTechnique implements SolverTechnique {
     return null;
   }
 
-  private findByColStrongLink(context: SolverContextLike, digit: Digit): SolveStep | null {
-    for (let col = 0; col < 9; col += 1) {
-      const colCells = context.getHouseCandidateCells({ type: 'col', index: col }, digit);
-      if (colCells.length !== 2) {
-        continue;
-      }
+  private findByColStrongLink(
+    context: SolverContextLike,
+    digit: Digit,
+    graph: SingleDigitStrongLinkGraph,
+  ): SolveStep | null {
+    for (const pair of graph.conjugatePairs.filter((entry) => entry.house.type === 'col')) {
+      const colCells = [...pair.cells];
       for (const hinge of colCells) {
         const wingStrong = colCells.find((cell) => cell !== hinge);
         if (wingStrong == null) {
@@ -6584,6 +7059,7 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
   public readonly score = 201;
 
   public find(context: SolverContextLike): SolveStep | null {
+    const graphCache = new Map<Digit, SingleDigitStrongLinkGraph>();
     for (let rowA = 0; rowA < 8; rowA += 1) {
       for (let rowB = rowA + 1; rowB < 9; rowB += 1) {
         for (let colA = 0; colA < 8; colA += 1) {
@@ -6604,7 +7080,7 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
             if (!pairDigits) {
               continue;
             }
-            const type1 = this.tryType1(context, cells, pairDigits);
+            const type1 = this.tryType1(context, cells, pairDigits, graphCache);
             if (type1) {
               return type1;
             }
@@ -6615,7 +7091,12 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
     return null;
   }
 
-  private tryType1(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+  private tryType1(
+    context: SolverContextLike,
+    cells: number[],
+    pairDigits: Digit[],
+    graphCache: Map<Digit, SingleDigitStrongLinkGraph>,
+  ): SolveStep | null {
     for (const opposite of cells) {
       const roles = getUrOppositeRoles(cells, opposite);
       if (!roles) {
@@ -6627,8 +7108,8 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
       }
       for (const strongDigit of pairDigits) {
         if (
-          context.getHouseCandidateCells({ type: 'row', index: context.getCellRow(opposite) }, strongDigit).length !== 2
-          || context.getHouseCandidateCells({ type: 'col', index: context.getCellCol(opposite) }, strongDigit).length !== 2
+          !isHouseConjugatePair(context, strongDigit, { type: 'row', index: context.getCellRow(opposite) }, graphCache)
+          || !isHouseConjugatePair(context, strongDigit, { type: 'col', index: context.getCellCol(opposite) }, graphCache)
           || !context.isCandidatePresent(opposite, strongDigit)
         ) {
           continue;
@@ -6660,18 +7141,19 @@ class AICWithUrTechnique implements SolverTechnique {
   public readonly score = 216;
 
   public find(context: SolverContextLike): SolveStep | null {
+    const graphCache = new Map<Digit, SingleDigitStrongLinkGraph>();
     for (const cells of enumerateUrCells(context)) {
       const pairDigits = getBasePairDigits(context, cells);
       if (!pairDigits) {
         continue;
       }
 
-      const singleRoof = this.trySingleRoofChain(context, cells, pairDigits);
+      const singleRoof = this.trySingleRoofChain(context, cells, pairDigits, graphCache);
       if (singleRoof) {
         return singleRoof;
       }
 
-      const floorRoof = this.tryFloorRoofChain(context, cells, pairDigits);
+      const floorRoof = this.tryFloorRoofChain(context, cells, pairDigits, graphCache);
       if (floorRoof) {
         return floorRoof;
       }
@@ -6683,6 +7165,7 @@ class AICWithUrTechnique implements SolverTechnique {
     context: SolverContextLike,
     cells: number[],
     pairDigits: Digit[],
+    graphCache: Map<Digit, SingleDigitStrongLinkGraph>,
   ): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
     for (const opposite of cells) {
@@ -6693,8 +7176,8 @@ class AICWithUrTechnique implements SolverTechnique {
 
       for (const strongDigit of pairDigits) {
         if (
-          context.getHouseCandidateCells({ type: 'row', index: context.getCellRow(opposite) }, strongDigit).length !== 2
-          || context.getHouseCandidateCells({ type: 'col', index: context.getCellCol(opposite) }, strongDigit).length !== 2
+          !isHouseConjugatePair(context, strongDigit, { type: 'row', index: context.getCellRow(opposite) }, graphCache)
+          || !isHouseConjugatePair(context, strongDigit, { type: 'col', index: context.getCellCol(opposite) }, graphCache)
           || !context.isCandidatePresent(opposite, strongDigit)
         ) {
           continue;
@@ -6724,6 +7207,7 @@ class AICWithUrTechnique implements SolverTechnique {
     context: SolverContextLike,
     cells: number[],
     pairDigits: Digit[],
+    graphCache: Map<Digit, SingleDigitStrongLinkGraph>,
   ): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
     for (const { floorA, floorB, roofA, roofB } of getUrLayouts(cells)) {
@@ -6736,9 +7220,9 @@ class AICWithUrTechnique implements SolverTechnique {
           continue;
         }
 
-        const leftStrong = context.getHouseCandidateCells({ type: 'col', index: context.getCellCol(floorA) }, strongDigit);
+        const leftStrong = getHouseConjugatePair(context, strongDigit, { type: 'col', index: context.getCellCol(floorA) }, graphCache);
         if (
-          leftStrong.length === 2
+          leftStrong
           && leftStrong.includes(floorA)
           && leftStrong.includes(roofA)
           && context.isCandidatePresent(roofB, otherDigit)
@@ -6753,9 +7237,9 @@ class AICWithUrTechnique implements SolverTechnique {
           );
         }
 
-        const rightStrong = context.getHouseCandidateCells({ type: 'col', index: context.getCellCol(floorB) }, strongDigit);
+        const rightStrong = getHouseConjugatePair(context, strongDigit, { type: 'col', index: context.getCellCol(floorB) }, graphCache);
         if (
-          rightStrong.length === 2
+          rightStrong
           && rightStrong.includes(floorB)
           && rightStrong.includes(roofB)
           && context.isCandidatePresent(roofA, otherDigit)
@@ -6927,6 +7411,67 @@ function subsetStep(
   };
 }
 
+function directPlacementStep(
+  technique: TechniqueId,
+  score: number,
+  context: SolverContextLike,
+  houses: HouseRef[],
+  reasonCells: readonly number[],
+  eliminations: SolveStep['actions'],
+  note: string,
+): SolveStep | null {
+  const placement = findPlacementAfterEliminations(context, eliminations);
+  if (!placement) {
+    return null;
+  }
+  return {
+    technique,
+    score,
+    actions: [
+      ...eliminations,
+      { type: 'place', cell: placement.cell, digit: placement.digit },
+    ],
+    evidence: {
+      houses,
+      cells: [
+        ...reasonCells.map((cell) => ({ cell, role: 'reason' as const })),
+        ...eliminations.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
+        { cell: placement.cell, digit: placement.digit, role: 'target' },
+      ],
+      note,
+    },
+  };
+}
+
+function findPlacementAfterEliminations(
+  context: SolverContextLike,
+  eliminations: SolveStep['actions'],
+): StepPlacement | null {
+  const affectedCells = new Set<number>();
+  const removedByCell = new Map<number, number>();
+  for (const action of eliminations) {
+    if (action.type !== 'eliminate') {
+      continue;
+    }
+    affectedCells.add(action.cell);
+    removedByCell.set(action.cell, (removedByCell.get(action.cell) ?? 0) | maskForDigit(action.digit));
+  }
+  for (const cell of affectedCells) {
+    if (context.board[cell] !== EMPTY_VALUE) {
+      continue;
+    }
+    const maskAfter = context.getCandidateMask(cell) & ~(removedByCell.get(cell) ?? 0);
+    if (countMaskBits(maskAfter) !== 1) {
+      continue;
+    }
+    const digit = digitsFromMask(maskAfter)[0];
+    if (digit) {
+      return { cell, digit };
+    }
+  }
+  return null;
+}
+
 function createCombinations<T>(items: readonly T[], size: number): T[][] {
   const result: T[][] = [];
   const walk = (start: number, current: T[]): void => {
@@ -6945,7 +7490,7 @@ function createCombinations<T>(items: readonly T[], size: number): T[][] {
 }
 
 function uniqueNumbers(values: readonly number[]): number[] {
-  return [...new Set(values)];
+  return Array.from(new Set(values));
 }
 
 function formatCellLabel(cell: number): string {
@@ -6989,11 +7534,54 @@ function sameHouse(left: HouseRef, right: HouseRef): boolean {
   return left.type === right.type && left.index === right.index;
 }
 
-function buildStrongLinkAdjacency(
+interface CandidateHouseCache {
+  getCells(house: HouseRef, digit: Digit): number[];
+  getCellSet(house: HouseRef, digit: Digit): Set<number>;
+}
+
+function createCandidateHouseCache(context: SolverContextLike): CandidateHouseCache {
+  const candidateCellsCache = new Map<string, number[]>();
+  const candidateCellSetCache = new Map<string, Set<number>>();
+  const cacheKey = (house: HouseRef, digit: Digit): string => `${house.type}:${house.index}:${digit}`;
+
+  const getCells = (house: HouseRef, digit: Digit): number[] => {
+    const key = cacheKey(house, digit);
+    const cached = candidateCellsCache.get(key);
+    if (cached) {
+      return cached;
+    }
+    const cells = context.getHouseCandidateCells(house, digit);
+    candidateCellsCache.set(key, cells);
+    return cells;
+  };
+
+  const getCellSet = (house: HouseRef, digit: Digit): Set<number> => {
+    const key = cacheKey(house, digit);
+    const cached = candidateCellSetCache.get(key);
+    if (cached) {
+      return cached;
+    }
+    const set = new Set(getCells(house, digit));
+    candidateCellSetCache.set(key, set);
+    return set;
+  };
+
+  return { getCells, getCellSet };
+}
+
+interface SingleDigitStrongLinkGraph {
+  adjacency: Map<number, Array<{ to: number; houses: HouseRef[] }>>;
+  linkHouses: Map<string, HouseRef[]>;
+  conjugatePairs: Array<{ house: HouseRef; cells: readonly [number, number] }>;
+}
+
+function buildSingleDigitStrongLinkGraph(
   context: SolverContextLike,
   digit: Digit,
-): Map<number, Array<{ to: number; houses: HouseRef[] }>> {
+): SingleDigitStrongLinkGraph {
   const adjacency = new Map<number, Array<{ to: number; houses: HouseRef[] }>>();
+  const linkHouses = new Map<string, HouseRef[]>();
+  const conjugatePairs: Array<{ house: HouseRef; cells: readonly [number, number] }> = [];
   for (const house of ALL_HOUSES) {
     const cells = context.getHouseCandidateCells(house, digit);
     if (cells.length !== 2) {
@@ -7003,21 +7591,84 @@ function buildStrongLinkAdjacency(
     if (first == null || second == null) {
       continue;
     }
-    addStrongLink(first, second, house);
-    addStrongLink(second, first, house);
+    addStrongLink(adjacency, first, second, house);
+    addStrongLink(adjacency, second, first, house);
+    const key = buildLinkKey(first, second);
+    linkHouses.set(key, uniqueHouses([...(linkHouses.get(key) ?? []), house]));
+    conjugatePairs.push({ house, cells: [first, second] });
   }
-  return adjacency;
+  return { adjacency, linkHouses, conjugatePairs };
+}
 
-  function addStrongLink(from: number, to: number, house: HouseRef): void {
-    const links = adjacency.get(from) ?? [];
-    const existing = links.find((link) => link.to === to);
-    if (existing) {
-      existing.houses = uniqueHouses([...existing.houses, house]);
-      return;
-    }
-    links.push({ to, houses: [house] });
-    adjacency.set(from, links);
+function buildStrongLinkAdjacency(
+  context: SolverContextLike,
+  digit: Digit,
+): Map<number, Array<{ to: number; houses: HouseRef[] }>> {
+  return buildSingleDigitStrongLinkGraph(context, digit).adjacency;
+}
+
+function getHouseConjugatePair(
+  context: SolverContextLike,
+  digit: Digit,
+  house: HouseRef,
+  graphCache?: Map<Digit, SingleDigitStrongLinkGraph>,
+): number[] | null {
+  const graph = getSingleDigitStrongLinkGraph(context, digit, graphCache);
+  const pair = graph.conjugatePairs
+    .find((entry) => sameHouse(entry.house, house));
+  return pair ? [...pair.cells] : null;
+}
+
+function isHouseConjugatePair(
+  context: SolverContextLike,
+  digit: Digit,
+  house: HouseRef,
+  graphCache?: Map<Digit, SingleDigitStrongLinkGraph>,
+): boolean {
+  return getHouseConjugatePair(context, digit, house, graphCache) !== null;
+}
+
+function getSingleDigitStrongLinkGraph(
+  context: SolverContextLike,
+  digit: Digit,
+  graphCache?: Map<Digit, SingleDigitStrongLinkGraph>,
+): SingleDigitStrongLinkGraph {
+  if (!graphCache) {
+    return buildSingleDigitStrongLinkGraph(context, digit);
   }
+  const cached = graphCache.get(digit);
+  if (cached) {
+    return cached;
+  }
+  const graph = buildSingleDigitStrongLinkGraph(context, digit);
+  graphCache.set(digit, graph);
+  return graph;
+}
+
+function toColorAdjacency(
+  adjacency: Map<number, Array<{ to: number; houses: HouseRef[] }>>,
+): Map<number, Set<number>> {
+  const result = new Map<number, Set<number>>();
+  for (const [cell, edges] of adjacency.entries()) {
+    result.set(cell, new Set(edges.map((edge) => edge.to)));
+  }
+  return result;
+}
+
+function addStrongLink(
+  adjacency: Map<number, Array<{ to: number; houses: HouseRef[] }>>,
+  from: number,
+  to: number,
+  house: HouseRef,
+): void {
+  const links = adjacency.get(from) ?? [];
+  const existing = links.find((link) => link.to === to);
+  if (existing) {
+    existing.houses = uniqueHouses([...existing.houses, house]);
+    return;
+  }
+  links.push({ to, houses: [house] });
+  adjacency.set(from, links);
 }
 
 function getFourthCornerBox(hingeBox: number, strongBox: number, weakBox: number): number | null {
@@ -7825,13 +8476,13 @@ function intersectBranchPlacements(outcomes: BranchOutcome[]): BranchOutcome['pl
   }
   for (const outcome of outcomes.slice(1)) {
     const keys = new Set(outcome.placements.map((item) => `${item.cell}:${item.digit}`));
-    for (const key of [...common.keys()]) {
+    for (const key of Array.from(common.keys())) {
       if (!keys.has(key)) {
         common.delete(key);
       }
     }
   }
-  return [...common.values()];
+  return Array.from(common.values());
 }
 
 function intersectBranchEliminations(outcomes: BranchOutcome[]): BranchOutcome['eliminations'] {
@@ -7841,13 +8492,13 @@ function intersectBranchEliminations(outcomes: BranchOutcome[]): BranchOutcome['
   }
   for (const outcome of outcomes.slice(1)) {
     const keys = new Set(outcome.eliminations.map((item) => `${item.cell}:${item.digit}`));
-    for (const key of [...common.keys()]) {
+    for (const key of Array.from(common.keys())) {
       if (!keys.has(key)) {
         common.delete(key);
       }
     }
   }
-  return [...common.values()];
+  return Array.from(common.values());
 }
 
 function buildExocetStep(
@@ -7858,7 +8509,7 @@ function buildExocetStep(
 ): SolveStep | null {
   const allBaseDigits = uniqueNumbers(patterns.flatMap((pattern) => pattern.baseDigits)) as Digit[];
   const allBaseCells = uniqueNumbers(patterns.flatMap((pattern) => pattern.baseCells));
-  const allTargets = uniqueNumbers(patterns.flatMap((pattern) => [...pattern.targets]));
+  const allTargets = uniqueNumbers(patterns.flatMap((pattern) => Array.from(pattern.targets)));
   const actions: SolveStep['actions'] = [];
 
   for (const target of allTargets) {
@@ -7945,7 +8596,7 @@ function enumerateAlmostLockedSets(
       }
     }
   }
-  return [...result.values()];
+  return Array.from(result.values());
 }
 
 function areCellSetsDisjoint(...cellSets: number[][]): boolean {
@@ -8025,7 +8676,7 @@ function getCommonSeenCells(cells: readonly number[]): number[] {
     }
     common = next;
   }
-  return [...common];
+  return Array.from(common);
 }
 
 function isConnectedClusterCached(
@@ -8111,7 +8762,7 @@ function buildColorLinks(
   linkHouses: Map<string, HouseRef[]>,
 ): NonNullable<SolveStep['evidence']['links']> {
   const links: NonNullable<SolveStep['evidence']['links']> = [];
-  const cells = [...colorMap.keys()];
+  const cells = Array.from(colorMap.keys());
   for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
       const left = cells[leftIndex]!;
@@ -8178,7 +8829,7 @@ interface ColorComponent {
   colorMap: Map<number, 0 | 1>;
 }
 
-type XColorInvalidKind = 'overlap' | 'same-color-house' | 'house-covered';
+type XColorInvalidKind = 'same-color-house' | 'house-covered';
 
 interface XColorDerivation {
   cell: number;
@@ -8245,12 +8896,10 @@ function buildXYChainLinks(path: readonly XYNode[]): NonNullable<SolveStep['evid
   return links;
 }
 
-function buildAicGraph(context: SolverContextLike): {
-  nodes: Map<string, AicNode>;
-  adjacency: Map<string, AicEdge[]>;
-} {
+function buildAicGraph(context: SolverContextLike): CandidateGraph<AicNode, AicEdge> {
   const nodes = new Map<string, AicNode>();
   const adjacency = new Map<string, AicEdge[]>();
+  const houseCache = createCandidateHouseCache(context);
   for (let cell = 0; cell < context.board.length; cell += 1) {
     for (const digit of context.getCandidateDigits(cell)) {
       const node = { key: aicNodeKey(cell, digit), cell, digit };
@@ -8263,31 +8912,31 @@ function buildAicGraph(context: SolverContextLike): {
       for (let rightIndex = leftIndex + 1; rightIndex < digits.length; rightIndex += 1) {
         const left = nodes.get(aicNodeKey(cell, digits[leftIndex]!))!;
         const right = nodes.get(aicNodeKey(cell, digits[rightIndex]!))!;
-        addAicEdge(adjacency, left, right, 'weak');
-        addAicEdge(adjacency, right, left, 'weak');
+        addCandidateGraphEdge(adjacency, left, right, 'weak');
+        addCandidateGraphEdge(adjacency, right, left, 'weak');
         if (digits.length === 2) {
-          addAicEdge(adjacency, left, right, 'strong');
-          addAicEdge(adjacency, right, left, 'strong');
+          addCandidateGraphEdge(adjacency, left, right, 'strong');
+          addCandidateGraphEdge(adjacency, right, left, 'strong');
         }
       }
     }
   }
   for (const house of ALL_HOUSES) {
     for (let digit = 1; digit <= 9; digit += 1) {
-      const cells = context.getHouseCandidateCells(house, digit as Digit);
+      const cells = houseCache.getCells(house, digit as Digit);
       for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
         for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
           const left = nodes.get(aicNodeKey(cells[leftIndex]!, digit as Digit))!;
           const right = nodes.get(aicNodeKey(cells[rightIndex]!, digit as Digit))!;
-          addAicEdge(adjacency, left, right, 'weak', house);
-          addAicEdge(adjacency, right, left, 'weak', house);
+          addCandidateGraphEdge(adjacency, left, right, 'weak', house);
+          addCandidateGraphEdge(adjacency, right, left, 'weak', house);
         }
       }
       if (cells.length === 2) {
         const left = nodes.get(aicNodeKey(cells[0]!, digit as Digit))!;
         const right = nodes.get(aicNodeKey(cells[1]!, digit as Digit))!;
-        addAicEdge(adjacency, left, right, 'strong', house);
-        addAicEdge(adjacency, right, left, 'strong', house);
+        addCandidateGraphEdge(adjacency, left, right, 'strong', house);
+        addCandidateGraphEdge(adjacency, right, left, 'strong', house);
       }
     }
   }
@@ -8298,16 +8947,16 @@ function aicNodeKey(cell: number, digit: Digit): string {
   return `${cell}:${digit}`;
 }
 
-function addAicEdge(
-  adjacency: Map<string, AicEdge[]>,
-  from: AicNode,
-  to: AicNode,
-  type: 'strong' | 'weak',
+function addCandidateGraphEdge<N extends CandidateGraphNode, E extends CandidateGraphEdge>(
+  adjacency: Map<string, E[]>,
+  from: N,
+  to: N,
+  type: InferenceLinkType,
   house?: HouseRef,
 ): void {
   const edges = adjacency.get(from.key) ?? [];
   if (!edges.some((edge) => edge.to === to.key && edge.type === type && sameHouseOrBothMissing(edge.house, house))) {
-    edges.push({ to: to.key, type, ...(house ? { house } : {}) });
+    edges.push({ to: to.key, type, ...(house ? { house } : {}) } as E);
     adjacency.set(from.key, edges);
   }
 }
@@ -8353,20 +9002,6 @@ function groupedAicCellsSeeingNode(node: GroupedAicNode): number[] {
     return [node.cells[0]!, ...(CELL_TO_PEERS[node.cells[0]!] ?? [])];
   }
   return getCommonSeenCells(node.cells);
-}
-
-function addGroupedAicEdge(
-  adjacency: Map<string, GroupedAicEdge[]>,
-  from: GroupedAicNode,
-  to: GroupedAicNode,
-  type: GroupedAicLinkType,
-  house?: HouseRef,
-): void {
-  const edges = adjacency.get(from.key) ?? [];
-  if (!edges.some((edge) => edge.to === to.key && edge.type === type && sameHouseOrBothMissing(edge.house, house))) {
-    edges.push({ to: to.key, type, ...(house ? { house } : {}) });
-    adjacency.set(from.key, edges);
-  }
 }
 
 function formatGroupedAicPath(path: readonly string[], nodes: Map<string, GroupedAicNode>): string {

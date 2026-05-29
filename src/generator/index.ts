@@ -293,7 +293,7 @@ const GENERATION_REQUEST_FIELDS = new Set([
   'maxResults',
   'scoreBucketSize',
 ]);
-const SEARCH_REQUEST_FIELDS = new Set([...GENERATION_REQUEST_FIELDS]);
+const SEARCH_REQUEST_FIELDS = new Set(Array.from(GENERATION_REQUEST_FIELDS));
 const GENERATION_CONSTRAINT_FIELDS = new Set([
   'score',
   'clues',
@@ -1686,7 +1686,7 @@ function validateRequiredTechniques(
         continue;
       }
       for (const family of rule.families) {
-        const hasFamily = [...allowed].some((technique) => techniqueFamilies.get(technique) === family);
+        const hasFamily = Array.from(allowed).some((technique) => techniqueFamilies.get(technique) === family);
         if (!hasFamily) {
           errors.push({
             code: 'required-family-not-allowed',
@@ -1929,7 +1929,7 @@ function estimateFeasibility(
   policy: RatingPolicy,
 ): GenerationFeasibilityEstimate {
   const constraints = request.constraints ?? {};
-  const allowedScores = [...allowed]
+  const allowedScores = Array.from(allowed)
     .filter((technique) => !forbidden.has(technique))
     .map((technique) => policy.techniqueScores[technique] ?? 0);
   const positiveScores = allowedScores.filter((score) => score > 0);
@@ -2000,7 +2000,7 @@ function estimateDifficulty(
     return 'very-high';
   }
   const scoreMin = score?.min ?? score?.target ?? 0;
-  const maxAllowedScore = Math.max(...[...allowed].map((technique) => policy.techniqueScores[technique] ?? 0));
+  const maxAllowedScore = Math.max(...Array.from(allowed).map((technique) => policy.techniqueScores[technique] ?? 0));
   if (scoreMin >= 3000 || maxAllowedScore >= 150) {
     return 'very-high';
   }
@@ -2208,9 +2208,14 @@ function buildPolicyForConstraints(policy: RatingPolicy, constraints: Generation
     : [];
   const preferredPrimary = preferred.filter((technique) => allowedPrimary.includes(technique));
   const preferredFallback = preferred.filter((technique) => allowedFallback.includes(technique));
+  const remainingFallback = allowedFallback.filter((technique) => !preferredFallback.includes(technique));
   const techniqueOrder = allowedPrimary.length > 0
-    ? [...preferredPrimary, ...allowedPrimary.filter((technique) => !preferredPrimary.includes(technique))]
-    : [...preferredFallback, ...allowedFallback.filter((technique) => !preferredFallback.includes(technique))];
+    ? [
+      ...preferredPrimary,
+      ...preferredFallback,
+      ...allowedPrimary.filter((technique) => !preferredPrimary.includes(technique)),
+    ]
+    : [...preferredFallback, ...remainingFallback];
   const constrainedPolicy: RatingPolicy = {
     ...policy,
     techniqueOrder,
@@ -2222,8 +2227,8 @@ function buildPolicyForConstraints(policy: RatingPolicy, constraints: Generation
       ...(rule.allowedTechniques ? { allowedTechniques: rule.allowedTechniques.filter((technique) => allowed.includes(technique)) } : {}),
     }));
   }
-  if (allowedPrimary.length > 0 && allowedFallback.length > 0) {
-    constrainedPolicy.fallbackTechniques = allowedFallback;
+  if (allowedPrimary.length > 0 && remainingFallback.length > 0) {
+    constrainedPolicy.fallbackTechniques = remainingFallback;
   } else {
     delete constrainedPolicy.fallbackTechniques;
   }

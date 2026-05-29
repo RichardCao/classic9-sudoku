@@ -41,6 +41,9 @@ jobs:
       - name: Examples Typecheck
         run: npm run examples:typecheck
 
+      - name: Reference Technique Smoke Audit
+        run: npm run audit:reference
+
       - name: Dist Smoke
         run: npm run smoke:dist
 

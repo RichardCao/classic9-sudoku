@@ -64,7 +64,8 @@ node dist/src/cli/index.js schema puzzleState
 7. `ratingPolicy` schema 既可以通过 `getJsonSchemas().ratingPolicy` 独立获取，也内嵌在 `generationRequest.properties.ratingPolicy` 中。
 8. `ratingPolicy` schema 覆盖公开评分策略的静态结构，包括字段类型、未知字段、技巧 ID 枚举和基础数组约束；技巧枚举由运行时代码根据当前技巧定义生成，不是手写固定列表。
 9. `ratingPolicy` 的动态规则必须继续调用 `validateRatingPolicy()` 校验，例如 `techniqueScores` 是否覆盖所有已启用技巧，以及 `gradeRules[].minScore <= maxScore`。例如某个 policy 的 schema 预校验可以通过，但如果缺少已启用技巧分值，`validateRatingPolicy(policy)` 仍会返回错误。
-10. `candidateSelectionPlan` schema 会约束技巧 ID 和基础字段类型；`scoreBuckets` 的 `min <= max`、桶不重叠等跨项规则仍由 `selectFromCandidates()` 运行时校验。
-11. `canonicalTransform` schema 会约束 row/col/digit 映射的基础置换形状；公开变换 API 仍会通过 `validateCanonicalTransform()` 做运行时校验。
-12. `generatedPuzzle.solution`、`generationResult.*.solution` 和 `canonicalPairResult.solution` 在 schema 中要求为完整 1-9 棋盘；行列宫无冲突、与 puzzle 给定数一致、canonicalKey 与 puzzle 匹配等跨字段规则仍由 `validateCandidatePool()` 或对应运行时 API 校验。
-13. 如果 schema 结构发生破坏性变化，后续必须升级 schema 版本。
+10. `techniqueDefinition` schema 包含 `aliases`、`seDifficulty` 和 `seStatus`，作为外部技巧体系的参考元数据；它们不是独立 SE profile 的主 API 承诺，具体映射口径见 [SE_COMPATIBILITY.md](./SE_COMPATIBILITY.md)。
+11. `candidateSelectionPlan` schema 会约束技巧 ID 和基础字段类型；`scoreBuckets` 的 `min <= max`、桶不重叠等跨项规则仍由 `selectFromCandidates()` 运行时校验。
+12. `canonicalTransform` schema 会约束 row/col/digit 映射的基础置换形状；公开变换 API 仍会通过 `validateCanonicalTransform()` 做运行时校验。
+13. `generatedPuzzle.solution`、`generationResult.*.solution` 和 `canonicalPairResult.solution` 在 schema 中要求为完整 1-9 棋盘；行列宫无冲突、与 puzzle 给定数一致、canonicalKey 与 puzzle 匹配等跨字段规则仍由 `validateCandidatePool()` 或对应运行时 API 校验。
+14. 如果 schema 结构发生破坏性变化，后续必须升级 schema 版本。

@@ -2,6 +2,33 @@
 
 本文档记录公开库层面的重要变化。
 
+## 0.3.0
+
+第三版公开发布。
+
+已新增或收口的内容：
+
+1. 新增 `classic-galaxy.v1` 作为本包自己的全技巧评分/求解 profile，覆盖所有已实现技巧。
+2. `classic-galaxy.v1` 将 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain` 和 `bowmans-bingo` 放入 fallback 管线，避免重型分支技巧参与每步常规扫描。
+3. CLI 新增 `--profile galaxy`，内置 profile 统一为 `stable`、`extended` 和 `galaxy`。
+4. SE 相关内容收口为外部参考映射文档和开发 fixture，不再作为公开内置评分策略或 CLI profile 暴露。
+5. 开发审计脚本改为中性命名：`audit:reference` 用于 reference smoke，`audit:technique-priority` 用于技巧优先级审计。
+6. reference smoke fixture 改到 `tests/fixtures/reference-techniques`，并通过显式 `allowedTechniques` / `preferredTechniques` 验证可达性。
+7. `verify` 流程纳入 `audit:reference`，CI 中对应步骤改为 Reference Technique Smoke Audit。
+8. 公开文档同步说明 `classic-stable.v1`、`classic-extended.v1` 和 `classic-galaxy.v1` 的边界。
+
+行为和契约变化：
+
+1. `getRatingPolicy()` 不再提供公开 `classic-se` 策略；调用方应使用 `classic-galaxy` 或自定义 `RatingPolicy`。
+2. CLI 不再接受 `--profile se`；需要全技巧入口时应使用 `--profile galaxy`。
+3. `aliases`、`seDifficulty` 和 `seStatus` 保留为外部技巧体系参考元数据，不构成独立 SE 主 API 承诺。
+
+当前版本仍不承诺：
+
+1. 和 Sudoku Explainer / Sukaku Explainer Java 实现逐步同构。
+2. 将所有 experimental 技巧升为 stable。
+3. 重型 forcing / 试探技巧适合批量实时评分。
+
 ## 0.2.0
 
 第二版公开发布。

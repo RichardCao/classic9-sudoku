@@ -53,7 +53,7 @@
 
 `nextStep(input, options)` 返回下一步结构化解法。
 
-`findSteps(input, options)` 返回当前状态下可找到的结构化解法列表。第一版每个技巧最多返回一条步骤，适合分析同一候选态上还有哪些技巧可用。`limit` 若传入，必须是正整数；初始状态存在矛盾时返回空步骤，并可通过 diagnostics 标记 `stuckReason: 'contradiction'`。
+`findSteps(input, options)` 返回当前状态下可找到的结构化解法列表。当前每个技巧最多返回一条步骤，适合分析同一候选态上还有哪些技巧可用。`limit` 若传入，必须是正整数；初始状态存在矛盾时返回空步骤，并可通过 diagnostics 标记 `stuckReason: 'contradiction'`。
 
 `walkthrough(input, options)` 返回完整解题过程。
 
@@ -71,7 +71,7 @@
 
 `verifyWalkthrough(input, steps, options)` 逐步验证并应用一组步骤，返回第一处非法步骤、最终棋盘和最终候选数。
 
-`getTechniqueDefinitions()` 返回当前技巧定义列表，其中包含 `stable` 和 `experimental` 两类。CLI 中也可以用 `techniques` 命令查看。
+`getTechniqueDefinitions()` 返回当前技巧定义列表，其中包含 `stable` 和 `experimental` 两类。技巧定义还会带上 SE 兼容元数据：`aliases`、`seDifficulty` 和 `seStatus`。CLI 中也可以用 `techniques` 命令查看。
 
 默认情况下，`nextStep()` 和 `walkthrough()` 只会运行 `stable` 技巧。
 
@@ -88,6 +88,7 @@ const result = walkthrough(puzzle, buildSolveOptionsFromRatingPolicy(policy));
 
 1. `classic-stable.v1`：默认策略，只使用 stable 技巧。
 2. `classic-extended.v1`：显式增强策略，先完整运行 stable 技巧；只有当前状态 primary 技巧全部无命中时，才把 `bowmans-bingo` 作为 fallback safety net 尝试，用于提升部分高难题的可解率。
+3. `classic-galaxy.v1`：本包自己的全技巧策略，启用所有已实现技巧，并把重型 forcing / 试探类技巧放入 fallback 管线。
 
 如果调用方需要显式启用某个 experimental 技巧，应传入 `allowedTechniques`。例如：
 
@@ -154,6 +155,7 @@ sudoku batch-solve --input puzzles.txt --output solve.jsonl --format jsonl --sum
 sudoku batch-rate --input puzzles.txt --output rating.csv --format csv --only 12,18,33
 sudoku batch-solve --input puzzles.txt --start-line 100 --end-line 200 --allow full-house,naked-single,hidden-single --prefer hidden-single --max-steps 64
 sudoku batch-rate --input puzzles.txt --profile extended
+sudoku batch-rate --input puzzles.txt --profile galaxy
 ```
 
 常用参数：
@@ -169,7 +171,7 @@ sudoku batch-rate --input puzzles.txt --profile extended
 9. `--max-steps <n>`
 10. `--include-steps`
 11. `--include-usage`
-12. `--profile stable|extended`
+12. `--profile stable|extended|galaxy`
 
 `--profile` 用于选择内置求解/评分策略。未指定时使用 `stable`。未指定 `--allow` 时使用当前 profile 的技巧范围；指定 `--allow` 时按完整技巧定义全集过滤，因此可以显式启用 profile 外的 experimental 技巧。`--prefer` 用于把一个或多个已启用技巧按指定顺序提前；如果 `--prefer` 指向未启用技巧，CLI 会返回参数错误。
 

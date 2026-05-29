@@ -43,7 +43,7 @@ interface SolveStep {
 1. `place`：在某格填入某数字。
 2. `eliminate`：从某格删除某候选数。
 
-`evidence` 是解释步骤为什么成立的证据。第一版保证它是结构化对象，并允许后续扩展字段；调用方不应该依赖 `evidence.note` 生成最终文案。
+`evidence` 是解释步骤为什么成立的证据。当前保证它是结构化对象，并允许后续扩展字段；调用方不应该依赖 `evidence.note` 生成最终文案。
 
 常见证据字段：
 
@@ -58,7 +58,7 @@ interface SolveStep {
 
 `replaySteps(input, steps)` 会按步骤动作回放棋盘。
 
-第一版要求：
+当前要求：
 
 1. 只接受 `place` 和 `eliminate` 两类动作。
 2. `place` 会按动作写盘，`eliminate` 只影响候选数。
@@ -82,12 +82,12 @@ interface SolveStep {
 
 `findSteps(input, options)` 用于返回当前状态下可找到的步骤列表。
 
-第一版语义：
+当前语义：
 
 1. 默认仍只运行 stable 技巧。
 2. `allowedTechniques` 只限制技巧集合，不改变默认由易到难的顺序。
 3. `preferredTechniques` 会把指定技巧按数组顺序提前。
-4. 如果希望直接复用内置 profile，可以先通过 `getRatingPolicy()` 取到 `classic-stable` 或 `classic-extended`，再用 `buildSolveOptionsFromRatingPolicy()` 转成 `walkthrough()` / `nextStep()` 可用的求解选项。
+4. 如果希望直接复用内置 profile，可以先通过 `getRatingPolicy()` 取到 `classic-stable`、`classic-extended` 或 `classic-galaxy`，再用 `buildSolveOptionsFromRatingPolicy()` 转成 `walkthrough()` / `nextStep()` 可用的求解选项。
 5. `nishio-forcing-chains` 已经进入 stable，会按正常由易到难顺序参与默认求解。其余 forcing / 试探类技巧仍为 experimental，需要调用方显式启用。
 6. 内置默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`。这些技巧即使出现在 `allowedTechniques` 中，也只会在当前状态 primary 技巧全部无命中时才尝试；`table-chain` 不在默认 fallback 列表中，需要显式放进 `preferredTechniques` 或 `fallbackTechniques`。
 7. 若调用方要显式提前某个 forcing 技巧，需要把它放进 `preferredTechniques`。
@@ -110,8 +110,11 @@ interface SolveStep {
 | 显式传 `allowedTechniques`，且未传 `fallbackTechniques` | 允许技巧中不属于默认 fallback 列表的技巧 | 允许技巧中属于默认 fallback 列表的技巧 |
 | `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-stable'))` | stable 技巧 | 空 |
 | `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-extended'))` | stable 技巧 | `bowmans-bingo` |
+| `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-galaxy'))` | 全部非重型技巧 | `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain`、`bowmans-bingo` |
 
 默认 fallback 列表用于显式 `allowedTechniques` 场景，不等于 `classic-extended` 会启用全部 forcing 技巧。`classic-extended.v1` 的增强来自 fallback 中的 `bowmans-bingo`，主顺序仍是 stable 顺序。
+
+`classic-galaxy.v1` 是本包自己的全技巧入口。它不进入默认求解入口，适合调用方显式要求更强覆盖或离线分析时使用。
 
 如果需要定位某个技巧第一次命中的真实候选态，可以使用：
 

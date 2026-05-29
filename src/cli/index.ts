@@ -575,11 +575,11 @@ function buildHelp(): Record<string, unknown> {
       },
       {
         command: 'solve <puzzle>',
-        description: '运行人类逻辑求解器。支持 --profile stable|extended、--allow、--prefer、--max-steps、--format text 和 --locale zh-CN。--allow 可显式启用 profile 外 experimental 技巧。',
+        description: '运行人类逻辑求解器。支持 --profile stable|extended|galaxy、--allow、--prefer、--max-steps、--format text 和 --locale zh-CN。--allow 可显式启用 profile 外 experimental 技巧。',
       },
       {
         command: 'rate <puzzle>',
-        description: '按内置评分规则给题目打分。支持 --profile stable|extended、--allow、--prefer 和 --max-steps。--allow 可显式启用 profile 外 experimental 技巧。',
+        description: '按内置评分规则给题目打分。支持 --profile stable|extended|galaxy、--allow、--prefer 和 --max-steps。--allow 可显式启用 profile 外 experimental 技巧。',
       },
       {
         command: 'batch-solve --input <file>',
@@ -844,7 +844,9 @@ function buildCliRatingPolicy(args: readonly string[]): RatingPolicy {
   if (allowedTechniques) {
     const allowed = new Set(allowedTechniques);
     const preferred = new Set(preferredTechniques ?? []);
-    const fallbackSet = new Set(CLI_DEFAULT_FALLBACK_TECHNIQUES.filter((technique) => allowed.has(technique) && !preferred.has(technique)));
+    const profileFallback = policy.fallbackTechniques ?? [];
+    const fallbackCandidates = [...profileFallback, ...CLI_DEFAULT_FALLBACK_TECHNIQUES];
+    const fallbackSet = new Set(fallbackCandidates.filter((technique) => allowed.has(technique) && !preferred.has(technique)));
     techniqueOrder = buildDefaultTechniques()
       .map((technique) => technique.id)
       .filter((technique) => allowed.has(technique) && !fallbackSet.has(technique));
@@ -885,7 +887,7 @@ function buildCliRatingPolicy(args: readonly string[]): RatingPolicy {
   };
 }
 
-function parseProfileOption(args: readonly string[]): 'classic-stable' | 'classic-extended' {
+function parseProfileOption(args: readonly string[]): 'classic-stable' | 'classic-extended' | 'classic-galaxy' {
   const raw = getOption(args, '--profile');
   if (raw === null || raw === 'stable' || raw === 'classic-stable' || raw === 'classic-stable.v1') {
     return 'classic-stable';
@@ -893,7 +895,10 @@ function parseProfileOption(args: readonly string[]): 'classic-stable' | 'classi
   if (raw === 'extended' || raw === 'classic-extended' || raw === 'classic-extended.v1') {
     return 'classic-extended';
   }
-  throw new Error('--profile 只能是 stable 或 extended。');
+  if (raw === 'galaxy' || raw === 'classic-galaxy' || raw === 'classic-galaxy.v1') {
+    return 'classic-galaxy';
+  }
+  throw new Error('--profile 只能是 stable、extended 或 galaxy。');
 }
 
 function parseTechniqueListOption(args: readonly string[], name: string): TechniqueId[] | null {
@@ -912,7 +917,7 @@ function parseTechniqueListOption(args: readonly string[], name: string): Techni
   if (unknown.length > 0) {
     throw new Error(`${name} 包含未知技巧：${unknown.join(', ')}`);
   }
-  return [...new Set(parsed)] as TechniqueId[];
+  return Array.from(new Set(parsed)) as TechniqueId[];
 }
 
 function applyPreferredTechniqueOrder(
@@ -1130,7 +1135,7 @@ function acquireLock(path: string): () => void {
 }
 
 function acquireLocks(paths: Array<string | null>): () => void {
-  const normalizedPaths = [...new Set(paths.filter((path): path is string => Boolean(path)).map((path) => resolve(path)))]
+  const normalizedPaths = Array.from(new Set(paths.filter((path): path is string => Boolean(path)).map((path) => resolve(path))))
     .sort();
   const releases: Array<() => void> = [];
   try {

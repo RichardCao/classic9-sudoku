@@ -72,7 +72,7 @@ const totalElapsedMs = Math.round(performance.now() - startedAt);
 const topSlow = [...audited]
   .sort((left, right) => right.elapsedMs - left.elapsedMs)
   .slice(0, options.top);
-const topTechniques = [...techniqueElapsedMs.entries()]
+const topTechniques = Array.from(techniqueElapsedMs.entries())
   .map(([technique, elapsedMs]) => ({ technique, elapsedMs: Math.round(elapsedMs) }))
   .sort((left, right) => right.elapsedMs - left.elapsedMs)
   .slice(0, options.top);
@@ -90,8 +90,8 @@ const summary = {
   warnMs: options.warnMs,
   failMs: options.failMs,
   totalElapsedMs,
-  techniqueElapsedMs: Object.fromEntries([...techniqueElapsedMs.entries()].map(([technique, elapsedMs]) => [technique, Math.round(elapsedMs)])),
-  overheadMs: Math.max(0, totalElapsedMs - [...techniqueElapsedMs.values()].reduce((sum, value) => sum + value, 0)),
+  techniqueElapsedMs: Object.fromEntries(Array.from(techniqueElapsedMs.entries()).map(([technique, elapsedMs]) => [technique, Math.round(elapsedMs)])),
+  overheadMs: Math.max(0, totalElapsedMs - Array.from(techniqueElapsedMs.values()).reduce((sum, value) => sum + value, 0)),
   topSlow,
   topTechniques,
 };

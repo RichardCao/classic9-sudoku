@@ -57,7 +57,7 @@ export interface RatingPolicyValidationIssue {
   details?: Record<string, unknown>;
 }
 
-export type BuiltInRatingPolicyId = 'classic-stable' | 'classic-extended';
+export type BuiltInRatingPolicyId = 'classic-stable' | 'classic-extended' | 'classic-galaxy';
 
 const definitionScores = Object.fromEntries(
   getTechniqueDefinitions().map((definition) => [definition.id, definition.defaultScore]),
@@ -83,6 +83,19 @@ export const CLASSIC_STABLE_TECHNIQUE_ORDER: readonly TechniqueId[] = Object.fre
 export const CLASSIC_EXTENDED_TECHNIQUE_ORDER: readonly TechniqueId[] = Object.freeze([
   ...CLASSIC_STABLE_TECHNIQUE_ORDER,
 ]);
+
+const CLASSIC_GALAXY_FALLBACK_TECHNIQUES: readonly TechniqueId[] = [
+  'forcing-nets',
+  'digit-forcing-chains',
+  'cell-forcing-chains',
+  'unit-forcing-chains',
+  'table-chain',
+  'bowmans-bingo',
+];
+
+export const CLASSIC_GALAXY_TECHNIQUE_ORDER: readonly TechniqueId[] = Object.freeze(buildDefaultTechniques()
+  .map((technique) => technique.id)
+  .filter((id) => !CLASSIC_GALAXY_FALLBACK_TECHNIQUES.includes(id)));
 
 const CLASSIC_STABLE_POLICY_SOURCE: RatingPolicy = {
   id: 'classic-stable',
@@ -191,8 +204,19 @@ const CLASSIC_EXTENDED_POLICY_SOURCE: RatingPolicy = {
   ...(CLASSIC_STABLE_POLICY_SOURCE.gradeRules ? { gradeRules: CLASSIC_STABLE_POLICY_SOURCE.gradeRules } : {}),
 };
 
+const CLASSIC_GALAXY_POLICY_SOURCE: RatingPolicy = {
+  id: 'classic-galaxy',
+  version: '1',
+  techniqueOrder: CLASSIC_GALAXY_TECHNIQUE_ORDER,
+  fallbackTechniques: CLASSIC_GALAXY_FALLBACK_TECHNIQUES,
+  techniqueScores: definitionScores,
+  maxSteps: 1024,
+  ...(CLASSIC_STABLE_POLICY_SOURCE.gradeRules ? { gradeRules: CLASSIC_STABLE_POLICY_SOURCE.gradeRules } : {}),
+};
+
 export const CLASSIC_STABLE_POLICY: Readonly<RatingPolicy> = deepFreezePolicy(CLASSIC_STABLE_POLICY_SOURCE);
 export const CLASSIC_EXTENDED_POLICY: Readonly<RatingPolicy> = deepFreezePolicy(CLASSIC_EXTENDED_POLICY_SOURCE);
+export const CLASSIC_GALAXY_POLICY: Readonly<RatingPolicy> = deepFreezePolicy(CLASSIC_GALAXY_POLICY_SOURCE);
 
 export function getDefaultRatingPolicy(): RatingPolicy {
   return clonePolicy(CLASSIC_STABLE_POLICY);
@@ -204,6 +228,8 @@ export function getRatingPolicy(id: BuiltInRatingPolicyId = 'classic-stable'): R
       return clonePolicy(CLASSIC_STABLE_POLICY);
     case 'classic-extended':
       return clonePolicy(CLASSIC_EXTENDED_POLICY);
+    case 'classic-galaxy':
+      return clonePolicy(CLASSIC_GALAXY_POLICY);
     default:
       throw new Error(`未知评分策略：${String(id)}`);
   }

@@ -9,6 +9,12 @@
 
 同时，公开库也包含一组 `experimental` 技巧。它们已经可以通过 `allowedTechniques` 显式调用，但默认不会进入 `walkthrough()`、`rate()` 或 `classic-stable.v1`。
 
+如果目标是对照 Sudoku Explainer / Sukaku Explainer 的技巧体系，请先看 [SE 参考映射](./SE_COMPATIBILITY.md)。该文档列出外部技巧名称到当前 `TechniqueId` 的映射、缺失项、实现阶段和验收标准。
+
+direct 变体当前以 `experimental` 提供：`direct-pointing`、`direct-claiming`、`direct-hidden-pair`、`direct-hidden-triplet`。它们会返回“删除候选 + 直接落子”的单个可回放步骤，可通过 `classic-galaxy.v1` 或显式 `allowedTechniques` 使用，但不会改变默认 stable 管线。
+
+chain / cycle 入口当前也以 `experimental` 提供：`bidirectional-x-cycle`、`bidirectional-y-cycle`、`forcing-x-chain`、`forcing-chain`。它们复用现有 coloring / chain / AIC finder，返回对应步骤和 `evidence.links`，用于外部参考映射和回归；原有 `simple-coloring`、`x-chain`、`xy-chain`、`aic` 行为保持不变。
+
 ## 查看方式
 
 代码中可以调用：
@@ -96,8 +102,16 @@ node dist/src/cli/index.js techniques
 
 | id | 中文名 | 技巧族 | 默认单步分 |
 | --- | --- | --- | --- |
+| `direct-pointing` | 直接指向 | `intersection` | 17 |
+| `direct-claiming` | 直接声明 | `intersection` | 19 |
+| `direct-hidden-pair` | 直接隐性数对 | `subset` | 20 |
+| `direct-hidden-triplet` | 直接隐性三数组 | `subset` | 25 |
 | `aic-als` | ALS-AIC | `als` | 214 |
 | `big-wings` | BigWings | `als` | 179 |
+| `bidirectional-x-cycle` | 双向 X-Cycle | `coloring` | 165 |
+| `bidirectional-y-cycle` | 双向 Y-Cycle | `chain` | 166 |
+| `forcing-x-chain` | 强制 X-Chain | `chain` | 176 |
+| `forcing-chain` | 强制链 | `chain` | 205 |
 | `forcing-nets` | Forcing Nets | `forcing` | 220 |
 | `digit-forcing-chains` | 数字强制链 | `forcing` | 221 |
 | `cell-forcing-chains` | 单元格强制链 | `forcing` | 223 |
@@ -120,7 +134,7 @@ node dist/src/cli/index.js techniques
 
 `als` 表示 Almost Locked Set 相关技巧，目前稳定支持准锁定数对、准锁定三数组、ALS-XZ、ALS-XY-Wing、Fireworks、双生 XY-Chains、Sue-de-Coq、Death Blossom 和对齐数对排除；`aic-als` 与 `big-wings` 现在保留为 experimental，供显式调用和回归。
 
-当前 `aic-als` 仍在 experimental。真实题库回归中发现此前的简化实现会把 ALS 内部关系误当作普通候选链，从而在某些候选态下误删真值候选。因此公开库暂时保留 `aic-als` 的 definition 与技巧 ID，但在按 ALS / RCC 链模型重写前，不默认进入 stable 管线，也不会对外产出步骤。
+当前 `aic-als` 仍在 experimental。它已经改为保守的 ALS/RCC chain 模型：ALS 节点之间只通过真正的 restricted common candidate 相连，中间 ALS 的入链和出链 RCC digit 必须不同，链端共享候选只会从同时看见两端 ALS 中该候选全部出现位置的格子删除。它仍不进入 stable 管线，后续需要更多真实题面回归后再考虑升级。
 
 `pattern` 表示更高阶的结构型模式，目前稳定支持 Exocet、Double Exocet、Pattern Overlay、Tridagons 和 SK Loops。
 

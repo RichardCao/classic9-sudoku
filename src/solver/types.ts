@@ -4,10 +4,14 @@ export type TechniqueId =
   | 'full-house'
   | 'naked-single'
   | 'hidden-single'
+  | 'direct-pointing'
+  | 'direct-claiming'
+  | 'direct-hidden-pair'
   | 'locked-candidates'
   | 'naked-pair'
   | 'hidden-pair'
   | 'naked-triple'
+  | 'direct-hidden-triplet'
   | 'hidden-triple'
   | 'naked-quad'
   | 'hidden-quad'
@@ -36,6 +40,10 @@ export type TechniqueId =
   | 'sue-de-coq'
   | 'death-blossom'
   | 'aligned-pair-exclusion'
+  | 'bidirectional-x-cycle'
+  | 'bidirectional-y-cycle'
+  | 'forcing-x-chain'
+  | 'forcing-chain'
   | 'exocet'
   | 'double-exocet'
   | 'pattern-overlay'
@@ -137,6 +145,9 @@ export interface TechniqueDefinition {
   family: string;
   defaultScore: number;
   stability: 'stable' | 'experimental';
+  aliases?: readonly string[];
+  seDifficulty?: string;
+  seStatus?: 'covered' | 'covered-as-variant' | 'partial' | 'non-se-extension';
 }
 
 export interface SolveOptions {

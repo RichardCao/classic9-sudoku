@@ -76,7 +76,6 @@ export function findSteps(input: StateInput, options: FindStepsOptions = {}): Fi
     };
   }
   const pipeline = buildTechniquePipeline(options);
-  const techniques = [...pipeline.primary, ...pipeline.fallback];
   const steps: SolveStep[] = [];
   const techniquesTried: TechniqueId[] = [];
   const techniqueCalls: Partial<Record<TechniqueId, number>> = {};
@@ -84,21 +83,9 @@ export function findSteps(input: StateInput, options: FindStepsOptions = {}): Fi
   const limit = normalizePositiveInteger(options.limit);
   const canShortCircuit = options.sort === undefined || options.sort === 'pipeline';
 
-  for (const technique of techniques) {
-    techniquesTried.push(technique.id);
-    techniqueCalls[technique.id] = (techniqueCalls[technique.id] ?? 0) + 1;
-    const step = technique.find(context);
-    if (!step) {
-      continue;
-    }
-    if (!isApplicableStep(context, step)) {
-      continue;
-    }
-    techniqueHits[technique.id] = (techniqueHits[technique.id] ?? 0) + 1;
-    steps.push(step);
-    if (canShortCircuit && limit !== null && steps.length >= limit) {
-      break;
-    }
+  scanFindStepsTechniques(pipeline.primary, context, steps, techniquesTried, techniqueCalls, techniqueHits, canShortCircuit, limit);
+  if (steps.length === 0) {
+    scanFindStepsTechniques(pipeline.fallback, context, steps, techniquesTried, techniqueCalls, techniqueHits, canShortCircuit, limit);
   }
 
   const sortedSteps = sortFoundSteps(steps, options.sort ?? 'pipeline');
@@ -114,6 +101,31 @@ export function findSteps(input: StateInput, options: FindStepsOptions = {}): Fi
       },
     } : {}),
   };
+}
+
+function scanFindStepsTechniques(
+  techniques: readonly SolverTechnique[],
+  context: SolverContext,
+  steps: SolveStep[],
+  techniquesTried: TechniqueId[],
+  techniqueCalls: Partial<Record<TechniqueId, number>>,
+  techniqueHits: Partial<Record<TechniqueId, number>>,
+  canShortCircuit: boolean,
+  limit: number | null,
+): void {
+  for (const technique of techniques) {
+    techniquesTried.push(technique.id);
+    techniqueCalls[technique.id] = (techniqueCalls[technique.id] ?? 0) + 1;
+    const step = technique.find(context);
+    if (!step || !isApplicableStep(context, step)) {
+      continue;
+    }
+    techniqueHits[technique.id] = (techniqueHits[technique.id] ?? 0) + 1;
+    steps.push(step);
+    if (canShortCircuit && limit !== null && steps.length >= limit) {
+      break;
+    }
+  }
 }
 
 export function walkthrough(input: StateInput, options?: SolveOptions): SolveAnalysis {

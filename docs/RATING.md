@@ -43,20 +43,23 @@ interface RatingPolicy {
 6. `gradeRules[].allowedTechniques` 如果存在，必须全部是已知技巧。
 7. `gradeRules[].minScore` 和 `maxScore` 如果同时存在，必须满足 `minScore <= maxScore`。
 
-可以先调用 `validateRatingPolicy(policy)` 获取结构化错误；`undefined`、`null`、数组和其他非 object 输入都会被视为非法 policy，不会被当成默认规则。`rate(input, policy)` 和 `buildSolveOptionsFromRatingPolicy(policy)` 会在 policy 非法时直接抛错。`getRatingPolicy(id)` 只接受 `classic-stable` 和 `classic-extended`，未知 id 会抛错，不会静默回退到默认规则。
+可以先调用 `validateRatingPolicy(policy)` 获取结构化错误；`undefined`、`null`、数组和其他非 object 输入都会被视为非法 policy，不会被当成默认规则。`rate(input, policy)` 和 `buildSolveOptionsFromRatingPolicy(policy)` 会在 policy 非法时直接抛错。`getRatingPolicy(id)` 只接受 `classic-stable`、`classic-extended` 和 `classic-galaxy`，未知 id 会抛错，不会静默回退到默认规则。
 
 如果调用方使用 `getJsonSchemas().ratingPolicy` 或生成请求里的 `ratingPolicy` schema 做预校验，还需要再调用 `validateRatingPolicy(policy)`。JSON Schema 负责字段类型、未知技巧和未知字段等静态结构；`techniqueScores` 是否覆盖所有已启用技巧、`gradeRules[].minScore <= maxScore` 这类动态规则以运行时校验为准。
 
 ## 内置规则
 
-当前内置两套规则：
+当前内置三套规则：
 
 1. `classic-stable.v1`
 2. `classic-extended.v1`
+3. `classic-galaxy.v1`
 
 `classic-stable.v1` 是公开库默认规则，目标是稳定、通用。它不绑定任何产品里的 `easy / normal / hard / expert / epic` 档位，也不承诺这些档位的业务含义。
 
 `classic-extended.v1` 面向“在 stable 之上再多给一层求解能力”的场景。当前它会先完整运行 stable 技巧；只有当前状态 primary 技巧全部无命中时，才把 `bowmans-bingo` 作为 fallback safety net 尝试，不会把全部 experimental forcing 技巧直接并入默认管线。
+
+`classic-galaxy.v1` 是本包自己的全技巧入口。它启用所有已实现技巧，并把 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain` 和 `bowmans-bingo` 放入 fallback 管线，只在 primary 技巧全部无命中时尝试这些重型 forcing / 试探技巧。
 
 如果调用方需要自己的题库分档，应定义独立的 `RatingPolicy`，并在题库记录中保存对应的 `id/version`。
 
@@ -100,4 +103,5 @@ import { getRatingPolicy } from '@sudoku-tools/classic9';
 
 const stable = getRatingPolicy('classic-stable');
 const extended = getRatingPolicy('classic-extended');
+const galaxy = getRatingPolicy('classic-galaxy');
 ```

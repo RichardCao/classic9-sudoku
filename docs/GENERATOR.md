@@ -87,7 +87,7 @@ node dist/src/cli/index.js generator-analyze request.json
 2. `bestCandidate` 只用于调参、诊断和回看失败样本，不应直接当成合格题目。
 3. 失败状态即使带有 `bestCandidate`，也不代表满足了请求约束。
 
-当前生成器始终保证唯一解。`constraints.uniqueness` 只接受 `required`，第一版不支持跳过唯一性检查。
+当前生成器始终保证唯一解。`constraints.uniqueness` 只接受 `required`，暂不支持跳过唯一性检查。
 
 当前完整终盘生成器是 lightweight / reproducible 取向：它从一个固定合法终盘出发，做数字置换、行列带内/栈内置换、带/栈置换和转置等价变换。它适合 smoke、稳定测试和可复现候选池任务，但不声称覆盖所有终盘等价类。需要更大终盘多样性时，应在后续版本增加真正随机终盘生成或外部终盘池。
 
@@ -140,7 +140,7 @@ minimality = none
 
 `relaxation` 只有在显式开启时才生效。
 
-当前第一版支持：
+当前支持：
 
 1. 扩大分数范围。
 2. 扩大线索数范围。
@@ -175,6 +175,8 @@ relaxationsApplied
 ## 后续计划
 
 后续 generator 应继续补更细的 relaxation 策略，例如 preferred 技巧放宽。核心原则是：生成器不能只返回失败，还必须解释为什么失败。
+
+如果 relaxation 或生成目标涉及 Sudoku Explainer 风格的技巧覆盖或 SE difficulty 参考元数据，应和 [SE_COMPATIBILITY.md](./SE_COMPATIBILITY.md) 中的技巧矩阵和参考 corpus 计划保持一致，避免生成器先支持一套和求解/评分不同步的技巧口径。
 
 技巧 id 和技巧族见：
 

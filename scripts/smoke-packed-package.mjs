@@ -21,13 +21,14 @@ try {
   }
   tarballPath = join(root, packed.filename);
   const files = new Set(packed.files.map((file) => file.path));
+  assertPackedFilesTracked(files);
   for (const required of ['dist/src/index.js', 'dist/src/index.d.ts', 'dist/src/cli/index.js', 'README.md', 'LICENSE']) {
     if (!files.has(required)) {
       throw new Error(`发布包缺少必要文件：${required}`);
     }
   }
   for (const forbidden of ['src/', 'tests/', 'scripts/', 'dist/tests/', 'dist/tmp/', '.npm-cache/']) {
-    if ([...files].some((file) => file === forbidden.slice(0, -1) || file.startsWith(forbidden))) {
+    if (Array.from(files).some((file) => file === forbidden.slice(0, -1) || file.startsWith(forbidden))) {
       throw new Error(`发布包包含禁止内容：${forbidden}`);
     }
   }
@@ -81,4 +82,38 @@ function binCommand(binPath) {
 
 function binArgs(binPath, args) {
   return process.platform === 'win32' ? ['/d', '/s', '/c', `"${binPath}" ${args.join(' ')}`] : args;
+}
+
+function assertPackedFilesTracked(files) {
+  if (!isGitWorktree()) {
+    return;
+  }
+  const tracked = new Set(execFileSync('git', ['ls-files'], {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  }).split(/\r?\n/u).filter(Boolean));
+  const generatedPrefixes = ['dist/src/'];
+  const untrackedPackedFiles = Array.from(files)
+    .filter((file) => !generatedPrefixes.some((prefix) => file.startsWith(prefix)))
+    .filter((file) => !tracked.has(file));
+  if (untrackedPackedFiles.length > 0) {
+    throw new Error([
+      '发布包包含未纳入 git 跟踪的文件：',
+      ...untrackedPackedFiles.map((file) => `- ${file}`),
+      '请先 git add 这些文件，或从 package files 中移除它们。',
+    ].join('\n'));
+  }
+}
+
+function isGitWorktree() {
+  try {
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
