@@ -39,8 +39,10 @@ npm test
 import {
   canonicalizeBoard,
   getPackageInfo,
+  hint,
   parsePuzzle,
   rate,
+  summarizeRating,
   validate,
   walkthrough,
 } from '@sudoku-tools/classic9';
@@ -50,10 +52,26 @@ const board = parsePuzzle(puzzle);
 
 console.log(getPackageInfo());
 console.log(validate(board).legal);
+console.log(hint(board, { format: { locale: 'zh-CN' } }).text);
 console.log(walkthrough(board).solved);
-console.log(rate(board).score);
+console.log(summarizeRating(rate(board)));
 console.log(canonicalizeBoard(board).key);
 ```
+
+## API 选择表
+
+| 目标 | 推荐 API |
+| --- | --- |
+| 解析题面 | `parsePuzzle` / `tryParsePuzzle` |
+| 转换二维数组或 nullable board | `fromMatrix` / `fromNullableBoard` |
+| 校验格式和冲突 | `validate` |
+| 检查唯一解 | `checkUniqueness` |
+| 获取一个人类逻辑提示 | `hint`，高级场景用 `nextStep` |
+| 获取完整人类逻辑过程 | `walkthrough` / `analyzeSolve` |
+| 评分和难度摘要 | `rate` + `summarizeRating` |
+| 生成题目 | `generateOne` |
+| 批量搜索候选池 | `search` |
+| canonical 去重 | `canonicalizeBoard` |
 
 更多示例见：
 
@@ -104,13 +122,17 @@ npm run verify:release -- --input /path/to/expert.ts
 npm run verify:release -- --input tests/fixtures/release-smoke-corpus.json
 ```
 
-参考技巧也有一个轻量 smoke gate，用于确认首批 direct/chain fixture、显式技巧选项和可回放步骤仍然同步：
+参考技巧也有一组源码仓库审计，用于确认 smoke fixture、真实题面评分路径、目标技巧优先级、evidence 引用和可回放步骤仍然同步：
 
 ```bash
 npm run audit:reference
+npm run audit:coverage
+npm run verify:coverage
 ```
 
-`audit:reference`、`audit:stable` 和 `verify:release` 都是源码仓库开发/发布验证脚本，不会随 npm 包一起发布。它们适合检查参考技巧可达性、expert 全量可解、慢题 top N，以及稳定技巧是否误删真解候选。
+`audit:reference` 会同时运行人工候选态 reference smoke 和真实题面 `reference-rating-corpus.json` 审计，后者会校验唯一解、完整评分路径、步骤 evidence 和是否误删真解候选，因此属于慢速审计。`audit:coverage` 检查 90 个技巧定义是否都具备 smoke / rating corpus 覆盖。`verify:coverage` 额外汇总 forcing evidence、forcing smoke 和 BUG graph evidence 审计。
+
+`audit:reference`、`audit:coverage`、`audit:stable`、`verify:coverage` 和 `verify:release` 都是源码仓库开发/发布验证脚本，不会随 npm 包一起发布。它们适合检查参考技巧可达性、真实题面评分路径、expert 全量可解、慢题 top N，以及稳定技巧是否误删真解候选。
 
 ## 生成和候选池
 
@@ -215,13 +237,13 @@ sudoku manifest-summary ./dist/tmp/shards/worker-01-manifest.json ./dist/tmp/sha
 
 公开库还吸收了 `big-wings`，但它当前保持 `experimental`，不会进入默认 stable 顺序。
 
-公开库也包含 `direct-pointing`、`direct-claiming`、`direct-hidden-pair`、`direct-hidden-triplet`、`bidirectional-x-cycle`、`bidirectional-y-cycle`、`forcing-x-chain`、`forcing-chain`、`aic-als`、`big-wings`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain`、`bowmans-bingo` 等 experimental 技巧；`nishio-forcing-chains` 已进入 stable。上面这些 experimental 技巧已经可以通过 `allowedTechniques` 显式纳入技巧集合，forcing / 试探类技巧会返回结构化分支证据。`aic-als` 当前采用保守 ALS/RCC chain 模型，仍需更多真实题面回归后再考虑进入 stable。experimental 技巧默认不会进入 `walkthrough()`、`rate()` 或 `classic-stable.v1`。
+公开库也包含 `direct-pointing`、`direct-claiming`、`direct-hidden-pair`、`direct-hidden-triplet`、`bidirectional-x-cycle`、`bidirectional-y-cycle`、`forcing-x-chain`、`forcing-chain`、`aic-als`、`big-wings`、`remote-pairs`、`sashimi-x-wing`、`finned-franken-swordfish`、`finned-franken-jellyfish`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`、`nested-forcing-chains`、`bowmans-bingo`、`bug-plus-two` 等 experimental 技巧；`nishio-forcing-chains` 已进入 stable。上面这些 experimental 技巧已经可以通过 `allowedTechniques` 显式纳入技巧集合，forcing / 试探类技巧会返回结构化分支证据。`aic-als` 当前采用保守 ALS/RCC chain 模型，仍需更多真实题面回归后再考虑进入 stable。experimental 技巧默认不会进入 `walkthrough()`、`rate()` 或 `classic-stable.v1`。
 
 如果调用方希望在 stable 技巧全部失败后继续尝试更强求解能力，可以显式使用 `classic-extended.v1`。当前 extended 会先完整运行 stable 技巧；只有当前状态 primary 技巧全部无命中时，才把 `bowmans-bingo` 作为 fallback safety net 尝试，不会一次性启用全部 experimental forcing 技巧。
 
-如果调用方希望使用本包自己的全技巧入口，可以显式使用 `classic-galaxy.v1` 或 CLI `--profile galaxy`。galaxy 会启用所有已实现技巧，并把 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain` 和 `bowmans-bingo` 放入 fallback 管线，避免重型试探技巧参与每步常规扫描。
+如果调用方希望使用本包自己的高覆盖入口，可以显式使用 `classic-galaxy.v1` 或 CLI `--profile galaxy`。galaxy 会启用除 `nested-forcing-chains` 外的已实现技巧，并把 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `bowmans-bingo` 放入 fallback 管线，避免重型试探技巧参与每步常规扫描。`nested-forcing-chains` 比 galaxy fallback 更重，当前仅建议显式启用做离线审计。
 
-`table-chain` 可能非常慢，不建议默认用于批量评分或生成；它更适合离线审计、人工研究或少量疑难题复核。
+`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `nested-forcing-chains` 可能非常慢，不建议默认用于批量评分或生成；它们更适合离线审计、人工研究或少量疑难题复核。
 
 ## 文档
 
@@ -238,6 +260,8 @@ sudoku manifest-summary ./dist/tmp/shards/worker-01-manifest.json ./dist/tmp/sha
 11. [COMPATIBILITY.md](./docs/COMPATIBILITY.md)
 12. [SE_COMPATIBILITY.md](./docs/SE_COMPATIBILITY.md)
 
+仓库内还保留了一些路线图、调研和学习样例工作文档。这些文件用于开发协作，不随 npm 包发布。
+
 ## 参考与致谢
 
 本项目在高级解题技巧覆盖、技巧命名和求解路径验证过程中，参考了开源项目 [Sudoku Explainer](https://sourceforge.net/projects/sudoku-explainer/)。
@@ -251,6 +275,8 @@ npm run typecheck
 npm test
 npm run examples:typecheck
 npm run audit:reference
+npm run audit:coverage
+npm run verify:coverage
 npm run smoke:dist
 npm run smoke:cli
 npm run pack:dry-run

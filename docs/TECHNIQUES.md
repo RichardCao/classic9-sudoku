@@ -9,11 +9,13 @@
 
 同时，公开库也包含一组 `experimental` 技巧。它们已经可以通过 `allowedTechniques` 显式调用，但默认不会进入 `walkthrough()`、`rate()` 或 `classic-stable.v1`。
 
-如果目标是对照 Sudoku Explainer / Sukaku Explainer 的技巧体系，请先看 [SE 参考映射](./SE_COMPATIBILITY.md)。该文档列出外部技巧名称到当前 `TechniqueId` 的映射、缺失项、实现阶段和验收标准。
+如果目标是对照 Sudoku Explainer / Sukaku Explainer 的技巧体系，请先看 [SE 参考映射](./SE_COMPATIBILITY.md)。chain / cycle subtype 另见 [SE Chain Matrix](./SE_CHAIN_MATRIX.md)，唯一性相关 subtype 另见 [SE Uniqueness Matrix](./SE_UNIQUENESS_MATRIX.md)。这些文档列出外部技巧名称到当前 `TechniqueId` 的映射、缺失项、实现阶段和验收标准。
 
 direct 变体当前以 `experimental` 提供：`direct-pointing`、`direct-claiming`、`direct-hidden-pair`、`direct-hidden-triplet`。它们会返回“删除候选 + 直接落子”的单个可回放步骤，可通过 `classic-galaxy.v1` 或显式 `allowedTechniques` 使用，但不会改变默认 stable 管线。
 
-chain / cycle 入口当前也以 `experimental` 提供：`bidirectional-x-cycle`、`bidirectional-y-cycle`、`forcing-x-chain`、`forcing-chain`。它们复用现有 coloring / chain / AIC finder，返回对应步骤和 `evidence.links`，用于外部参考映射和回归；原有 `simple-coloring`、`x-chain`、`xy-chain`、`aic` 行为保持不变。
+chain / cycle 入口当前也以 `experimental` 提供：`bidirectional-x-cycle`、`bidirectional-y-cycle`、`forcing-x-chain`、`forcing-chain`。它们复用现有 coloring / chain / AIC finder，返回对应步骤和 `evidence.links`，用于外部参考映射和回归；原有 `simple-coloring`、`x-chain`、`xy-chain`、`aic` 行为保持不变。当前 reference smoke 已固定这些入口的 expected elimination 和 strong/weak link 下限，完整边界见 [SE Chain Matrix](./SE_CHAIN_MATRIX.md)。
+
+`unique-rectangle` 当前通过 `evidence.pattern.subtype` 区分 Type 1、Type 2 shared-extra、Type 3、Type 4 和保守 Type 5；Type 5 仅覆盖两个对角 extra cells 或三个 extra cells 的 common-seeing target 删除形态。完整唯一性边界见 [SE Uniqueness Matrix](./SE_UNIQUENESS_MATRIX.md)。
 
 ## 查看方式
 
@@ -106,8 +108,15 @@ node dist/src/cli/index.js techniques
 | `direct-claiming` | 直接声明 | `intersection` | 19 |
 | `direct-hidden-pair` | 直接隐性数对 | `subset` | 20 |
 | `direct-hidden-triplet` | 直接隐性三数组 | `subset` | 25 |
+| `almost-locked-quad` | 准锁定四数组 | `als` | 164 |
 | `aic-als` | ALS-AIC | `als` | 214 |
 | `big-wings` | BigWings | `als` | 179 |
+| `remote-pairs` | 远程数对 | `wing` | 167 |
+| `sashimi-x-wing` | 刺身 X-Wing | `fish` | 116 |
+| `finned-franken-swordfish` | 带鳍 Franken Swordfish | `fish` | 172 |
+| `finned-franken-jellyfish` | 带鳍 Franken Jellyfish | `fish` | 212 |
+| `larger-fish` | 大鱼 | `fish` | 230 |
+| `mutant-fish` | Mutant Fish | `fish` | 234 |
 | `bidirectional-x-cycle` | 双向 X-Cycle | `coloring` | 165 |
 | `bidirectional-y-cycle` | 双向 Y-Cycle | `chain` | 166 |
 | `forcing-x-chain` | 强制 X-Chain | `chain` | 176 |
@@ -116,8 +125,15 @@ node dist/src/cli/index.js techniques
 | `digit-forcing-chains` | 数字强制链 | `forcing` | 221 |
 | `cell-forcing-chains` | 单元格强制链 | `forcing` | 223 |
 | `unit-forcing-chains` | 区域强制链 | `forcing` | 224 |
+| `region-forcing-chains` | Region 强制链 | `forcing` | 224 |
 | `table-chain` | Table Chain | `forcing` | 226 |
+| `dynamic-forcing-chains` | 动态强制链 | `forcing` | 227 |
+| `dynamic-forcing-chains-plus` | 动态强制链+ | `forcing` | 238 |
+| `nested-forcing-chains` | 嵌套强制链 | `forcing` | 246 |
 | `bowmans-bingo` | Bowman's Bingo | `forcing` | 248 |
+| `bug-plus-two` | BUG+2 | `uniqueness` | 214 |
+| `bug-plus-n` | BUG+n | `uniqueness` | 218 |
+| `unique-loop` | 唯一环 | `uniqueness` | 202 |
 ## 技巧族
 
 `single` 表示直接确定某个格子的数字，例如满屋法、显性单数、隐性单数。
@@ -126,19 +142,21 @@ node dist/src/cli/index.js techniques
 
 `subset` 表示同一区域内的数组技巧，包括显性数组和隐性数组。
 
-`fish` 表示鱼类结构，目前稳定支持 X-Wing、Swordfish、Franken Swordfish、Jellyfish、带鳍鱼和刺身鱼。
+`fish` 表示鱼类结构，目前稳定支持 X-Wing、Swordfish、Franken Swordfish、Jellyfish、带鳍鱼和刺身鱼；`sashimi-x-wing` 当前作为 experimental 补齐 X-Wing 的缺角带鳍形态，`finned-franken-swordfish` / `finned-franken-jellyfish` 当前作为 experimental 覆盖 mixed line/box basis 加单 fin box 的保守形态，`larger-fish` 当前作为 experimental 保守覆盖 size 5/6/7 普通 fish，`mutant-fish` 当前作为 experimental 保守覆盖 size-3、base/cover sectors 各自互不重叠的 mixed-cover fish。
 
 当前 `franken-swordfish` 采用稳定保守口径：允许 line basis 与 box basis 混合，但每个 basis 候选格只能属于一个 basis。若某个候选格同时属于两个 basis，它会形成 endofin / overlap 场景，公开库暂不把它当作普通 Franken Swordfish 删除；这类复杂 mixed fish 后续应作为单独技巧补充。
 
 `wing` 表示翼类结构，目前稳定支持 XY-Wing、XYZ-Wing、WXYZ-Wing、W-Wing 和宫带远程数对。
 
-`als` 表示 Almost Locked Set 相关技巧，目前稳定支持准锁定数对、准锁定三数组、ALS-XZ、ALS-XY-Wing、Fireworks、双生 XY-Chains、Sue-de-Coq、Death Blossom 和对齐数对排除；`aic-als` 与 `big-wings` 现在保留为 experimental，供显式调用和回归。
+`als` 表示 Almost Locked Set 相关技巧，目前稳定支持准锁定数对、准锁定三数组、ALS-XZ、ALS-XY-Wing、Fireworks、双生 XY-Chains、Sue-de-Coq、Death Blossom 和对齐数对排除；`almost-locked-quad`、`aic-als` 与 `big-wings` 现在保留为 experimental，供显式调用和回归。
+
+`remote-pairs` 是标准远程数对：同一候选对的双值格形成奇数长度链时，异色端点的共同可见格可以删除这两个候选。它不同于 `chute-remote-pairs` 的宫带/yellow-cell 模型，当前保持 experimental，先通过显式 `allowedTechniques` 使用。
 
 当前 `aic-als` 仍在 experimental。它已经改为保守的 ALS/RCC chain 模型：ALS 节点之间只通过真正的 restricted common candidate 相连，中间 ALS 的入链和出链 RCC digit 必须不同，链端共享候选只会从同时看见两端 ALS 中该候选全部出现位置的格子删除。它仍不进入 stable 管线，后续需要更多真实题面回归后再考虑升级。
 
 `pattern` 表示更高阶的结构型模式，目前稳定支持 Exocet、Double Exocet、Pattern Overlay、Tridagons 和 SK Loops。
 
-`forcing` 表示显式分支、试探或多分支共同结论类技巧。当前 `nishio-forcing-chains` 已进入 stable；其余 forcing 技巧仍以 experimental 形式提供。其中 `table-chain` 可显式调用，但不会默认进入 `walkthrough()` 或 `rate()`，`classic-extended` 当前也仍只默认兜底 `bowmans-bingo`。`table-chain` 目前更接近一个安全的通用分支 reduction，和 SE 的原始 TableChain 仍不是逐步同构的完全移植。它可能非常慢，不建议默认用于批量评分或生成，更适合离线审计、人工研究或少量疑难题复核。
+`forcing` 表示显式分支、试探或多分支共同结论类技巧。当前 `nishio-forcing-chains` 已进入 stable；其余 forcing 技巧仍以 experimental 形式提供。其中 `table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `nested-forcing-chains` 可显式调用，但不会默认进入 `walkthrough()` 或 `rate()`，`classic-extended` 当前也仍只默认兜底 `bowmans-bingo`。`table-chain` 目前更接近一个安全的通用分支 reduction，和 SE 的原始 TableChain 仍不是逐步同构的完全移植；`dynamic-forcing-chains` / `dynamic-forcing-chains-plus` 是不同预算等级的动态分支入口；`nested-forcing-chains` 当前只做单候选 contradiction，并允许分支内再使用一层受控 forcing，尚不是完整 SE proof-tree 同构实现。`nested-forcing-chains` 比 galaxy fallback 更重，当前仅建议显式启用做离线审计。
 
 `coloring` 表示基于强链分色的技巧，目前稳定支持简单染色、扩展染色、多重染色和 3D Medusa。
 
@@ -146,7 +164,7 @@ node dist/src/cli/index.js techniques
 
 `single-digit-chain` 表示单数字链类结构，目前稳定支持分组 X-Cycles、摩天楼、涡轮鱼、双线风筝和空矩形。
 
-`uniqueness` 表示依赖唯一解假设的技巧，目前稳定支持唯一矩形、可避免矩形、矩形删减、扩展矩形、隐藏唯一矩形、UR-AIC 和 BUG+1。
+`uniqueness` 表示依赖唯一解假设的技巧，目前稳定支持唯一矩形、可避免矩形、矩形删减、扩展矩形、隐藏唯一矩形、UR-AIC 和 BUG+1；`unique-loop` 当前作为 experimental 保守覆盖 2x3 / 3x2 single-roof、2x3 / 3x2 shared-guardian 和最多 14 cell 的有界 generalized single-roof loop，`bug-plus-two` 作为 experimental 保守覆盖 common-extra elimination 和 bounded non-common parity-elimination 形态，`bug-plus-n` 作为 experimental 仅覆盖 3 个以上三值格共享同一 extra digit 且有共同可见 target 的保守删除形态。
 
 ## 分数说明
 
@@ -189,29 +207,33 @@ node dist/src/cli/index.js generator-analyze request.json
 3. `evidence.houses`：相关区域，可能为空数组。
 4. `evidence.cells`：相关格子，使用 `target`、`reason`、`pivot`、`link` 等角色。
 5. `evidence.links`：链式或染色技巧中的强链/弱链证据。
-6. `evidence.branches`：forcing / 试探类技巧的分支证据，记录每个分支的假设、是否矛盾、是否穷尽，以及分支内推出的动作摘要。
-7. `score`：当前评分规则下的单步分。
+6. `evidence.nodes`：可选 proof node；用于 grouped AIC、ALS/APE cell sets，以及 UR rectangle/floor/roof 等需要保留 cell-set 边界的证明结构。
+7. `evidence.pattern`：结构化 pattern family / subtype 标签，用于 SE 变体和 uniqueness subtype 审计。
+7. `evidence.branches`：forcing / 试探类技巧的分支证据，记录每个分支的假设、是否矛盾、是否穷尽，以及分支内推出的动作摘要。
+8. `score`：当前评分规则下的单步分。
 
 当前证据约定按技巧族说明如下。
 
 | 技巧族 | 适用技巧 | actions | evidence.houses | evidence.cells / links |
 | --- | --- | --- | --- | --- |
-| `single` | `full-house`、`naked-single`、`hidden-single` | `place` | 满屋法和隐性单数会标出相关 house；显性单数可能没有 house | `target` 表示落子的格子和数字 |
+| `single` | `full-house`、`naked-single`、`hidden-single` | `place` | 满屋法和隐性单数会标出相关 house；显性单数可能没有 house | `target` 表示落子的格子和数字；`full-house` / `hidden-single` 的 `pattern.subtype` 区分 `block`、`row`、`col` |
 | `intersection` | `locked-candidates` | `eliminate` | 标出发生锁定的宫、行或列 | `reason` 表示形成锁定的候选格；`target` 表示被删候选 |
 | `subset` | `naked-pair`、`hidden-pair`、`naked-triple`、`hidden-triple`、`naked-quad`、`hidden-quad` | `eliminate` | 标出数组所在 house | `reason` 表示数组格；`target` 表示被删候选 |
-| `fish` | `x-wing`、`swordfish`、`franken-swordfish`、`jellyfish`、带鳍鱼、刺身鱼 | `eliminate` | 标出 basis line、cover line；Franken Swordfish 会混合标出 line basis 和 box basis；带鳍/刺身鱼还会标出 fin 所在宫 | `reason` 表示鱼形结构候选格；`target` 表示被删候选 |
-| `wing` | `xy-wing`、`xyz-wing`、`w-wing`、`chute-remote-pairs` | `eliminate` | 当前为空数组或只标出强链 house | `reason` 表示 pivot、wing 或远程数对端点；`link` 表示第三宫 yellow cells；`target` 表示被删候选 |
-| `als` | `almost-locked-pair`、`almost-locked-triple`、`als-xz`、`als-xy-wing`、`aic-als`、`fireworks`、`twinned-xy-chains`、`sue-de-coq`、`death-blossom`、`aligned-pair-exclusion` | `eliminate` | 标出 ALS 所在 house、交叉区域或 ALS-AIC/Fireworks/双生 XY-Chains/Sue-de-Coq/Death Blossom/Aligned Pair Exclusion 相关区域 | `reason` 表示 ALS/AHS 格、Fireworks 三格、双生 XY-Chains 六格、Sue-de-Coq 交集与翼格、Death Blossom 的 pivot 与花瓣、对齐基础对或链端候选；`link` 表示交叉、限制公共候选或 ALS 单元；`target` 表示被删候选 |
-| `pattern` | `exocet`、`double-exocet`、`pattern-overlay`、`tridagons`、`sk-loops` | `place` 或 `eliminate` | 标出 base cells、target cells、模板支撑格、guardian 或 loop houses | `reason` 表示结构支撑格；`pivot` 表示 target cells 或模板结点；`target` 表示落子或被删候选 |
+| `fish` | `x-wing`、`swordfish`、`franken-swordfish`、`jellyfish`、`larger-fish`、`mutant-fish`、`sashimi-x-wing`、`finned-franken-swordfish`、`finned-franken-jellyfish`、带鳍鱼、刺身鱼 | `eliminate` | 标出 basis line、cover line；Franken / Mutant Fish 会混合标出 line / box basis 或 cover；带鳍/刺身鱼还会标出 fin 所在宫 | `reason` 表示鱼形结构候选格；`target` 表示被删候选；fish family 会写入 `{ family: "fish", subtype }` |
+| `wing` | `xy-wing`、`xyz-wing`、`wxyz-wing`、`w-wing`、`big-wings`、`chute-remote-pairs`、`remote-pairs` | `eliminate` | 标出 wing / ALS / 远程数对相关 houses；W-Wing 和 Remote Pairs 会额外标出链路 | `reason` 表示 pivot、wing、ALS stem 或远程数对端点；`link` 表示第三宫 yellow cells 或远程数对链路；`target` 表示被删候选；主要 wing 入口会写入 `{ family: "wing", subtype }` |
+| `als` | `almost-locked-pair`、`almost-locked-triple`、`almost-locked-quad`、`als-xz`、`als-xy-wing`、`aic-als`、`fireworks`、`twinned-xy-chains`、`sue-de-coq`、`death-blossom`、`aligned-pair-exclusion` | `eliminate` | 标出 ALS 所在 house、交叉区域或 ALS-AIC/Fireworks/双生 XY-Chains/Sue-de-Coq/Death Blossom/Aligned Pair Exclusion 相关区域 | `reason` 表示 ALS/AHS 格、Fireworks 三格、双生 XY-Chains 六格、Sue-de-Coq 交集与翼格、Death Blossom 的 pivot 与花瓣、对齐基础对或链端候选；`link` 表示交叉、限制公共候选或 ALS 单元；`nodes` 表示 ALS/AHS/petal/pattern cell set；`target` 表示被删候选；这些 ALS/APE 入口会写入 `{ family: "als", subtype }` |
+| `pattern` | `exocet`、`double-exocet`、`pattern-overlay`、`tridagons`、`sk-loops` | `place` 或 `eliminate` | 标出 base cells、target cells、模板支撑格、guardian 或 loop houses | `reason` 表示结构支撑格；`pivot` 表示 target cells、guardian 或模板结点；`target` 表示落子或被删候选；`nodes` 固定 Exocet base/target、template support、Tridagon box/guardian 和 SK loop node cell sets |
 | `coloring` | `simple-coloring`、`x-coloring`、`multi-colors`、`three-d-medusa` | `eliminate` | 标出强链所在 house | `reason` 表示染色链格子；`target` 表示被删候选；`links` 表示强链和跨组件弱链 |
-| `chain` | `x-chain`、`xy-chain`、`aic`、`aic-exotic`、`grouped-aic` | `eliminate` | 标出链经过的相关 house | `reason` 表示链上的格子；`target` 表示被删候选；`links` 表示链上的强弱关系 |
-| `forcing` | `forcing-nets`、`digit-forcing-chains`、`nishio-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain`、`bowmans-bingo` | `place` 或 `eliminate` | 标出分支来源或结论相关区域 | `reason` 表示分支起点；`target` 表示最终结论；`branches` 表示每条分支的假设、矛盾状态、穷尽状态和分支内动作摘要 |
+| `chain` | `x-chain`、`xy-chain`、`aic`、`aic-exotic`、`grouped-aic` | `eliminate` | 标出链经过的相关 house | `reason` 表示链上的格子；`target` 表示被删候选；`links` 表示链上的强弱关系；`grouped-aic` 会额外用 `nodes` 标出 grouped candidate node 的完整 cell set |
+| `forcing` | `forcing-nets`、`digit-forcing-chains`、`nishio-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`、`nested-forcing-chains`、`bowmans-bingo` | `place` 或 `eliminate` | 标出分支来源或结论相关区域 | `reason` 表示分支起点；`target` 表示最终结论；`branches` 表示每条分支的假设、矛盾状态、穷尽状态和分支内动作摘要 |
 | `single-digit-chain` | `grouped-x-cycles`、`skyscraper`、`turbot-fish`、`two-string-kite`、`empty-rectangle` | `eliminate` | 标出强链所在行列、相关宫或 cover line | `reason` 表示链结构候选格；`target` 表示被删候选 |
-| `uniqueness` | `unique-rectangle`、`avoidable-rectangle`、`rectangle-elimination`、`extended-rectangle`、`hidden-unique-rectangle`、`aic-ur`、`bug-plus-one` | `place` 或 `eliminate` | 标出矩形、强链或 BUG 相关区域 | `reason` 表示唯一性结构；`link` 表示 UR-AIC 中的链节点；`target` 表示落子或被删候选 |
+| `uniqueness` | `unique-rectangle`、`avoidable-rectangle`、`rectangle-elimination`、`extended-rectangle`、`unique-loop`、`hidden-unique-rectangle`、`aic-ur`、`bug-plus-one`、`bug-plus-two`、`bug-plus-n` | `place` 或 `eliminate` | 标出矩形、环、强链或 BUG 相关区域 | `reason` 表示唯一性结构；`link` 表示 UR-AIC 中的链节点；`nodes` 表示 UR rectangle/floor/roof、Unique Loop loop/base-pair/guardian/target 或 BUG base/extra cell sets；`target` 表示落子或被删候选；`pattern.family/subtype` 表示 UR、AR、Unique Loop、BUG 等 subtype |
 
 `evidence.note` 当前只用于调试和内部说明，不建议调用方直接展示。面向用户的文案应使用 `formatStep` 生成。
 
-`evidence.branches` 主要用于公开库调用方解释 forcing / 试探类技巧。`assumption` 是分支入口动作；`contradiction` 表示该分支是否导向矛盾；`contradictionAt` 在可定位时记录矛盾点，包括某格候选耗尽、某区域内数字重复、某区域内数字无处可放；`exhausted` 表示当前分支是否已经在步数上限内无法继续推出稳定步骤；`actions` 是分支内推导动作的有限摘要，不承诺包含完整证明树。除 `nishio-forcing-chains` 外，其他 forcing 技巧仍默认保持 `experimental`，调用方需要通过 `allowedTechniques` 显式启用。默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`；`table-chain` 不在默认 fallback 列表中，需要调用方显式放入 `preferredTechniques` 或 `fallbackTechniques`。
+`evidence.pattern` 是面向审计和兼容映射的轻量标签，不改变 public `TechniqueId`。例如 `full-house` / `hidden-single` 会用 subtype 区分 `block`、`row`、`col`；finned / sashimi / finned-franken / larger fish 会用 `{ family: "fish", subtype: techniqueId }` 固定鱼类变体；XY/XYZ/WXYZ/W-Wing、BigWings、Chute Remote Pairs 和 Remote Pairs 会用 `{ family: "wing", subtype }` 固定翼类变体；Almost Locked Pair/Triple/Quad、ALS-XZ/XY、AIC-ALS、Fireworks、Twinned XY-Chains、APE、Death Blossom 和 Sue-de-Coq 会用 `{ family: "als", subtype }` 固定 ALS/AHS/RCC 变体；Exocet、Double Exocet、Pattern Overlay、Tridagons 和 SK Loops 会用 `{ family: "pattern", subtype }` 固定当前 pattern proof boundary；`bidirectional-x-cycle`、`forcing-x-chain`、`forcing-chain` 和 `aic` 会标出当前命中的 chain / endpoint / loop subtype，其中 `aic` 已覆盖 same/different endpoint、conservative continuous loop、weak-weak discontinuous loop 与 strong-strong discontinuous loop；`xy-chain` 会用 subtype 区分 `open-chain` 和 `bidirectional-y-cycle` 命名入口；`unique-rectangle` 会用 subtype 区分 `type-1`、`type-2-shared-extra`、`type-3-naked-set`、`type-3-hidden-set`、`type-4` 和保守 `type-5`；`unique-loop` 当前使用 `2x3-or-3x2-single-roof`、`2x3-or-3x2-shared-guardian` 或 `generalized-single-roof` subtype；BUG+1 使用 `{ family: "bug", subtype: "bug-plus-one" }`，BUG+2 使用 `{ family: "bug", subtype: "bug-plus-two-common-extra" }` 或 `{ family: "bug", subtype: "bug-plus-two-parity-elimination" }`，BUG+n 当前使用 `{ family: "bug", subtype: "bug-plus-n-common-extra" }`。
+
+`evidence.branches` 主要用于公开库调用方解释 forcing / 试探类技巧。`assumption` 是分支入口动作；`contradiction` 表示该分支是否导向矛盾；`contradictionAt` 在可定位时记录矛盾点，包括某格候选耗尽、某区域内数字重复、某区域内数字无处可放；`exhausted` 表示当前分支已经在预算内无法继续推出稳定步骤；`steps` / `maxSteps` / `truncated` 分别记录分支实际应用的内部步骤数、预算上限和是否因预算上限截断；`stopReason` 标记分支停止原因，可能是 `contradiction`、`no-step`、`step-limit` 或 `replay-error`；`actions` 是分支内推导动作的有限摘要，不承诺包含完整证明树。除 `nishio-forcing-chains` 外，其他 forcing 技巧仍默认保持 `experimental`，调用方需要通过 `allowedTechniques` 显式启用。默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`；`table-chain` 和 `nested-forcing-chains` 不在默认 fallback 列表中，需要调用方显式放入 `preferredTechniques` 或 `fallbackTechniques`。
 
 ## 样例覆盖
 

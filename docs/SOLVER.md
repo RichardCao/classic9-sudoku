@@ -89,7 +89,7 @@ interface SolveStep {
 3. `preferredTechniques` 会把指定技巧按数组顺序提前。
 4. 如果希望直接复用内置 profile，可以先通过 `getRatingPolicy()` 取到 `classic-stable`、`classic-extended` 或 `classic-galaxy`，再用 `buildSolveOptionsFromRatingPolicy()` 转成 `walkthrough()` / `nextStep()` 可用的求解选项。
 5. `nishio-forcing-chains` 已经进入 stable，会按正常由易到难顺序参与默认求解。其余 forcing / 试探类技巧仍为 experimental，需要调用方显式启用。
-6. 内置默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`。这些技巧即使出现在 `allowedTechniques` 中，也只会在当前状态 primary 技巧全部无命中时才尝试；`table-chain` 不在默认 fallback 列表中，需要显式放进 `preferredTechniques` 或 `fallbackTechniques`。
+6. 内置默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`。这些技巧即使出现在 `allowedTechniques` 中，也只会在当前状态 primary 技巧全部无命中时才尝试；`table-chain` 和 `nested-forcing-chains` 不在默认 fallback 列表中，需要显式放进 `preferredTechniques` 或 `fallbackTechniques`。
 7. 若调用方要显式提前某个 forcing 技巧，需要把它放进 `preferredTechniques`。
 8. 每个技巧最多返回一条步骤。
 9. `sort: 'pipeline'` 按实际技巧管线顺序返回，是默认值。
@@ -110,7 +110,7 @@ interface SolveStep {
 | 显式传 `allowedTechniques`，且未传 `fallbackTechniques` | 允许技巧中不属于默认 fallback 列表的技巧 | 允许技巧中属于默认 fallback 列表的技巧 |
 | `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-stable'))` | stable 技巧 | 空 |
 | `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-extended'))` | stable 技巧 | `bowmans-bingo` |
-| `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-galaxy'))` | 全部非重型技巧 | `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain`、`bowmans-bingo` |
+| `buildSolveOptionsFromRatingPolicy(getRatingPolicy('classic-galaxy'))` | 全部非重型技巧 | `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`、`bowmans-bingo` |
 
 默认 fallback 列表用于显式 `allowedTechniques` 场景，不等于 `classic-extended` 会启用全部 forcing 技巧。`classic-extended.v1` 的增强来自 fallback 中的 `bowmans-bingo`，主顺序仍是 stable 顺序。
 

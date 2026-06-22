@@ -11,9 +11,21 @@
 1. 81 位字符串。
 2. 字符串中 `0` 表示空格。
 3. 字符串中 `.` 表示空格。
-4. 81 长度数字数组。
+4. 字符串中 `-` 表示空格，作为兼容输入。
+5. 81 长度数字数组。
 
 `serializeBoard(board)` 用于把棋盘数组转回字符串。
+
+## 输入适配器
+
+核心算法使用 flat 81-cell `Board`。如果调用方来自使用二维数组或 `null` 空格的包，可以在应用边界使用适配器：
+
+1. `fromMatrix(matrix)`：把 `number[9][9]` 转成 flat board。
+2. `toMatrix(board)`：把 flat board 转成 `number[9][9]`。
+3. `fromNullableBoard(cells)`：把 81 长度 `(number | null)[]` 转成 flat board，`null` 视为空格。
+4. `toNullableBoard(board)`：把 flat board 转成 81 长度 `(number | null)[]`，空格输出为 `null`。
+
+这些 helper 只做形状和值域转换，不做 Sudoku 合法性判断；合法性仍使用 `validate()`。
 
 ## 状态标准化
 
@@ -33,7 +45,7 @@
 
 `validate().invalidValueIndexes` 会包含数字数组中的非法值位置，也会包含 81 位字符串中非法字符的位置。字符串非法字符仍会在内部按空格参与后续统计，并在 `contradictions` 中保留原始错误说明。
 
-`checkUniqueness(input)` 用于判断题目是无解、唯一解还是多解。
+`checkUniqueness(input, options)` 用于判断题目是无解、唯一解还是多解。它会返回 `status`、`solutionCount`、`firstSolution`、`uniqueSolution`、`multipleSolutions` 和 `diagnostics`。如果传入 `maxElapsedMs` 并触发预算，`status` 会是 `aborted`，同时 `aborted` / `exhausted` 为 `true`。`searchDiagnostics` 提供 `elapsedMs`、`nodesVisited` 和 `maxElapsedMs`，便于服务端或浏览器调用方区分“确定结果”和“预算内未知”。`solutionCountLowerBound` 是当前已找到解数的下界，最多为 2。
 
 ## 等价变换
 
@@ -50,6 +62,8 @@
 `applyTransformToStep(step, transform)` 同步变换步骤动作和证据中的格子、数字、区域引用。
 
 ## 求解
+
+`hint(input, options)` 返回一个面向应用的轻量提示结果。它委托 `nextStep()` 寻找步骤，命中时保留原始 `SolveStep`、动作和技巧 id；如果传入 `format: true` 或 `format: { locale, style }`，会用 `formatStep()` 生成展示文本。它不会修改输入状态。
 
 `nextStep(input, options)` 返回下一步结构化解法。
 
@@ -102,9 +116,9 @@ const step = nextStep(puzzle, {
 
 `nishio-forcing-chains` 已经进入 stable，因此默认可以参与 `classic-stable.v1`。其余 forcing / 试探类技巧仍为 experimental，必须通过 `allowedTechniques`、内置 profile 或显式 fallback 设置启用。
 
-为避免旧式调用方把 forcing / 试探类技巧误当成常规技巧每步扫描，公开库内置的默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`。也就是说：这些技巧即使出现在 `allowedTechniques` 中，也只会在当前状态没有任何 primary 技巧命中时才尝试。`table-chain` 不在默认 fallback 列表中；调用方如果需要它，应显式放入 `preferredTechniques` 或 `fallbackTechniques`。若调用方确实希望某个 forcing 技巧优先命中，可以把它放入 `preferredTechniques`。但对默认 `classic-extended.v1` 来说，fallback 目前仍只包含 `bowmans-bingo`，不是完整 experimental profile。
+为避免旧式调用方把 forcing / 试探类技巧误当成常规技巧每步扫描，公开库内置的默认 fallback 列表只包含 `bowmans-bingo`、`forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus`。也就是说：这些技巧即使出现在 `allowedTechniques` 中，也只会在当前状态没有任何 primary 技巧命中时才尝试。`table-chain` 和 `nested-forcing-chains` 不在默认 fallback 列表中；调用方如果需要它们，应显式放入 `preferredTechniques` 或 `fallbackTechniques`。若调用方确实希望某个 forcing 技巧优先命中，可以把它放入 `preferredTechniques`。但对默认 `classic-extended.v1` 来说，fallback 目前仍只包含 `bowmans-bingo`，不是完整 experimental profile。
 
-`table-chain` 可能非常慢，不建议默认用于批量评分或生成。它更适合离线审计、人工研究或针对少量题面的复核场景。
+`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `nested-forcing-chains` 可能非常慢，不建议默认用于批量评分或生成。它们更适合离线审计、人工研究或针对少量题面的复核场景。
 
 如果多个技巧在同一候选态上都能命中，而调用方希望某些技巧优先返回，可以使用 `preferredTechniques`：
 
@@ -129,6 +143,8 @@ const step = nextStep(puzzle, {
 
 `rate(input, policy)` 按指定评分规则重新计算分数。
 
+`summarizeAnalysis(analysis)` 和 `summarizeRating(result)` 会把完整求解或评分结果压缩为应用常用字段，包括 `solved`、`score`、`grade`、`hardestTechnique`、`stepCount`、`actionCount`、`placementCount`、`eliminationCount`、`techniqueCounts`、`stuckReason` 和评分策略版本信息。它们不替代原始结果，只是方便列表、卡片和 API 响应使用。
+
 自定义 `policy` 会被严格校验；未知技巧、缺失已启用技巧分值、非法分档范围等会抛错。可以先用 `validateRatingPolicy(policy)` 做配置检查。
 
 评分结果必须带：
@@ -137,6 +153,23 @@ const step = nextStep(puzzle, {
 2. `ratingPolicyVersion`
 
 分数不是题目的客观属性，而是某套评分规则下的结果。
+
+## API 选择表
+
+| 目标 | 推荐 API |
+| --- | --- |
+| 解析题面 | `parsePuzzle` / `tryParsePuzzle` |
+| 转换二维数组或 nullable board | `fromMatrix` / `toMatrix` / `fromNullableBoard` / `toNullableBoard` |
+| 校验格式和冲突 | `validate` |
+| 检查唯一解 | `checkUniqueness` |
+| 获取一个人类逻辑提示 | `hint`，高级场景用 `nextStep` |
+| 找出当前候选态的多个可用步骤 | `findSteps` |
+| 获取完整人类逻辑过程 | `walkthrough` / `analyzeSolve` |
+| 压缩求解结果 | `summarizeAnalysis` |
+| 评分和难度摘要 | `rate` + `summarizeRating` |
+| 生成题目 | `generateOne` |
+| 批量搜索候选池 | `search` |
+| canonical 去重 | `canonicalizeBoard` |
 
 ## 批量 CLI
 

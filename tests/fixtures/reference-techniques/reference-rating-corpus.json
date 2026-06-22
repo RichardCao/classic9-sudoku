@@ -1,0 +1,1362 @@
+{
+  "corpusId": "reference-rating-corpus.v1",
+  "corpusKind": "reference-rating",
+  "note": "Small real-board reference rating corpus. These rows use normal puzzle strings and known solutions; rows with targetFirstTechniques are audited with those techniques temporarily prioritized and remain separate from artificial candidate-state smoke fixtures.",
+  "rows": [
+    {
+      "id": "se-1.0-full-house",
+      "externalBucket": "SE 1.0 Last value",
+      "profile": "classic-stable",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419635345286170",
+      "solution": "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "full-house",
+        "score": 10,
+        "stepCount": 1,
+        "techniqueCountsAtLeast": {
+          "full-house": 1
+        }
+      }
+    },
+    {
+      "id": "classic-basic-singles",
+      "externalBucket": "Classic basic singles baseline",
+      "profile": "classic-stable",
+      "puzzle": "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+      "solution": "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "naked-single",
+        "scoreMin": 800,
+        "scoreMax": 820,
+        "stepCount": 51,
+        "techniqueCountsAtLeast": {
+          "naked-single": 30,
+          "full-house": 21
+        }
+      }
+    },
+    {
+      "id": "classic-basic-naked-single-transition",
+      "externalBucket": "Classic basic naked single transition",
+      "profile": "classic-stable",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "solution": "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "naked-single",
+        "score": 50,
+        "stepCount": 4,
+        "techniqueCountsAtLeast": {
+          "naked-single": 1,
+          "full-house": 3
+        }
+      }
+    },
+    {
+      "id": "classic-stable-grouped-aic-path",
+      "externalBucket": "Classic stable grouped AIC real-board path",
+      "profile": "classic-stable",
+      "puzzle": "000001002001000030020040050002030100060170080100092003080400000300000900500080006",
+      "solution": "634751892751928634928346751892634175463175289175892463289463517346517928517289346",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "nishio-forcing-chains",
+        "score": 4676,
+        "stepCount": 76,
+        "techniqueCountsAtLeast": {
+          "grouped-aic": 8,
+          "nishio-forcing-chains": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-forcing-chain-path",
+      "externalBucket": "Classic galaxy forcing-chain real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001020003450000600600500000000000070200080009006400300005100400020070008000009000",
+      "solution": "791624853458937621632518794849253176213786549576491382985162437124375968367849215",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "aic-als",
+        "score": 6063,
+        "stepCount": 97,
+        "techniqueCountsAtLeast": {
+          "forcing-chain": 4,
+          "aic-als": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-avoidable-rectangle-path",
+      "externalBucket": "Classic galaxy avoidable rectangle real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "006000400000050070070100030800079006060301050700620004090007020030060000008000900",
+      "solution": "126793485389456172475182639843579216962341758751628394694817523237965841518234967",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 1984,
+        "stepCount": 61,
+        "techniqueCountsAtLeast": {
+          "avoidable-rectangle": 3
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-w-wing-path",
+      "externalBucket": "Classic galaxy W-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "302004605005326407604590032030400050007000904040001023000040509400805200000000348",
+      "solution": "372184695915326487684597132231479856567238914849651723128743569493865271756912348",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 2480,
+        "stepCount": 60,
+        "techniqueCountsAtLeast": {
+          "avoidable-rectangle": 2,
+          "w-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-stable-xy-wing-path",
+      "externalBucket": "Classic stable XY-Wing real-board path",
+      "profile": "classic-stable",
+      "puzzle": "001020003000300140350040607600805470000030000095104006203010064067003000500060300",
+      "solution": "941726853726358149358941627632895471174632598895174236283519764467283915519467382",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "xy-wing",
+        "score": 895,
+        "stepCount": 49,
+        "techniqueCountsAtLeast": {
+          "xy-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-sashimi-x-wing-path",
+      "externalBucket": "Classic galaxy sashimi X-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000123405425600103301045620732510046006432500054006312503284760200361050008957230",
+      "solution": "679123485425698173381745629732519846816432597954876312593284761247361958168957234",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "sashimi-x-wing",
+        "score": 842,
+        "stepCount": 34,
+        "techniqueCountsAtLeast": {
+          "sashimi-x-wing": 2
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-als-xz-path",
+      "externalBucket": "Classic galaxy ALS-XZ real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000100000230040000050067001000008060670031040580600000003000970000000200090300800",
+      "solution": "967123485231845697458967321312458769679231548584679132123584976845796213796312854",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "als-xz",
+        "score": 2378,
+        "stepCount": 67,
+        "techniqueCountsAtLeast": {
+          "als-xz": 2
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-als-xy-wing-path",
+      "externalBucket": "Classic galaxy ALS-XY-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "100002003040005610007000000000000100385000040000060530000028000023907460000410000",
+      "solution": "196842753248735619537691824462583197385179246971264538614328975823957461759416382",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "nishio-forcing-chains",
+        "score": 2802,
+        "stepCount": 67,
+        "techniqueCountsAtLeast": {
+          "als-xy-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-aic-als-path",
+      "externalBucket": "Classic galaxy AIC-ALS real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "100020030400000500020006000700850040008040700030097002000700080007000004080060001",
+      "solution": "179528436463971528825436197791852643258643719634197852346719285917285364582364971",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "aic-als",
+        "score": 5974,
+        "stepCount": 88,
+        "techniqueCountsAtLeast": {
+          "aic-als": 2
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-finned-x-wing-path",
+      "externalBucket": "Classic galaxy finned X-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000001002300405610760800000008000060009716200070000500000003059045107003800500000",
+      "solution": "594671382382495617761832945238954761459716238176328594617283459945167823823549176",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-x-wing",
+        "score": 1000,
+        "stepCount": 53,
+        "techniqueCountsAtLeast": {
+          "finned-x-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-almost-locked-pair-path",
+      "externalBucket": "Classic galaxy almost locked pair real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000001002034000003560004005007000070000130800009040100000070209000600530800000",
+      "solution": "458972361692134758713568924325417896974685132861329547186293475249751683537846219",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "almost-locked-pair",
+        "score": 1156,
+        "stepCount": 58,
+        "techniqueCountsAtLeast": {
+          "almost-locked-pair": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-finned-franken-jellyfish-path",
+      "externalBucket": "Classic galaxy finned franken jellyfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001002003240005000063000420000657800300000000000000204000504060008019705000000100",
+      "solution": "891742653247365981563198427124657839389421576756983214912574368638219745475836192",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-jellyfish",
+        "score": 2593,
+        "stepCount": 70,
+        "techniqueCountsAtLeast": {
+          "finned-franken-jellyfish": 1,
+          "big-wings": 1,
+          "wxyz-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-finned-swordfish-path",
+      "externalBucket": "Classic galaxy finned swordfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001002304500000060074006000003008000045030280000700600000800450090000007402100800",
+      "solution": "961582374528347961374916528613298745745631289289754613137869452896425137452173896",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-swordfish",
+        "score": 1250,
+        "stepCount": 57,
+        "techniqueCountsAtLeast": {
+          "finned-swordfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-finned-franken-swordfish-path",
+      "externalBucket": "Classic galaxy finned franken swordfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "012000345600500100400002070000280007000090000700003000020700003006005201034000060",
+      "solution": "812976345697534128453812976345281697281697534769453812128769453976345281534128769",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-swordfish",
+        "score": 1504,
+        "stepCount": 58,
+        "techniqueCountsAtLeast": {
+          "finned-franken-swordfish": 2
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-sashimi-swordfish-path",
+      "externalBucket": "Classic galaxy sashimi swordfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000100200300020400000506001006007054000000000540800300800300000007050000001004006",
+      "solution": "654183297318729465972546831186237954723495618549861372865312749497658123231974586",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-jellyfish",
+        "score": 2578,
+        "stepCount": 69,
+        "techniqueCountsAtLeast": {
+          "sashimi-swordfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-chute-remote-pairs-path",
+      "externalBucket": "Classic galaxy chute remote pairs real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "100002300400500006000030007086090000000057620000206004008049500070020000904000000",
+      "solution": "157862349493571286862934157286493715349157628715286934628349571571628493934715862",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 1846,
+        "stepCount": 63,
+        "techniqueCountsAtLeast": {
+          "chute-remote-pairs": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-xyz-wing-path",
+      "externalBucket": "Classic galaxy XYZ-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000010000020000304400000050060700003040026500500103006206807000100009080058000200",
+      "solution": "875314692629578314413692857962785143341926578587143926296857431134269785758431269",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "xyz-wing",
+        "score": 1691,
+        "stepCount": 63,
+        "techniqueCountsAtLeast": {
+          "xyz-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-almost-locked-triple-path",
+      "externalBucket": "Classic galaxy almost locked triple real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "100200003304050000060000000570800000020903010003001026000000080000020904200009701",
+      "solution": "157286493394157268862394175571862349628943517943571826439715682715628934286439751",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "big-wings",
+        "score": 3091,
+        "stepCount": 71,
+        "techniqueCountsAtLeast": {
+          "almost-locked-triple": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-almost-locked-quad-path",
+      "externalBucket": "Classic galaxy almost locked quad real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000500000090010008400003600100070320040206080083040007008300001500020030000004000",
+      "solution": "812567493396412578457893612165978324749236185283145967628359741574621839931784256",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "wxyz-wing",
+        "score": 1868,
+        "stepCount": 65,
+        "techniqueCountsAtLeast": {
+          "almost-locked-quad": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-death-blossom-path",
+      "externalBucket": "Classic galaxy Death Blossom real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "700000400020070080003008009000500300060020090001007006000300900030040060009001005",
+      "solution": "798635421126974583453218679972586314564123897381497256617352948835749162249861735",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "nishio-forcing-chains",
+        "score": 4704,
+        "stepCount": 82,
+        "techniqueCountsAtLeast": {
+          "death-blossom": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-rectangle-elimination-path",
+      "externalBucket": "Classic galaxy rectangle-elimination real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000001230000420500000000016420000670600000003003000021380000000005014300047200000",
+      "solution": "598671234716423598234859716421385679679142853853967421382596147965714382147238965",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "aic-als",
+        "score": 3593,
+        "stepCount": 70,
+        "techniqueCountsAtLeast": {
+          "rectangle-elimination": 2
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-aic-ur-path",
+      "externalBucket": "Classic galaxy AIC-UR real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000000001002034020053006000070000004010002700300018050800209200000000608007040",
+      "solution": "345186927861792534927453186186279453534618792792345618453861279279534861618927345",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "nishio-forcing-chains",
+        "score": 6864,
+        "stepCount": 96,
+        "techniqueCountsAtLeast": {
+          "aic-ur": 1
+        }
+      }
+    },
+    {
+      "id": "classic-stable-avoidable-rectangle-path",
+      "externalBucket": "Classic stable avoidable rectangle real-board path",
+      "profile": "classic-stable",
+      "puzzle": "906020001502961340104500296790602000048000000020000009410206085259178634860000000",
+      "solution": "986324751572961348134587296795642813348719562621853479417236985259178634863495127",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 1452,
+        "stepCount": 45,
+        "techniqueCountsAtLeast": {
+          "avoidable-rectangle": 3
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-swordfish-path",
+      "externalBucket": "Classic galaxy Swordfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "100000023400205067000700000000804002004000300200000805970508010000000000000670900",
+      "solution": "167489523489235167325761489731854692854926371296317845973548216642193758518672934",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "swordfish",
+        "score": 1340,
+        "stepCount": 59,
+        "techniqueCountsAtLeast": {
+          "swordfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-franken-swordfish-path",
+      "externalBucket": "Classic galaxy Franken Swordfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "120003405500000300060750000700025000031000580000360007000046050007000004406500013",
+      "solution": "128693475574218369963754821749825136631479582285361947312946758857132694496587213",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "franken-swordfish",
+        "score": 1839,
+        "stepCount": 59,
+        "techniqueCountsAtLeast": {
+          "franken-swordfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-jellyfish-path",
+      "externalBucket": "Classic galaxy Jellyfish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001000020230400105060000000700040080400000050695700402009030000306100549000060070",
+      "solution": "951673824237489165864251793723546981418392657695718432579834216386127549142965378",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "jellyfish",
+        "score": 2789,
+        "stepCount": 70,
+        "techniqueCountsAtLeast": {
+          "jellyfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-stable-finned-jellyfish-path",
+      "externalBucket": "Classic stable Finned Jellyfish real-board path",
+      "profile": "classic-stable",
+      "puzzle": "100234560200561700653879421020086104060010280081002376006120800012098600830607912",
+      "solution": "179234568248561793653879421327986154564713289981452376496125837712398645835647912",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-jellyfish",
+        "score": 1095,
+        "stepCount": 35,
+        "techniqueCountsAtLeast": {
+          "finned-jellyfish": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-hidden-single-x-wing-path",
+      "externalBucket": "Classic galaxy hidden single and X-Wing real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001002340534000002060400700180700500000080000007004031008006050600000987015800400",
+      "solution": "871962345534178692269435718183729564456381279927654831798246153642513987315897426",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "x-wing",
+        "score": 970,
+        "stepCount": 51,
+        "techniqueCountsAtLeast": {
+          "hidden-single": 8,
+          "x-wing": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-locked-candidates-path",
+      "externalBucket": "Classic galaxy locked candidates real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000012000200304015003060370021800000040000008370029050800290807002000690000000",
+      "solution": "483769512769215384215483967376921845921548673548376129154837296837692451692154738",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "locked-candidates",
+        "score": 950,
+        "stepCount": 53,
+        "techniqueCountsAtLeast": {
+          "hidden-single": 7,
+          "locked-candidates": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-naked-hidden-pair-path",
+      "externalBucket": "Classic galaxy naked and hidden pair real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000000010023400056701020040007050005000800070200010000308540024170090000000000",
+      "solution": "932465781718923465456781923641837259295614837873259614167398542524176398389542176",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 3689,
+        "stepCount": 81,
+        "techniqueCountsAtLeast": {
+          "naked-pair": 4,
+          "hidden-pair": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-hidden-pair-naked-triple-path",
+      "externalBucket": "Classic galaxy hidden pair and naked triple real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000000001023045260407100000004080004030007009200001030040500070100800900008000",
+      "solution": "547981362891623745263457198726514983154839627389276451638742519472195836915368274",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "als-xz",
+        "score": 3589,
+        "stepCount": 76,
+        "techniqueCountsAtLeast": {
+          "hidden-pair": 1,
+          "naked-triple": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-hidden-triple-path",
+      "externalBucket": "Classic galaxy hidden triple real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000010000002003405306720000700000849000000000294000007000098102801200300000030000",
+      "solution": "589614723172983465346725918715362849638479251294851637463598172851247396927136584",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 1902,
+        "stepCount": 67,
+        "techniqueCountsAtLeast": {
+          "hidden-triple": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-naked-quad-path",
+      "externalBucket": "Classic galaxy naked quad real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000001000020030045360700000000000010004208600010000000900004082700000030002690004",
+      "solution": "457821369821936745369745821693457218574218693218369457936574182745182936182693574",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-swordfish",
+        "score": 2233,
+        "stepCount": 69,
+        "techniqueCountsAtLeast": {
+          "naked-quad": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-hidden-quad-path",
+      "externalBucket": "Classic galaxy hidden quad real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001000200300000004050000607006008090040902000005601000000470801800120409000000000",
+      "solution": "671894253328567914459213687236748195147952368985631742592476831863125479714389526",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "hidden-quad",
+        "score": 1295,
+        "stepCount": 60,
+        "techniqueCountsAtLeast": {
+          "hidden-quad": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-x-coloring-path",
+      "externalBucket": "Classic galaxy X-Coloring real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "001023040200004100050600002002005000600000007000100300700006080008500009090230500",
+      "solution": "961823745283754196457691832832475961619382457574169328745916283328547619196238574",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "als-xy-wing",
+        "score": 4182,
+        "stepCount": 77,
+        "techniqueCountsAtLeast": {
+          "x-coloring": 1
+        }
+      }
+    },
+    {
+      "id": "classic-galaxy-mutant-fish-path",
+      "externalBucket": "Classic galaxy Mutant Fish real-board path",
+      "profile": "classic-galaxy",
+      "puzzle": "000000010000203040005060020720800600001000580004000072070040100050106000060007000",
+      "solution": "237485916916273845845961723723854691691732584584619372372548169458196237169327458",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "mutant-fish",
+        "score": 2339,
+        "stepCount": 64,
+        "techniqueCountsAtLeast": {
+          "mutant-fish": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-direct-epic-099",
+      "externalBucket": "Target-first direct techniques real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "direct-pointing",
+        "direct-claiming",
+        "direct-hidden-pair",
+        "direct-hidden-triplet"
+      ],
+      "puzzle": "100020034000050061540076002800040006400000200070900000000000040000060800908500000",
+      "solution": "167829534289453761543176982892345176435617298671982453716298345354761829928534617",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "avoidable-rectangle",
+        "score": 1878,
+        "stepCount": 63,
+        "techniqueCountsAtLeast": {
+          "direct-pointing": 1,
+          "direct-claiming": 1,
+          "direct-hidden-pair": 24,
+          "direct-hidden-triplet": 2
+        }
+      }
+    },
+    {
+      "id": "target-first-ur-chain-epic-097",
+      "externalBucket": "Target-first UR and chain real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "unique-rectangle",
+        "hidden-unique-rectangle",
+        "extended-rectangle",
+        "bug-plus-one",
+        "bug-plus-two",
+        "unique-loop",
+        "remote-pairs",
+        "bidirectional-x-cycle",
+        "bidirectional-y-cycle",
+        "forcing-x-chain",
+        "skyscraper",
+        "two-string-kite",
+        "turbot-fish",
+        "empty-rectangle"
+      ],
+      "puzzle": "000000000010023400056701020040007050005000800070200010000308540024170090000000000",
+      "solution": "932465781718923465456781923641837259295614837873259614167398542524176398389542176",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "hidden-unique-rectangle",
+        "score": 9478,
+        "stepCount": 109,
+        "techniqueCountsAtLeast": {
+          "unique-rectangle": 2,
+          "hidden-unique-rectangle": 1,
+          "bidirectional-x-cycle": 26,
+          "bidirectional-y-cycle": 9,
+          "skyscraper": 1,
+          "turbot-fish": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-remote-empty-epic-095",
+      "externalBucket": "Target-first remote pairs and empty rectangle real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "unique-rectangle",
+        "hidden-unique-rectangle",
+        "extended-rectangle",
+        "bug-plus-one",
+        "bug-plus-two",
+        "unique-loop",
+        "remote-pairs",
+        "bidirectional-x-cycle",
+        "bidirectional-y-cycle",
+        "forcing-x-chain",
+        "skyscraper",
+        "two-string-kite",
+        "turbot-fish",
+        "empty-rectangle"
+      ],
+      "puzzle": "100002340050067000000300007280000030000010500040000018800009000000600070035800009",
+      "solution": "176982345354167982928345167281594736763218594549736218817429653492653871635871429",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "hidden-unique-rectangle",
+        "score": 7614,
+        "stepCount": 95,
+        "techniqueCountsAtLeast": {
+          "hidden-unique-rectangle": 3,
+          "remote-pairs": 1,
+          "bidirectional-x-cycle": 22,
+          "bidirectional-y-cycle": 6,
+          "turbot-fish": 2,
+          "empty-rectangle": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-als-pattern-fish-epic-085",
+      "externalBucket": "Target-first ALS pattern fish real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "aligned-pair-exclusion",
+        "fireworks",
+        "sue-de-coq",
+        "twinned-xy-chains",
+        "double-exocet",
+        "exocet",
+        "pattern-overlay",
+        "sk-loops",
+        "tridagons",
+        "sashimi-jellyfish",
+        "larger-fish"
+      ],
+      "puzzle": "001020003420000560070000000300600020040007050050208090200370000005402000000010800",
+      "solution": "561824973428793561973165284397651428842937156156248397284379615615482739739516842",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "larger-fish",
+        "score": 13630,
+        "stepCount": 110,
+        "techniqueCountsAtLeast": {
+          "aligned-pair-exclusion": 36,
+          "sue-de-coq": 2,
+          "pattern-overlay": 10,
+          "sashimi-jellyfish": 5,
+          "larger-fish": 5
+        }
+      }
+    },
+    {
+      "id": "target-first-bug-plus-two-epic-092",
+      "externalBucket": "Target-first BUG+2 real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "extended-rectangle",
+        "bug-plus-one",
+        "bug-plus-two",
+        "bug-plus-n",
+        "unique-loop"
+      ],
+      "puzzle": "100200000203045060005000070000010026004320000000080900700000001090031002000700490",
+      "solution": "169273845273845169845169273587914326914326587326587914752498631498631752631752498",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "bug-plus-two",
+        "score": 2686,
+        "stepCount": 71,
+        "techniqueCountsAtLeast": {
+          "bug-plus-two": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-bug-plus-n-external-bug3-001",
+      "externalBucket": "Target-first BUG+n real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "bug-plus-n",
+        "bug-plus-two",
+        "bug-plus-one",
+        "unique-loop",
+        "extended-rectangle"
+      ],
+      "puzzle": "000030100000908000000700286750080000180600054000000060043005008000103000007090000",
+      "solution": "865432179271968543394751286756384921189627354432519867943275618628143795517896432",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "bug-plus-n",
+        "score": 1308,
+        "stepCount": 59,
+        "techniqueCountsAtLeast": {
+          "bug-plus-n": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-bug-plus-one-epic-031",
+      "externalBucket": "Target-first BUG+1 real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "extended-rectangle",
+        "bug-plus-one",
+        "bug-plus-two",
+        "bug-plus-n",
+        "unique-loop"
+      ],
+      "puzzle": "000000000010230045400106000704500020060000010050003800000307051830451060000000000",
+      "solution": "328745196916238745475196238784519623263874519159623874692387451837451962541962387",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-jellyfish",
+        "score": 2760,
+        "stepCount": 70,
+        "techniqueCountsAtLeast": {
+          "bug-plus-one": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-unique-loop-epic-024",
+      "externalBucket": "Target-first Unique Loop real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "unique-loop",
+        "bug-plus-one",
+        "bug-plus-two",
+        "bug-plus-n",
+        "extended-rectangle"
+      ],
+      "puzzle": "100230040050000006700008000004800200630000014000001000000700001500000820060080007",
+      "solution": "186235749352974186749618352914863275638527914275491638823759461597146823461382597",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "unique-loop",
+        "score": 2771,
+        "stepCount": 73,
+        "techniqueCountsAtLeast": {
+          "unique-loop": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-constructed-extended-rectangle-epic-024",
+      "externalBucket": "Target-first constructed Extended Rectangle real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "extended-rectangle"
+      ],
+      "puzzle": "100230040050000006700008000004800200630000014000001000000700001500000820060080007",
+      "solution": "186235749352974186749618352914863275638527914275491638823759461597146823461382597",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "extended-rectangle",
+        "score": 2767,
+        "stepCount": 73,
+        "techniqueCountsAtLeast": {
+          "extended-rectangle": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-forcing-epic-095",
+      "externalBucket": "Target-first forcing real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "bowmans-bingo",
+        "cell-forcing-chains",
+        "digit-forcing-chains",
+        "dynamic-forcing-chains",
+        "dynamic-forcing-chains-plus",
+        "forcing-nets",
+        "nested-forcing-chains",
+        "region-forcing-chains",
+        "table-chain",
+        "unit-forcing-chains"
+      ],
+      "puzzle": "100002340050067000000300007280000030000010500040000018800009000000600070035800009",
+      "solution": "176982345354167982928345167281594736763218594549736218817429653492653871635871429",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "bowmans-bingo",
+        "score": 37995,
+        "stepCount": 206,
+        "techniqueCountsAtLeast": {
+          "bowmans-bingo": 144,
+          "dynamic-forcing-chains": 5,
+          "dynamic-forcing-chains-plus": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-aic-grouped-x-cycles-epic-088",
+      "externalBucket": "Target-first AIC and grouped X-cycles real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "aic",
+        "aic-exotic",
+        "x-chain",
+        "xy-chain",
+        "multi-colors",
+        "simple-coloring",
+        "three-d-medusa",
+        "grouped-x-cycles",
+        "two-string-kite",
+        "forcing-x-chain"
+      ],
+      "puzzle": "000000000100200340045030000000627500010000068000000000000000829094700030008500000",
+      "solution": "832974651169258347745136982983627514417395268256841793571463829694782135328519476",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "finned-franken-jellyfish",
+        "score": 23797,
+        "stepCount": 170,
+        "techniqueCountsAtLeast": {
+          "aic": 107,
+          "grouped-x-cycles": 3
+        }
+      }
+    },
+    {
+      "id": "target-first-two-string-kite-epic-092",
+      "externalBucket": "Target-first two-string kite real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "two-string-kite"
+      ],
+      "puzzle": "100200000203045060005000070000010026004320000000080900700000001090031002000700490",
+      "solution": "169273845273845169845169273587914326914326587326587914752498631498631752631752498",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "two-string-kite",
+        "score": 2907,
+        "stepCount": 73,
+        "techniqueCountsAtLeast": {
+          "two-string-kite": 2
+        }
+      }
+    },
+    {
+      "id": "target-first-forcing-x-chain-epic-094",
+      "externalBucket": "Target-first forcing X-chain real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "forcing-x-chain"
+      ],
+      "puzzle": "000100200000030045200004000500000030600000007030070068000500001740060000016002070",
+      "solution": "457186293168239745293754816574618932681923457932475168329547681745861329816392574",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "forcing-x-chain",
+        "score": 4946,
+        "stepCount": 81,
+        "techniqueCountsAtLeast": {
+          "forcing-x-chain": 19
+        }
+      }
+    },
+    {
+      "id": "target-first-coloring-medusa-xy-chain-epic-098",
+      "externalBucket": "Target-first coloring, Medusa, and XY-chain real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "simple-coloring",
+        "multi-colors",
+        "x-chain",
+        "xy-chain",
+        "three-d-medusa"
+      ],
+      "puzzle": "000000001000002000003010450002600017010500030600000520006700000008000396500090008",
+      "solution": "245963781781452963963817452452639817817524639639178524396781245178245396524396178",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "three-d-medusa",
+        "score": 15042,
+        "stepCount": 136,
+        "techniqueCountsAtLeast": {
+          "simple-coloring": 41,
+          "multi-colors": 1,
+          "xy-chain": 18,
+          "three-d-medusa": 8
+        }
+      }
+    },
+    {
+      "id": "target-first-x-chain-epic-097",
+      "externalBucket": "Target-first X-chain real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "x-chain"
+      ],
+      "puzzle": "000000000010023400056701020040007050005000800070200010000308540024170090000000000",
+      "solution": "932465781718923465456781923641837259295614837873259614167398542524176398389542176",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "x-chain",
+        "score": 4167,
+        "stepCount": 83,
+        "techniqueCountsAtLeast": {
+          "x-chain": 3
+        }
+      }
+    },
+    {
+      "id": "target-first-twinned-xy-chains-epic-097",
+      "externalBucket": "Target-first twinned XY-chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "twinned-xy-chains"
+      ],
+      "puzzle": "000000000010023400056701020040007050005000800070200010000308540024170090000000000",
+      "solution": "932465781718923465456781923641837259295614837873259614167398542524176398389542176",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "twinned-xy-chains",
+        "score": 3902,
+        "stepCount": 82,
+        "techniqueCountsAtLeast": {
+          "twinned-xy-chains": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-synthetic-fireworks-seed-065",
+      "externalBucket": "Synthetic target-first fireworks real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "fireworks"
+      ],
+      "puzzle": "400200100050007080800105000000528700000034508000000030700000950000900001520400000",
+      "solution": "473286195951347286862195347346528719197634528285719634714863952638952471529471863",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "fireworks",
+        "score": 1331,
+        "stepCount": 58,
+        "techniqueCountsAtLeast": {
+          "fireworks": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-synthetic-sk-loops-seed-084",
+      "externalBucket": "Synthetic target-first SK loops real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "sk-loops"
+      ],
+      "puzzle": "802500307000090460005000000020100090070600000300070006503010004000002600004000070",
+      "solution": "892546317137298465645731982426153798978624531351879246563917824719482653284365179",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "sk-loops",
+        "score": 1346,
+        "stepCount": 57,
+        "techniqueCountsAtLeast": {
+          "sk-loops": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-study-aic-exotic-epic-035-step-001",
+      "externalBucket": "Target-first study-board AIC exotic real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "aic-exotic"
+      ],
+      "puzzle": "000000000000001023004020506000000000027008000609700004000003000080400700200090061",
+      "solution": "532684179896571423174329586418965237327148695659732814761253948983416752245897361",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "aic-exotic",
+        "score": 24346,
+        "stepCount": 166,
+        "techniqueCountsAtLeast": {
+          "aic-exotic": 100
+        }
+      }
+    },
+    {
+      "id": "target-first-study-cell-forcing-chains-hard-040-step-081",
+      "externalBucket": "Target-first study-board cell forcing chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "cell-forcing-chains"
+      ],
+      "puzzle": "370060450090040720100300680001732000008100200000900500004000060200000000000000000",
+      "solution": "372869451896541723145327689451732896968154237723986514514273968237698145689415372",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "cell-forcing-chains",
+        "score": 2391,
+        "stepCount": 56,
+        "techniqueCountsAtLeast": {
+          "cell-forcing-chains": 7
+        }
+      }
+    },
+    {
+      "id": "target-first-study-digit-forcing-chains-expert-059-step-090",
+      "externalBucket": "Target-first study-board digit forcing chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "digit-forcing-chains"
+      ],
+      "puzzle": "603050201850010040900600507400800100500200600000000700192346000300000000000000000",
+      "solution": "643758291857912346921634587436875129578291634219463758192346875364587912785129463",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "digit-forcing-chains",
+        "score": 2307,
+        "stepCount": 54,
+        "techniqueCountsAtLeast": {
+          "digit-forcing-chains": 7
+        }
+      }
+    },
+    {
+      "id": "target-first-study-forcing-nets-epic-017-step-084",
+      "externalBucket": "Target-first study-board forcing nets real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "forcing-nets"
+      ],
+      "puzzle": "060020740200700190450690830002005900609300400000000300040900000300000000000000000",
+      "solution": "961823745283754196457691832832475961619382457574169328745916283328547619196238574",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "forcing-nets",
+        "score": 2020,
+        "stepCount": 56,
+        "techniqueCountsAtLeast": {
+          "forcing-nets": 5
+        }
+      }
+    },
+    {
+      "id": "target-first-study-table-chain-hard-036-step-001",
+      "externalBucket": "Target-first study-board table chain real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "table-chain"
+      ],
+      "puzzle": "000000000000001023045020600000000037000030400807000051010809000500200000908460000",
+      "solution": "723986145689541723145327689496152837251738496837694251312879564564213978978465312",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "table-chain",
+        "score": 36638,
+        "stepCount": 215,
+        "techniqueCountsAtLeast": {
+          "table-chain": 158
+        }
+      }
+    },
+    {
+      "id": "target-first-study-unit-forcing-chains-hard-086-step-082",
+      "externalBucket": "Target-first study-board unit forcing chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "unit-forcing-chains"
+      ],
+      "puzzle": "190082300003000060620000000431965000007003000900000000004001050060800000000520000",
+      "solution": "195682374743159862628734519431965728287413695956278143874391256562847931319526487",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "unit-forcing-chains",
+        "score": 2184,
+        "stepCount": 56,
+        "techniqueCountsAtLeast": {
+          "unit-forcing-chains": 6
+        }
+      }
+    },
+    {
+      "id": "target-first-study-region-forcing-chains-hard-040-step-081",
+      "externalBucket": "Target-first study-board region forcing chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "region-forcing-chains"
+      ],
+      "puzzle": "370060450090040720100300680001732000008100200000900500004000060200000000000000000",
+      "solution": "372869451896541723145327689451732896968154237723986514514273968237698145689415372",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "region-forcing-chains",
+        "score": 2816,
+        "stepCount": 56,
+        "techniqueCountsAtLeast": {
+          "region-forcing-chains": 9
+        }
+      }
+    },
+    {
+      "id": "target-first-study-nested-forcing-chains-hard-040-step-081",
+      "externalBucket": "Target-first study-board nested forcing chains real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "nested-forcing-chains"
+      ],
+      "puzzle": "370060450090040720100300680001732000008100200000900500004000060200000000000000000",
+      "solution": "372869451896541723145327689451732896968154237723986514514273968237698145689415372",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "nested-forcing-chains",
+        "score": 27970,
+        "stepCount": 166,
+        "techniqueCountsAtLeast": {
+          "nested-forcing-chains": 110
+        }
+      }
+    },
+    {
+      "id": "target-first-constructed-exocet-seed-010",
+      "externalBucket": "Target-first constructed Exocet real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "exocet"
+      ],
+      "puzzle": "000030002700090003300002090006083057002069040804000000080720006007000000090000000",
+      "solution": "169834572725691483348572691916483257572169348834257169483725916257916834691348725",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "exocet",
+        "score": 1316,
+        "stepCount": 57,
+        "techniqueCountsAtLeast": {
+          "exocet": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-constructed-double-exocet-seed-001",
+      "externalBucket": "Target-first constructed Double Exocet real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "double-exocet"
+      ],
+      "puzzle": "030240000090083470002500030300000050020890004050400000500700010000020000009008000",
+      "solution": "836247195195683472472519836364172958721895364958436721583764219647921583219358647",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "double-exocet",
+        "score": 1358,
+        "stepCount": 57,
+        "techniqueCountsAtLeast": {
+          "double-exocet": 1
+        }
+      }
+    },
+    {
+      "id": "target-first-constructed-tridagons-constrained-001",
+      "externalBucket": "Target-first constructed Tridagons real-board path",
+      "profile": "classic-galaxy",
+      "targetFirstTechniques": [
+        "tridagons"
+      ],
+      "puzzle": "005079400890506200607480100046057090900604072500800010380720000000300000000000000",
+      "solution": "135279468894516237627483159246157893918634572573892614381725946459368721762941385",
+      "expected": {
+        "solved": true,
+        "unique": true,
+        "hardestTechnique": "tridagons",
+        "score": 1002,
+        "stepCount": 50,
+        "techniqueCountsAtLeast": {
+          "tridagons": 1
+        }
+      }
+    }
+  ]
+}

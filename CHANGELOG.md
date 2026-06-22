@@ -2,6 +2,36 @@
 
 本文档记录公开库层面的重要变化。
 
+## 0.4.0
+
+第四版公开发布。
+
+已新增或收口的内容：
+
+1. 全部 90 个技巧定义都具备 reference rating corpus 覆盖；`audit:coverage` 当前显示 stable 60/60、experimental 30/30 均无真实题面覆盖缺口。
+2. 新增 `reference-rating-corpus.json` 真实题面评分路径 corpus，和 `reference-smoke.json` 的人工候选态 smoke fixture 明确分层；正式 corpus 行必须是普通题面、唯一解、完整评分路径可回放。
+3. `audit:reference` 现在同时跑 reference smoke 和 real-board rating corpus audit；rating corpus 每一步都会经过 `verifyStep(..., { mode: "evidence" })`，并校验 place / eliminate 动作不违背已知答案。
+4. 新增 `audit:coverage`、`find:reference-candidates`、`synthesize:reference-candidates` 等 reference corpus 工具，用于目标技巧优先搜索、候选题面去重、命中后 clue minimization 和覆盖缺口审计。
+5. 新增 `verify:coverage`，发布前可单独跑 coverage、forcing evidence、forcing smoke 和 BUG graph evidence 审计；`verify:release` 现在会在基础 `verify` 之后追加这些覆盖审计。
+6. 公开 API 补齐二维数组 / nullable board 适配器、`hint()`、`summarizeAnalysis()` 和 `summarizeRating()`，便于前端和题库服务直接消费提示文本、评分摘要和扁平 board 转换。
+7. `checkUniqueness()` 输出更完整的搜索诊断，包括预算中止、节点访问、耗时和解数下界，方便服务端区分确定结果和预算内未知。
+8. 多个高级技巧的 evidence 增加 `pattern`、`links`、`nodes` 和 subtype 边界测试，覆盖 fish、wing、ALS、chain、UR/BUG、Exocet、Tridagons、SK Loops、forcing 等家族。
+9. `classic-galaxy.v1` 的真实题面回归已经覆盖所有已定义技巧；部分重型 forcing / 试探类技巧仍保持 fallback 或显式启用定位。
+
+行为和契约变化：
+
+1. `verify:release` 比 0.3.0 更严格，会额外执行 reference coverage / evidence 类审计；它适合作为发布前门禁，但运行时间明显长于普通 typecheck。
+2. `audit:reference` 不再只是轻量 smoke；它也会跑 real-board rating corpus，因此在本地和 CI 中应按慢速审计对待。
+3. `reference-smoke.json` 中的 trusted / artificial candidate state 仍只用于技巧 finder 边界测试，不得直接计入真实题面 rating corpus。
+4. 添加或搜索 rating corpus 行时，若目标是覆盖某个技巧，应使用 `targetFirstTechniques` 或候选搜索脚本的 `--target-first`，并把目标技巧放在最前面。
+
+当前版本仍不承诺：
+
+1. 和 Sudoku Explainer / Sukaku Explainer Java 实现逐步同构。
+2. 将所有 experimental 技巧升为 stable。
+3. 所有高级技巧的 subtype 都已完整覆盖外部实现的全部变体。
+4. 重型 forcing / 试探技巧适合在线实时批量评分。
+
 ## 0.3.0
 
 第三版公开发布。
@@ -9,7 +39,7 @@
 已新增或收口的内容：
 
 1. 新增 `classic-galaxy.v1` 作为本包自己的全技巧评分/求解 profile，覆盖所有已实现技巧。
-2. `classic-galaxy.v1` 将 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain` 和 `bowmans-bingo` 放入 fallback 管线，避免重型分支技巧参与每步常规扫描。
+2. `classic-galaxy.v1` 将 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `bowmans-bingo` 放入 fallback 管线，避免重型分支技巧参与每步常规扫描。
 3. CLI 新增 `--profile galaxy`，内置 profile 统一为 `stable`、`extended` 和 `galaxy`。
 4. SE 相关内容收口为外部参考映射文档和开发 fixture，不再作为公开内置评分策略或 CLI profile 暴露。
 5. 开发审计脚本改为中性命名：`audit:reference` 用于 reference smoke，`audit:technique-priority` 用于技巧优先级审计。

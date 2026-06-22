@@ -234,12 +234,18 @@ function formatTechniqueReason(
         return `候选 ${digit} 在三条基线和三条覆盖线之间形成剑鱼，因此可删除覆盖线上其他位置的候选`;
       case 'franken-swordfish':
         return `候选 ${digit} 在混合基线和三条覆盖线之间形成 Franken Swordfish，因此可删除覆盖线上基线之外的候选`;
+      case 'finned-franken-swordfish':
+        return `候选 ${digit} 形成带鳍 Franken Swordfish，因此可删除与鱼鳍同宫且落在覆盖线上的候选`;
       case 'jellyfish':
         return `候选 ${digit} 在四条基线和四条覆盖线之间形成水母，因此可删除覆盖线上其他位置的候选`;
       case 'finned-x-wing':
         return `候选 ${digit} 形成带鳍 X-Wing，因此可删除与鱼鳍同宫且落在覆盖线上的候选`;
+      case 'sashimi-x-wing':
+        return `候选 ${digit} 形成刺身 X-Wing，因此可删除与缺角鱼鳍同宫且落在覆盖线上的候选`;
       case 'finned-swordfish':
         return `候选 ${digit} 形成带鳍剑鱼，因此可删除与鱼鳍同宫且落在覆盖线上的候选`;
+      case 'finned-franken-jellyfish':
+        return `候选 ${digit} 形成带鳍 Franken Jellyfish，因此可删除与鱼鳍同宫且落在覆盖线上的候选`;
       case 'finned-jellyfish':
         return `候选 ${digit} 形成带鳍水母，因此可删除与鱼鳍同宫且落在覆盖线上的候选`;
       case 'sashimi-swordfish':
@@ -264,8 +270,11 @@ function formatTechniqueReason(
         return `BigWings 将 ALS 与双值 stem 连接起来，因此受限候选可以删除`;
       case 'chute-remote-pairs':
         return `同一 chute 中的远程数对使第三宫 yellow cells 缺少一个数字，因此公共可见区可删除另一候选`;
+      case 'remote-pairs':
+        return `同一候选对的双值链两端颜色相反，因此同时看到两端的格子可删除这两个候选`;
       case 'almost-locked-pair':
       case 'almost-locked-triple':
+      case 'almost-locked-quad':
         return `准锁定数组与交叉区域形成限制关系，因此可以删除目标候选`;
       case 'als-xz':
         return `两个 ALS 通过限制公共候选相连，因此可以删除目标候选`;
@@ -303,8 +312,16 @@ function formatTechniqueReason(
         return `同一格所有候选分支共同推出的外部结论可以直接采用`;
       case 'unit-forcing-chains':
         return `同一区域内某数字的所有位置分支共同推出的外部结论可以直接采用`;
+      case 'region-forcing-chains':
+        return `Region Forcing Chains 会枚举某区域内某数字的所有位置分支，并采用共同推出的结论`;
       case 'table-chain':
         return `Table Chain 汇总静态分支推出的矛盾或共同结论，因此可以采用该目标动作`;
+      case 'dynamic-forcing-chains':
+        return `动态强制链展开更深的有界分支，保留所有可存活分支共同推出的结论`;
+      case 'dynamic-forcing-chains-plus':
+        return `动态强制链+使用更深、更宽的有界分支扫描，保留所有可存活分支共同推出的结论`;
+      case 'nested-forcing-chains':
+        return `嵌套强制链允许分支内再使用一层 forcing 推导，因此可采用共同结论或矛盾删候选`;
       case 'bowmans-bingo':
         return `对某个候选做有界试探后若稳定导向矛盾，则该候选可以删除`;
       case 'simple-coloring':
@@ -354,6 +371,13 @@ function formatTechniqueReason(
         return `UR-AIC 将唯一矩形作为链节点，因此可以删除会导致致命矩形的候选`;
       case 'bug-plus-one':
         return `当前盘面接近 BUG 形态，因此唯一三值格可确定为 ${digit}`;
+      case 'bug-plus-two':
+        if (step.evidence.pattern?.subtype === 'bug-plus-two-parity-elimination') {
+          return `当前盘面接近 BUG+2 非共同额外候选形态，有界奇偶证明排除了目标额外候选 ${digit}`;
+        }
+        return `当前盘面接近 BUG+2 形态，两个额外候选至少一个成立，因此可删除同时看到它们的候选 ${digit}`;
+      case 'bug-plus-n':
+        return `当前盘面接近 BUG+n 形态，多个额外候选共享数字 ${digit}，因此可删除同时看到它们的目标候选`;
       default:
         return targetCells ? `可对 ${targetCells} 执行本步骤` : '';
     }
@@ -388,12 +412,18 @@ function formatTechniqueReason(
       return `${digit} forms a Swordfish, removing other cover-line candidates.`;
     case 'franken-swordfish':
       return `${digit} forms a Franken Swordfish with mixed basis houses, removing cover-line candidates outside the basis houses.`;
+    case 'finned-franken-swordfish':
+      return `${digit} forms a Finned Franken Swordfish, removing cover-line candidates that see the fin.`;
     case 'jellyfish':
       return `${digit} forms a Jellyfish, removing other cover-line candidates.`;
     case 'finned-x-wing':
       return `${digit} forms a Finned X-Wing, removing candidates that see the fin.`;
+    case 'sashimi-x-wing':
+      return `${digit} forms a Sashimi X-Wing, removing candidates that see the fin in the missing-corner box.`;
     case 'finned-swordfish':
       return `${digit} forms a Finned Swordfish, removing candidates that see the fin.`;
+    case 'finned-franken-jellyfish':
+      return `${digit} forms a Finned Franken Jellyfish, removing cover-line candidates that see the fin.`;
     case 'finned-jellyfish':
       return `${digit} forms a Finned Jellyfish, removing candidates that see the fin.`;
     case 'sashimi-swordfish':
@@ -412,8 +442,11 @@ function formatTechniqueReason(
       return 'BigWings connects an ALS with a bivalue stem, removing linked candidates and, when both stem digits are linked, ALS-exclusive candidates.';
     case 'chute-remote-pairs':
       return 'Chute Remote Pairs remove the opposite digit when the yellow cells in the third box miss one digit of the remote pair.';
+    case 'remote-pairs':
+      return 'Remote Pairs use opposite-color endpoints of an equal bivalue chain to remove both pair digits from common peers.';
     case 'almost-locked-pair':
     case 'almost-locked-triple':
+    case 'almost-locked-quad':
       return 'Almost locked candidates eliminate targets through an ALS/AHS intersection.';
     case 'als-xz':
       return 'ALS-XZ removes target candidates through restricted common digits.';
@@ -451,8 +484,16 @@ function formatTechniqueReason(
       return 'Cell Forcing Chains keeps only the shared conclusion from all candidate branches of one cell.';
     case 'unit-forcing-chains':
       return 'Unit Forcing Chains keeps only the shared conclusion from all position branches of one digit in one house.';
+    case 'region-forcing-chains':
+      return 'Region Forcing Chains keeps only the shared conclusion from all position branches of one digit in one region.';
     case 'table-chain':
       return 'Table Chain keeps a contradiction or shared conclusion from static implication branches.';
+    case 'dynamic-forcing-chains':
+      return 'Dynamic Forcing Chains expands deeper bounded branches and keeps the conclusion shared by every surviving branch.';
+    case 'dynamic-forcing-chains-plus':
+      return 'Dynamic Forcing Chains (+) expands deeper and wider bounded branches, keeping only conclusions shared by every surviving branch.';
+    case 'nested-forcing-chains':
+      return 'Nested Forcing Chains allows one inner forcing layer inside each branch, then keeps shared conclusions or contradiction removals.';
     case 'bowmans-bingo':
       return 'Bowman\'s Bingo removes a candidate whose bounded trial branch reaches contradiction.';
     case 'simple-coloring':
@@ -502,6 +543,13 @@ function formatTechniqueReason(
       return 'UR-AIC treats a Unique Rectangle as a chain node to remove the deadly-pattern candidate.';
     case 'bug-plus-one':
       return `BUG+1 places ${digit} in the only trivalue cell.`;
+    case 'bug-plus-two':
+      if (step.evidence.pattern?.subtype === 'bug-plus-two-parity-elimination') {
+        return `BUG+2 non-common extras use a bounded parity proof to remove ${digit} from the target extra candidate.`;
+      }
+      return `BUG+2 removes ${digit} from cells seeing both shared extra candidates.`;
+    case 'bug-plus-n':
+      return `BUG+n removes ${digit} from cells seeing every shared extra candidate.`;
     default:
       return '';
   }

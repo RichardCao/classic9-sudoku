@@ -2,7 +2,7 @@ import { ALL_HOUSES, CELL_TO_PEERS, cloneBoard, getHouseCells } from '../core/gr
 import type { Board } from '../core/types.js';
 import { normalizeState, type StateInput } from '../state/index.js';
 import { SolverContext } from './context.js';
-import { buildDefaultTechniques, getTechniqueDefinitions } from './techniques.js';
+import { buildDefaultTechniques, buildExplicitTechnique, getTechniqueDefinitions } from './techniques.js';
 import type {
   AnalyzeSolveOptions,
   AnalyzeSolveResult,
@@ -343,12 +343,18 @@ const DEFAULT_FALLBACK_TECHNIQUES: TechniqueId[] = [
   'digit-forcing-chains',
   'cell-forcing-chains',
   'unit-forcing-chains',
+  'region-forcing-chains',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
 ];
 
 function buildTechniquePipeline(options?: SolveOptions): TechniquePipeline {
   const definitionsById = new Map(getTechniqueDefinitions().map((definition) => [definition.id, definition]));
   const allowed = options?.allowedTechniques ? new Set(options.allowedTechniques) : null;
-  const techniques = buildDefaultTechniques().filter((technique) => {
+  const explicitTechniques = Array.from(new Set(options?.allowedTechniques ?? []))
+    .map((id) => buildExplicitTechnique(id))
+    .filter((technique): technique is SolverTechnique => technique !== null);
+  const techniques = [...buildDefaultTechniques(), ...explicitTechniques].filter((technique) => {
     const definition = definitionsById.get(technique.id);
     if (!definition) {
       return false;

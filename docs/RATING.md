@@ -59,7 +59,7 @@ interface RatingPolicy {
 
 `classic-extended.v1` 面向“在 stable 之上再多给一层求解能力”的场景。当前它会先完整运行 stable 技巧；只有当前状态 primary 技巧全部无命中时，才把 `bowmans-bingo` 作为 fallback safety net 尝试，不会把全部 experimental forcing 技巧直接并入默认管线。
 
-`classic-galaxy.v1` 是本包自己的全技巧入口。它启用所有已实现技巧，并把 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`table-chain` 和 `bowmans-bingo` 放入 fallback 管线，只在 primary 技巧全部无命中时尝试这些重型 forcing / 试探技巧。
+`classic-galaxy.v1` 是本包自己的高覆盖入口。它启用除 `nested-forcing-chains` 外的已实现技巧，并把 `forcing-nets`、`digit-forcing-chains`、`cell-forcing-chains`、`unit-forcing-chains`、`region-forcing-chains`、`table-chain`、`dynamic-forcing-chains`、`dynamic-forcing-chains-plus` 和 `bowmans-bingo` 放入 fallback 管线，只在 primary 技巧全部无命中时尝试这些重型 forcing / 试探技巧。`nested-forcing-chains` 当前仅建议显式启用做离线审计，不放入 galaxy。
 
 如果调用方需要自己的题库分档，应定义独立的 `RatingPolicy`，并在题库记录中保存对应的 `id/version`。
 

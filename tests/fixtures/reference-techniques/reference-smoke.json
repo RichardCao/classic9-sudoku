@@ -11,6 +11,16 @@
       "expectedPlacement": { "cell": 3, "digit": 4 }
     },
     {
+      "technique": "direct-pointing",
+      "candidates": [
+        [0, [2, 3]],
+        [9, [2, 4]],
+        [27, [2, 5]]
+      ],
+      "expectedElimination": { "cell": 27, "digit": 2 },
+      "expectedPlacement": { "cell": 27, "digit": 5 }
+    },
+    {
       "technique": "direct-claiming",
       "candidates": [
         [0, [1, 2]],
@@ -19,6 +29,16 @@
       ],
       "expectedElimination": { "cell": 9, "digit": 1 },
       "expectedPlacement": { "cell": 9, "digit": 5 }
+    },
+    {
+      "technique": "direct-claiming",
+      "candidates": [
+        [0, [2, 3]],
+        [9, [2, 4]],
+        [19, [2, 6]]
+      ],
+      "expectedElimination": { "cell": 19, "digit": 2 },
+      "expectedPlacement": { "cell": 19, "digit": 6 }
     },
     {
       "technique": "direct-hidden-pair",
@@ -32,6 +52,38 @@
         [6, [3, 4, 5]],
         [7, [3, 4, 5]],
         [8, [3, 4, 5]]
+      ],
+      "expectedElimination": { "cell": 0, "digit": 3 },
+      "expectedPlacement": { "cell": 0, "digit": 1 }
+    },
+    {
+      "technique": "direct-hidden-pair",
+      "candidates": [
+        [0, [1, 3]],
+        [9, [1, 2, 4]],
+        [18, [3, 4, 5]],
+        [27, [3, 4, 5]],
+        [36, [3, 4, 5]],
+        [45, [3, 4, 5]],
+        [54, [3, 4, 5]],
+        [63, [3, 4, 5]],
+        [72, [3, 4, 5]]
+      ],
+      "expectedElimination": { "cell": 0, "digit": 3 },
+      "expectedPlacement": { "cell": 0, "digit": 1 }
+    },
+    {
+      "technique": "direct-hidden-pair",
+      "candidates": [
+        [0, [1, 3]],
+        [1, [1, 2, 4]],
+        [2, [3, 4, 5]],
+        [9, [3, 4, 5]],
+        [10, [3, 4, 5]],
+        [11, [3, 4, 5]],
+        [18, [3, 4, 5]],
+        [19, [3, 4, 5]],
+        [20, [3, 4, 5]]
       ],
       "expectedElimination": { "cell": 0, "digit": 3 },
       "expectedPlacement": { "cell": 0, "digit": 1 }
@@ -51,6 +103,551 @@
       ],
       "expectedElimination": { "cell": 0, "digit": 4 },
       "expectedPlacement": { "cell": 0, "digit": 1 }
+    },
+    {
+      "technique": "direct-hidden-triplet",
+      "candidates": [
+        [0, [1, 4]],
+        [9, [2, 5]],
+        [18, [1, 2, 3, 6]],
+        [27, [4, 5, 6]],
+        [36, [4, 5, 6]],
+        [45, [4, 5, 6]],
+        [54, [4, 5, 6]],
+        [63, [4, 5, 6]],
+        [72, [4, 5, 6]]
+      ],
+      "expectedElimination": { "cell": 0, "digit": 4 },
+      "expectedPlacement": { "cell": 0, "digit": 1 }
+    },
+    {
+      "technique": "direct-pointing",
+      "stateKind": "puzzle",
+      "puzzle": "030678002600090308098042560050760403026050791000920806961037200287409035305080079",
+      "expectedElimination": { "cell": 61, "digit": 4 },
+      "expectedPlacement": { "cell": 61, "digit": 8 }
+    },
+    {
+      "technique": "direct-claiming",
+      "stateKind": "puzzle",
+      "puzzle": "030678002600090308098042560050760403026050791000920806961037200287409035305080079",
+      "expectedElimination": { "cell": 39, "digit": 3 },
+      "expectedPlacement": { "cell": 39, "digit": 8 }
+    },
+    {
+      "technique": "direct-hidden-pair",
+      "stateKind": "puzzle",
+      "puzzle": "030678002600090308098042560050760403026050791000920806961037200287409035305080079",
+      "expectedElimination": { "cell": 0, "digit": 1 },
+      "expectedPlacement": { "cell": 0, "digit": 5 }
+    },
+    {
+      "technique": "direct-hidden-triplet",
+      "stateKind": "puzzle",
+      "puzzle": "030678002600090308098042560050760403026050791000920806961037200287409035305080079",
+      "expectedElimination": { "cell": 7, "digit": 4 },
+      "expectedPlacement": { "cell": 7, "digit": 1 }
+    }
+  ],
+  "fish": [
+    {
+      "technique": "x-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [18, [1, 8]],
+        [21, [1, 8]],
+        [36, [1, 8]],
+        [45, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 36, "digit": 1 },
+        { "cell": 45, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "x-wing" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 21, "digit": 1, "role": "reason" },
+        { "cell": 36, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 2 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 3 }
+      ]
+    },
+    {
+      "technique": "swordfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [10, [1, 8]],
+        [11, [1, 8]],
+        [18, [1, 8]],
+        [20, [1, 8]],
+        [27, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 27, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "swordfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 1, "role": "reason" },
+        { "cell": 27, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 1 },
+        { "type": "row", "index": 2 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "col", "index": 2 }
+      ]
+    },
+    {
+      "technique": "franken-swordfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [36, [1, 8]],
+        [37, [1, 8]],
+        [55, [1, 8]],
+        [56, [1, 8]],
+        [27, [1, 8]],
+        [46, [1, 8]],
+        [47, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 27, "digit": 1 },
+        { "cell": 46, "digit": 1 },
+        { "cell": 47, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "franken-swordfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 56, "digit": 1, "role": "reason" },
+        { "cell": 27, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 4 },
+        { "type": "box", "index": 6 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "col", "index": 2 }
+      ]
+    },
+    {
+      "technique": "jellyfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "jellyfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 67, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 3 },
+        { "type": "row", "index": 5 },
+        { "type": "row", "index": 7 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "col", "index": 2 },
+        { "type": "col", "index": 4 }
+      ]
+    },
+    {
+      "technique": "finned-x-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [12, [1, 8]],
+        [18, [1, 8]],
+        [21, [1, 8]],
+        [22, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 12, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "finned-x-wing" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 22, "digit": 1, "role": "reason" },
+        { "cell": 12, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "col", "index": 3 },
+        { "type": "box", "index": 1 }
+      ]
+    },
+    {
+      "technique": "sashimi-x-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [20, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 20, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "sashimi-x-wing" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "col", "index": 2 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "finned-swordfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [55, [1, 8]],
+        [57, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "finned-swordfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 55, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 6 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "finned-jellyfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "finned-jellyfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 67, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 7 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "sashimi-swordfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [55, [1, 8]],
+        [57, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "sashimi-swordfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 57, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 6 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "sashimi-jellyfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "sashimi-jellyfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 67, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 7 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "finned-franken-swordfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [8, [1, 8]],
+        [9, [1, 8]],
+        [17, [1, 8]],
+        [54, [1, 8]],
+        [55, [1, 8]],
+        [19, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 19, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "finned-franken-swordfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 55, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "box", "index": 6 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "finned-franken-jellyfish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [60, [1, 8]],
+        [61, [1, 8]],
+        [78, [1, 8]],
+        [79, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "finned-franken-jellyfish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 79, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "box", "index": 3 },
+        { "type": "box", "index": 0 }
+      ]
+    },
+    {
+      "technique": "larger-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [3, [1, 8]],
+        [4, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [11, [1, 8]],
+        [12, [1, 8]],
+        [13, [1, 8]],
+        [18, [1, 8]],
+        [19, [1, 8]],
+        [20, [1, 8]],
+        [21, [1, 8]],
+        [22, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [29, [1, 8]],
+        [30, [1, 8]],
+        [31, [1, 8]],
+        [36, [1, 8]],
+        [37, [1, 8]],
+        [38, [1, 8]],
+        [39, [1, 8]],
+        [40, [1, 8]],
+        [45, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 45, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "larger-fish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 40, "digit": 1, "role": "reason" },
+        { "cell": 45, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 1 },
+        { "type": "row", "index": 2 },
+        { "type": "row", "index": 3 },
+        { "type": "row", "index": 4 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "col", "index": 2 },
+        { "type": "col", "index": 3 },
+        { "type": "col", "index": 4 }
+      ]
+    },
+    {
+      "technique": "larger-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [3, [1, 8]],
+        [4, [1, 8]],
+        [5, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [11, [1, 8]],
+        [12, [1, 8]],
+        [13, [1, 8]],
+        [14, [1, 8]],
+        [18, [1, 8]],
+        [19, [1, 8]],
+        [20, [1, 8]],
+        [21, [1, 8]],
+        [22, [1, 8]],
+        [23, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [29, [1, 8]],
+        [30, [1, 8]],
+        [31, [1, 8]],
+        [32, [1, 8]],
+        [36, [1, 8]],
+        [37, [1, 8]],
+        [38, [1, 8]],
+        [39, [1, 8]],
+        [40, [1, 8]],
+        [41, [1, 8]],
+        [45, [1, 8]],
+        [46, [1, 8]],
+        [47, [1, 8]],
+        [48, [1, 8]],
+        [49, [1, 8]],
+        [50, [1, 8]],
+        [54, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 54, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "larger-fish" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 50, "digit": 1, "role": "reason" },
+        { "cell": 54, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 1 },
+        { "type": "row", "index": 2 },
+        { "type": "row", "index": 3 },
+        { "type": "row", "index": 4 },
+        { "type": "row", "index": 5 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "col", "index": 2 },
+        { "type": "col", "index": 3 },
+        { "type": "col", "index": 4 },
+        { "type": "col", "index": 5 }
+      ]
+    },
+    {
+      "technique": "mutant-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [60, [1, 8]],
+        [61, [1, 8]],
+        [18, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 18, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "fish", "subtype": "mutant-fish-size-3" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 61, "digit": 1, "role": "reason" },
+        { "cell": 18, "digit": 1, "role": "target" }
+      ],
+      "expectedHouses": [
+        { "type": "row", "index": 0 },
+        { "type": "row", "index": 1 },
+        { "type": "row", "index": 6 },
+        { "type": "col", "index": 0 },
+        { "type": "col", "index": 1 },
+        { "type": "box", "index": 8 }
+      ]
     }
   ],
   "chains": [
@@ -62,7 +659,42 @@
         [18, [1, 8]],
         [10, [1, 8]]
       ],
-      "minLinks": 1
+      "minLinks": 1,
+      "expectedEliminations": [
+        { "cell": 10, "digit": 1 }
+      ],
+      "minStrongLinks": 1,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "bidirectional-x-cycle", "subtype": "two-color-trap" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 18, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "bidirectional-x-cycle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [9, [1, 8]],
+        [1, [1, 8]],
+        [10, [1, 8]]
+      ],
+      "minLinks": 4,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 10, "digit": 1 }
+      ],
+      "minStrongLinks": 4,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "bidirectional-x-cycle", "subtype": "same-color-contradiction" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "target" },
+        { "cell": 10, "digit": 1, "role": "target" },
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "reason" }
+      ]
     },
     {
       "technique": "forcing-x-chain",
@@ -74,7 +706,540 @@
         [1, [1, 8]],
         [2, [1, 8]]
       ],
-      "minLinks": 3
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 2, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "forcing-x-chain", "subtype": "even-strong-link-chain" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "reason" },
+        { "cell": 2, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "skyscraper",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [13, [1, 8]],
+        [18, [1, 8]],
+        [22, [1, 8]]
+      ],
+      "minLinks": 2,
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "skyscraper", "subtype": "col-base" },
+      "expectedLinks": [
+        { "from": 0, "to": 18, "digit": 1, "type": "strong", "house": { "type": "col", "index": 0 } },
+        { "from": 13, "to": 22, "digit": 1, "type": "strong", "house": { "type": "col", "index": 4 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 22, "digit": 1, "role": "reason" },
+        { "cell": 3, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "skyscraper",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [37, [1, 8]],
+        [38, [1, 8]]
+      ],
+      "minLinks": 2,
+      "expectedEliminations": [
+        { "cell": 27, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "skyscraper", "subtype": "row-base" },
+      "expectedLinks": [
+        { "from": 0, "to": 2, "digit": 1, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 37, "to": 38, "digit": 1, "type": "strong", "house": { "type": "row", "index": 4 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 38, "digit": 1, "role": "reason" },
+        { "cell": 27, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [5, [1, 8]],
+        [10, [1, 8]],
+        [28, [1, 8]],
+        [32, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 32, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b0" },
+      "expectedLinks": [
+        { "from": 0, "to": 5, "digit": 1, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 10, "to": 28, "digit": 1, "type": "strong", "house": { "type": "col", "index": 1 } },
+        { "from": 0, "to": 10, "digit": 1, "type": "strong", "house": { "type": "box", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 28, "digit": 1, "role": "reason" },
+        { "cell": 32, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [13, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 45, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b1" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 49, "digit": 1, "role": "reason" },
+        { "cell": 45, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [3, [1, 8]],
+        [8, [1, 8]],
+        [16, [1, 8]],
+        [30, [1, 8]],
+        [34, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 30, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b2" },
+      "expectedCells": [
+        { "cell": 3, "digit": 1, "role": "reason" },
+        { "cell": 34, "digit": 1, "role": "reason" },
+        { "cell": 30, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [1, [1, 8]],
+        [5, [1, 8]],
+        [27, [1, 8]],
+        [32, [1, 8]],
+        [37, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 5, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b3" },
+      "expectedCells": [
+        { "cell": 27, "digit": 1, "role": "reason" },
+        { "cell": 37, "digit": 1, "role": "reason" },
+        { "cell": 5, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [4, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [40, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b4" },
+      "expectedLinks": [
+        { "from": 27, "to": 30, "digit": 1, "type": "strong", "house": { "type": "row", "index": 3 } },
+        { "from": 4, "to": 40, "digit": 1, "type": "strong", "house": { "type": "col", "index": 4 } },
+        { "from": 30, "to": 40, "digit": 1, "type": "strong", "house": { "type": "box", "index": 4 } }
+      ],
+      "expectedCells": [
+        { "cell": 27, "digit": 1, "role": "reason" },
+        { "cell": 40, "digit": 1, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [7, [1, 8]],
+        [27, [1, 8]],
+        [33, [1, 8]],
+        [43, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b5" },
+      "expectedCells": [
+        { "cell": 27, "digit": 1, "role": "reason" },
+        { "cell": 43, "digit": 1, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [46, [1, 8]],
+        [50, [1, 8]],
+        [64, [1, 8]],
+        [72, [1, 8]],
+        [77, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 50, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b6" },
+      "expectedCells": [
+        { "cell": 72, "digit": 1, "role": "reason" },
+        { "cell": 64, "digit": 1, "role": "reason" },
+        { "cell": 50, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [4, [1, 8]],
+        [54, [1, 8]],
+        [57, [1, 8]],
+        [67, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b7" },
+      "expectedCells": [
+        { "cell": 54, "digit": 1, "role": "reason" },
+        { "cell": 67, "digit": 1, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "candidates": [
+        [48, [1, 8]],
+        [52, [1, 8]],
+        [70, [1, 8]],
+        [75, [1, 8]],
+        [80, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 48, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "two-string-kite", "subtype": "box-linked-row-column-b8" },
+      "expectedCells": [
+        { "cell": 75, "digit": 1, "role": "reason" },
+        { "cell": 70, "digit": 1, "role": "reason" },
+        { "cell": 48, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [19, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 19, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "row-box-row" },
+      "expectedLinks": [
+        { "from": 0, "to": 2, "digit": 1, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 2, "to": 9, "digit": 1, "type": "weak", "house": { "type": "box", "index": 0 } },
+        { "from": 9, "to": 10, "digit": 1, "type": "strong", "house": { "type": "row", "index": 1 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [19, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 2, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "col-box-col" },
+      "expectedLinks": [
+        { "from": 0, "to": 9, "digit": 1, "type": "strong", "house": { "type": "col", "index": 0 } },
+        { "from": 9, "to": 1, "digit": 1, "type": "weak", "house": { "type": "box", "index": 0 } },
+        { "from": 1, "to": 19, "digit": 1, "type": "strong", "house": { "type": "col", "index": 1 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "reason" },
+        { "cell": 2, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 2, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "col-row-col" },
+      "expectedCells": [
+        { "cell": 9, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "reason" },
+        { "cell": 2, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [18, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 18, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "row-col-row" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "reason" },
+        { "cell": 18, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [3, [1, 8]],
+        [4, [1, 8]],
+        [9, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 1, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "col-row-box" },
+      "expectedCells": [
+        { "cell": 9, "digit": 1, "role": "reason" },
+        { "cell": 4, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [3, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "row-col-box" },
+      "expectedCells": [
+        { "cell": 30, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 3, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [3, [1, 8]],
+        [4, [1, 8]],
+        [6, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 6, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "box-row-box" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 4, "digit": 1, "role": "reason" },
+        { "cell": 6, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [11, [1, 8]],
+        [18, [1, 8]],
+        [20, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 18, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "turbot-fish", "subtype": "row-box-col" },
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 1, "role": "reason" },
+        { "cell": 18, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "empty-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [3, [1, 8]],
+        [9, [1, 8]],
+        [18, [1, 8]],
+        [36, [1, 8]],
+        [39, [1, 8]]
+      ],
+      "minLinks": 1,
+      "expectedEliminations": [
+        { "cell": 36, "digit": 1 }
+      ],
+      "minStrongLinks": 1,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "empty-rectangle", "subtype": "column-conjugate" },
+      "expectedLinks": [
+        { "from": 3, "to": 39, "digit": 1, "type": "strong", "house": { "type": "col", "index": 3 } }
+      ],
+      "expectedCells": [
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 39, "digit": 1, "role": "reason" },
+        { "cell": 36, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "empty-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [4, [1, 8]],
+        [9, [1, 8]],
+        [13, [1, 8]],
+        [18, [1, 8]],
+        [27, [1, 8]],
+        [31, [1, 8]]
+      ],
+      "minLinks": 1,
+      "expectedEliminations": [
+        { "cell": 4, "digit": 1 }
+      ],
+      "minStrongLinks": 1,
+      "minWeakLinks": 0,
+      "expectedPattern": { "family": "empty-rectangle", "subtype": "row-conjugate" },
+      "expectedLinks": [
+        { "from": 27, "to": 31, "digit": 1, "type": "strong", "house": { "type": "row", "index": 3 } }
+      ],
+      "expectedCells": [
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 31, "digit": 1, "role": "reason" },
+        { "cell": 4, "digit": 1, "role": "target" }
+      ]
     },
     {
       "technique": "bidirectional-y-cycle",
@@ -85,7 +1250,42 @@
         [10, [1, 3]],
         [1, [1, 8]]
       ],
-      "minLinks": 3
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 1, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "xy-chain", "subtype": "bidirectional-y-cycle" },
+      "expectedCells": [
+        { "cell": 0, "role": "reason" },
+        { "cell": 9, "role": "reason" },
+        { "cell": 10, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "bidirectional-y-cycle",
+      "stateKind": "mask",
+      "candidates": [
+        [8, [1, 2]],
+        [17, [2, 3]],
+        [16, [1, 3]],
+        [7, [1, 8]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 7, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "xy-chain", "subtype": "bidirectional-y-cycle" },
+      "expectedCells": [
+        { "cell": 8, "role": "reason" },
+        { "cell": 17, "role": "reason" },
+        { "cell": 16, "role": "reason" },
+        { "cell": 7, "digit": 1, "role": "target" }
+      ]
     },
     {
       "technique": "forcing-chain",
@@ -107,7 +1307,3068 @@
         [75, [1]],
         [76, [1]]
       ],
-      "minLinks": 3
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 4, "digit": 4 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "forcing-chain", "subtype": "same-digit-endpoints" },
+      "expectedCells": [
+        { "cell": 31, "digit": 4, "role": "reason" },
+        { "cell": 58, "digit": 4, "role": "reason" },
+        { "cell": 4, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [4, [4]],
+        [17, [1, 2, 3]],
+        [23, [1]],
+        [30, [3]],
+        [31, [3, 4]],
+        [35, [2, 3, 4]],
+        [38, [4]],
+        [39, [1]],
+        [45, [1]],
+        [47, [4]],
+        [55, [1]],
+        [58, [3, 4]],
+        [73, [3, 4]],
+        [75, [1]],
+        [76, [1]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 4, "digit": 4 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "aic", "subtype": "same-digit-endpoints" },
+      "expectedCells": [
+        { "cell": 31, "digit": 4, "role": "reason" },
+        { "cell": 58, "digit": 4, "role": "reason" },
+        { "cell": 4, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [4, [2, 3]],
+        [14, [1, 3]],
+        [15, [4]],
+        [20, [3, 4]],
+        [22, [2]],
+        [26, [2, 3, 4]],
+        [28, [2, 3, 4]],
+        [30, [2]],
+        [34, [4]],
+        [45, [3, 5]],
+        [52, [1, 3]],
+        [54, [4]],
+        [69, [1, 3, 4]],
+        [74, [2]],
+        [78, [2]],
+        [80, [1, 2, 3]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 26, "digit": 4 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "aic", "subtype": "different-digit-endpoints" },
+      "expectedCells": [
+        { "cell": 20, "digit": 4, "role": "reason" },
+        { "cell": 80, "digit": 2, "role": "reason" },
+        { "cell": 26, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [2, 3]],
+        [1, [1, 3]],
+        [10, [1, 8]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 10, "digit": 1 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "aic", "subtype": "same-digit-endpoints" },
+      "expectedLinks": [
+        { "from": 0, "to": 9, "digit": 2, "type": "weak", "house": { "type": "col", "index": 0 } },
+        { "from": 9, "to": 1, "digit": 3, "type": "weak", "house": { "type": "box", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [5, [3, 5]],
+        [6, [4]],
+        [12, [2, 3, 4]],
+        [20, [3, 4]],
+        [26, [2]],
+        [30, [2]],
+        [36, [2, 3]],
+        [38, [2]],
+        [46, [1, 3]],
+        [55, [4]],
+        [61, [1, 3, 4]],
+        [62, [2]],
+        [66, [4]],
+        [68, [1, 3]],
+        [74, [2, 3, 4]],
+        [80, [1, 2, 3]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 74, "digit": 4 }
+      ],
+      "minStrongLinks": 3,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "aic", "subtype": "different-digit-endpoints" },
+      "expectedLinks": [
+        { "from": 20, "to": 74, "digit": 3, "type": "weak", "house": { "type": "col", "index": 2 } },
+        { "from": 74, "to": 80, "digit": 3, "type": "strong", "house": { "type": "row", "index": 8 } },
+        { "from": 80, "to": 74, "digit": 2, "type": "strong", "house": { "type": "row", "index": 8 } }
+      ],
+      "expectedCells": [
+        { "cell": 20, "digit": 4, "role": "reason" },
+        { "cell": 80, "digit": 2, "role": "reason" },
+        { "cell": 74, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 4]],
+        [1, [1, 2, 3]]
+      ],
+      "minLinks": 4,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 4 },
+        { "cell": 1, "digit": 3 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "aic", "subtype": "continuous-loop" },
+      "expectedLinks": [
+        { "from": 0, "to": 1, "digit": 1, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 0, "to": 1, "digit": 2, "type": "strong", "house": { "type": "row", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 2, "role": "reason" },
+        { "cell": 1, "digit": 3, "role": "target" },
+        { "cell": 0, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 4]],
+        [9, [1, 2, 3]]
+      ],
+      "minLinks": 4,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 4 },
+        { "cell": 9, "digit": 3 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 2,
+      "expectedPattern": { "family": "aic", "subtype": "continuous-loop" },
+      "expectedLinks": [
+        { "from": 0, "to": 9, "digit": 1, "type": "strong", "house": { "type": "col", "index": 0 } },
+        { "from": 9, "to": 0, "digit": 2, "type": "strong", "house": { "type": "col", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 2, "role": "reason" },
+        { "cell": 9, "digit": 3, "role": "target" },
+        { "cell": 0, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [2, 3]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 3,
+      "expectedPattern": { "family": "aic", "subtype": "discontinuous-loop-weak-weak" },
+      "expectedLinks": [
+        { "from": 0, "to": 1, "digit": 2, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 0, "to": 1, "digit": 3, "type": "strong", "house": { "type": "row", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 2, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [9, [2, 3]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 3,
+      "expectedPattern": { "family": "aic", "subtype": "discontinuous-loop-weak-weak" },
+      "expectedLinks": [
+        { "from": 0, "to": 9, "digit": 2, "type": "strong", "house": { "type": "col", "index": 0 } },
+        { "from": 9, "to": 0, "digit": 3, "type": "strong", "house": { "type": "col", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 2, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 4]],
+        [1, [1, 3]],
+        [9, [1, 2]]
+      ],
+      "minLinks": 3,
+      "expectedPlacements": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "aic", "subtype": "discontinuous-loop-strong-strong" },
+      "expectedLinks": [
+        { "from": 0, "to": 1, "digit": 1, "type": "strong", "house": { "type": "row", "index": 0 } },
+        { "from": 9, "to": 0, "digit": 1, "type": "strong", "house": { "type": "col", "index": 0 } }
+      ],
+      "expectedCells": [
+        { "cell": 0, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "reason" },
+        { "cell": 0, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "candidates": [
+        [10, [1, 4]],
+        [11, [1, 3]],
+        [19, [1, 2]]
+      ],
+      "minLinks": 3,
+      "expectedPlacements": [
+        { "cell": 10, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "expectedPattern": { "family": "aic", "subtype": "discontinuous-loop-strong-strong" },
+      "expectedLinks": [
+        { "from": 10, "to": 11, "digit": 1, "type": "strong", "house": { "type": "row", "index": 1 } },
+        { "from": 19, "to": 10, "digit": 1, "type": "strong", "house": { "type": "col", "index": 1 } }
+      ],
+      "expectedCells": [
+        { "cell": 10, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "reason" },
+        { "cell": 10, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "candidates": [
+        [1, [1, 2, 4, 5]],
+        [2, [2, 3, 4, 5]],
+        [11, [3]],
+        [12, [1, 3]],
+        [18, [5]],
+        [19, [1]],
+        [20, [1, 3, 4, 5]],
+        [24, [1, 4]],
+        [34, [3]],
+        [44, [1, 5]],
+        [51, [5]],
+        [52, [4]],
+        [55, [1, 5]],
+        [61, [1, 2, 3]],
+        [62, [5]],
+        [63, [1, 3, 5]],
+        [68, [4]],
+        [74, [1, 2, 3, 5]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 20, "digit": 4 }
+      ],
+      "minStrongLinks": 4,
+      "minWeakLinks": 4,
+      "minGroupedNodes": 1,
+      "expectedPattern": { "family": "grouped-aic", "subtype": "different-digit-endpoints" },
+      "expectedNodes": [
+        { "id": "g:1:col:0:1:1-19", "cells": [1, 19], "digit": 1 }
+      ],
+      "expectedCells": [
+        { "cell": 24, "digit": 4, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "candidates": [
+        [1, [1, 2, 4, 5]],
+        [2, [2, 3, 4, 5]],
+        [11, [3]],
+        [12, [1, 3]],
+        [18, [1, 5]],
+        [19, [1]],
+        [20, [1, 3, 4, 5]],
+        [24, [1, 4]],
+        [34, [3]],
+        [44, [1, 5]],
+        [51, [5]],
+        [52, [4]],
+        [55, [1, 5]],
+        [61, [1, 2, 3]],
+        [62, [5]],
+        [63, [1, 3, 5]],
+        [68, [4]],
+        [74, [1, 2, 3, 5]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 20, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "minGroupedNodes": 1,
+      "expectedPattern": { "family": "grouped-aic", "subtype": "same-digit-endpoints" },
+      "expectedNodes": [
+        { "id": "g:1:col:0:1:1-19", "cells": [1, 19], "digit": 1 }
+      ],
+      "expectedCells": [
+        { "cell": 18, "digit": 1, "role": "reason" },
+        { "cell": 1, "digit": 1, "role": "reason" },
+        { "cell": 19, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "candidates": [
+        [6, [2, 3, 4, 5]],
+        [7, [1, 2, 4, 5]],
+        [14, [1, 3]],
+        [15, [3]],
+        [20, [1, 4]],
+        [24, [1, 3, 4, 5]],
+        [25, [1]],
+        [26, [5]],
+        [28, [3]],
+        [36, [1, 5]],
+        [46, [4]],
+        [47, [5]],
+        [54, [5]],
+        [55, [1, 2, 3]],
+        [61, [1, 5]],
+        [66, [4]],
+        [71, [1, 3, 5]],
+        [78, [1, 2, 3, 5]]
+      ],
+      "minLinks": 5,
+      "expectedEliminations": [
+        { "cell": 24, "digit": 4 }
+      ],
+      "minStrongLinks": 4,
+      "minWeakLinks": 4,
+      "minGroupedNodes": 1,
+      "expectedPattern": { "family": "grouped-aic", "subtype": "different-digit-endpoints" },
+      "expectedNodes": [
+        { "id": "g:1:col:2:7:7-25", "cells": [7, 25], "digit": 1 }
+      ],
+      "expectedCells": [
+        { "cell": 20, "digit": 4, "role": "reason" },
+        { "cell": 7, "digit": 1, "role": "reason" },
+        { "cell": 25, "digit": 1, "role": "reason" },
+        { "cell": 24, "digit": 4, "role": "target" }
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "candidates": [
+        [2, [1, 5]],
+        [7, [1, 3, 5]],
+        [9, [1, 2, 4, 5]],
+        [11, [1]],
+        [15, [1, 5]],
+        [18, [2, 3, 4, 5]],
+        [19, [3]],
+        [20, [1, 3, 4, 5]],
+        [26, [1, 2, 3, 5]],
+        [28, [1, 3]],
+        [52, [4]],
+        [56, [1, 4]],
+        [59, [5]],
+        [66, [3]],
+        [68, [4]],
+        [69, [1, 2, 3]],
+        [76, [1, 5]],
+        [78, [5]]
+      ],
+      "minLinks": 3,
+      "expectedEliminations": [
+        { "cell": 20, "digit": 1 }
+      ],
+      "minStrongLinks": 2,
+      "minWeakLinks": 1,
+      "minGroupedNodes": 1,
+      "expectedPattern": { "family": "grouped-aic", "subtype": "same-digit-endpoints" },
+      "expectedNodes": [
+        { "id": "g:1:row:0:1:9-11", "cells": [9, 11], "digit": 1 }
+      ],
+      "expectedCells": [
+        { "cell": 2, "digit": 1, "role": "reason" },
+        { "cell": 9, "digit": 1, "role": "reason" },
+        { "cell": 11, "digit": 1, "role": "reason" },
+        { "cell": 20, "digit": 1, "role": "target" }
+      ]
+    }
+  ],
+  "wings": [
+    {
+      "technique": "xy-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [2, 3]],
+        [10, [3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 10, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "xy-wing" },
+      "expectedCells": [
+        { "cell": 0, "digit": 3, "role": "reason" },
+        { "cell": 1, "digit": 3, "role": "reason" },
+        { "cell": 9, "digit": 3, "role": "reason" },
+        { "cell": 10, "digit": 3, "role": "target" }
+      ]
+    },
+    {
+      "technique": "xyz-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 3]],
+        [9, [2, 3]],
+        [10, [3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 10, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "xyz-wing" },
+      "expectedCells": [
+        { "cell": 0, "digit": 3, "role": "reason" },
+        { "cell": 1, "digit": 3, "role": "reason" },
+        { "cell": 9, "digit": 3, "role": "reason" },
+        { "cell": 10, "digit": 3, "role": "target" }
+      ]
+    },
+    {
+      "technique": "wxyz-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [1, 4]],
+        [10, [2, 3, 4]],
+        [2, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 2, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "wxyz-restricted-digits" },
+      "expectedCells": [
+        { "cell": 0, "role": "reason" },
+        { "cell": 1, "role": "reason" },
+        { "cell": 9, "role": "reason" },
+        { "cell": 10, "role": "reason" },
+        { "cell": 2, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "w-wing",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [30, [1, 2]],
+        [4, [1, 8]],
+        [31, [1, 8]],
+        [3, [2, 8]],
+        [27, [2, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "w-wing-strong-link-bridge" },
+      "expectedLinks": [
+        { "from": 4, "to": 31, "digit": 1, "type": "strong", "house": { "type": "col", "index": 4 } }
+      ],
+      "minLinks": 1,
+      "expectedCells": [
+        { "cell": 0, "digit": 2, "role": "reason" },
+        { "cell": 30, "digit": 2, "role": "reason" },
+        { "cell": 4, "digit": 2, "role": "reason" },
+        { "cell": 31, "digit": 2, "role": "reason" },
+        { "cell": 3, "digit": 2, "role": "target" }
+      ]
+    },
+    {
+      "technique": "big-wings",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [2, [2, 3, 4]],
+        [3, [1, 4]],
+        [4, [1, 2, 3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 4, "digit": 1 },
+        { "cell": 4, "digit": 2 },
+        { "cell": 4, "digit": 3 },
+        { "cell": 4, "digit": 4 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "big-wings-als-stem" },
+      "expectedCells": [
+        { "cell": 0, "role": "reason" },
+        { "cell": 1, "role": "reason" },
+        { "cell": 2, "role": "reason" },
+        { "cell": 3, "role": "pivot" },
+        { "cell": 4, "digit": 1, "role": "target" }
+      ]
+    },
+    {
+      "technique": "chute-remote-pairs",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [13, [1, 2]],
+        [4, [2]]
+      ],
+      "expectedEliminations": [
+        { "cell": 4, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "chute-horizontal" },
+      "expectedCells": [
+        { "cell": 0, "role": "reason" },
+        { "cell": 13, "role": "reason" },
+        { "cell": 24, "role": "link" },
+        { "cell": 4, "digit": 2, "role": "target" }
+      ]
+    },
+    {
+      "technique": "remote-pairs",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [4, [1, 2]],
+        [40, [1, 2]],
+        [44, [1, 2]],
+        [8, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 8, "digit": 1 },
+        { "cell": 8, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "wing", "subtype": "remote-pairs-opposite-color-endpoints" },
+      "expectedLinks": [
+        { "from": 0, "to": 4, "digit": 1, "type": "weak" },
+        { "from": 40, "to": 44, "digit": 2, "type": "weak" }
+      ],
+      "minLinks": 6,
+      "expectedCells": [
+        { "cell": 0, "role": "reason" },
+        { "cell": 4, "role": "reason" },
+        { "cell": 40, "role": "reason" },
+        { "cell": 44, "role": "reason" },
+        { "cell": 8, "digit": 1, "role": "target" },
+        { "cell": 8, "digit": 2, "role": "target" }
+      ]
+    }
+  ],
+  "als": [
+    {
+      "technique": "almost-locked-pair",
+      "stateKind": "mask",
+      "candidates": [
+        [3, [1, 2]],
+        [4, [1, 8]],
+        [9, [1, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 4, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "almost-locked-pair" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "almost-locked-pair:als", "cells": [3] },
+        { "id": "almost-locked-pair:ahs", "cells": [9] }
+      ]
+    },
+    {
+      "technique": "almost-locked-triple",
+      "stateKind": "mask",
+      "candidates": [
+        [3, [1, 2]],
+        [4, [2, 3]],
+        [5, [1, 8]],
+        [9, [1, 4]],
+        [10, [3, 5]]
+      ],
+      "expectedEliminations": [
+        { "cell": 5, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "almost-locked-triple" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "almost-locked-triple:als", "cells": [3, 4] },
+        { "id": "almost-locked-triple:ahs", "cells": [9, 10] }
+      ]
+    },
+    {
+      "technique": "almost-locked-quad",
+      "stateKind": "mask",
+      "candidates": [
+        [3, [1, 2]],
+        [4, [2, 3]],
+        [5, [3, 4]],
+        [6, [1, 9]],
+        [9, [1, 5]],
+        [10, [2, 6]],
+        [18, [4, 7]]
+      ],
+      "expectedEliminations": [
+        { "cell": 6, "digit": 1 },
+        { "cell": 9, "digit": 5 },
+        { "cell": 10, "digit": 6 },
+        { "cell": 18, "digit": 7 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "almost-locked-quad" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "almost-locked-quad:als", "cells": [3, 4, 5] },
+        { "id": "almost-locked-quad:ahs", "cells": [9, 10, 18] }
+      ]
+    },
+    {
+      "technique": "als-xz",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [1, 4]],
+        [14, [2, 4]],
+        [3, [2, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "als-xz" },
+      "minLinks": 1,
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "als-xz:als:0", "cells": [0] },
+        { "id": "als-xz:als:1", "cells": [9, 14] }
+      ]
+    },
+    {
+      "technique": "als-xy-wing",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [1, 3]],
+        [1, [2, 3]],
+        [10, [3, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 10, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "als-xy-wing" },
+      "minLinks": 2,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "als-xy-wing:als:0", "cells": [0] },
+        { "id": "als-xy-wing:als:0", "cells": [1] },
+        { "id": "als-xy-wing:als:1", "cells": [9] }
+      ]
+    },
+    {
+      "technique": "aic-als",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [1, 3]],
+        [3, [1, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "aic-als-rcc-chain" },
+      "minLinks": 2,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "aic-als:als:0", "cells": [0] },
+        { "id": "aic-als:als:1", "cells": [1] },
+        { "id": "aic-als:als:2", "cells": [2] }
+      ]
+    },
+    {
+      "technique": "fireworks",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3, 4]],
+        [3, [1, 2, 3, 5]],
+        [27, [1, 2, 3, 6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 4 },
+        { "cell": 3, "digit": 5 },
+        { "cell": 27, "digit": 6 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "fireworks" },
+      "minNodes": 1,
+      "expectedNodes": [
+        { "id": "fireworks:signature", "cells": [0, 3, 27] }
+      ]
+    },
+    {
+      "technique": "twinned-xy-chains",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [3, 4]],
+        [9, [1, 5]],
+        [10, [5, 6]],
+        [11, [4, 6]],
+        [18, [1]]
+      ],
+      "expectedEliminations": [
+        { "cell": 18, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "twinned-xy-chains" },
+      "minNodes": 1,
+      "expectedNodes": [
+        { "id": "twinned-xy-chains:pattern", "cells": [0, 1, 2, 9, 10, 11] }
+      ]
+    },
+    {
+      "technique": "aligned-pair-exclusion",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 2]],
+        [2, [1, 2]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 0, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "aligned-pair-exclusion" },
+      "minNodes": 1,
+      "expectedNodes": [
+        { "id": "aligned-pair-exclusion:pair", "cells": [0, 1] }
+      ]
+    },
+    {
+      "technique": "death-blossom",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 4]],
+        [9, [2, 4]],
+        [10, [3, 4]],
+        [2, [4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 2, "digit": 4 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "death-blossom" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "death-blossom:pivot", "cells": [0] },
+        { "id": "death-blossom:petal:0", "cells": [1], "digit": 1 },
+        { "id": "death-blossom:petal:1", "cells": [9], "digit": 2 },
+        { "id": "death-blossom:petal:2", "cells": [10], "digit": 3 }
+      ]
+    },
+    {
+      "technique": "sue-de-coq",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [3, 4]],
+        [3, [1, 5]],
+        [4, [2, 5]],
+        [5, [3, 5]],
+        [6, [5]],
+        [9, [1, 6]],
+        [10, [2, 6]],
+        [11, [3, 6]],
+        [18, [6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 6, "digit": 5 },
+        { "cell": 18, "digit": 6 }
+      ],
+      "expectedPattern": { "family": "als", "subtype": "sue-de-coq-row-box" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "sue-de-coq:intersection", "cells": [0, 1] },
+        { "id": "sue-de-coq:line-wing", "cells": [3, 4, 5] },
+        { "id": "sue-de-coq:box-wing", "cells": [9, 10, 11] }
+      ]
+    }
+  ],
+  "patterns": [
+    {
+      "technique": "exocet",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [15, [1, 2, 3, 4]],
+        [21, [1, 2, 3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 15, "digit": 4 },
+        { "cell": 21, "digit": 4 }
+      ],
+      "expectedPattern": { "family": "pattern", "subtype": "exocet" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "exocet:base:0", "cells": [0, 1] },
+        { "id": "exocet:targets:0", "cells": [15, 21] }
+      ],
+      "expectedNoteIncludes": [
+        "links 2 base cells and 2 target cells",
+        "3 base digit"
+      ]
+    },
+    {
+      "technique": "double-exocet",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [13, [1, 2]],
+        [14, [2, 3]],
+        [15, [1, 2, 3, 4]],
+        [21, [1, 2, 3, 4]],
+        [8, [1, 2, 3, 4]],
+        [19, [1, 2, 3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 15, "digit": 4 },
+        { "cell": 21, "digit": 4 },
+        { "cell": 8, "digit": 4 },
+        { "cell": 19, "digit": 4 }
+      ],
+      "expectedPattern": { "family": "pattern", "subtype": "double-exocet" },
+      "minNodes": 4,
+      "expectedNodes": [
+        { "id": "double-exocet:base:0" },
+        { "id": "double-exocet:targets:0" },
+        { "id": "double-exocet:base:1" },
+        { "id": "double-exocet:targets:1" }
+      ],
+      "expectedNoteIncludes": [
+        "links 2 base pair",
+        "4 base cells and 4 target cells",
+        "3 base digit"
+      ]
+    },
+    {
+      "technique": "pattern-overlay",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [12, [1, 8]],
+        [24, [1, 8]],
+        [28, [1, 8]],
+        [40, [1, 8]],
+        [52, [1, 8]],
+        [56, [1, 8]],
+        [68, [1, 8]],
+        [80, [1, 8]]
+      ],
+      "expectedPlacements": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 80, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "pattern", "subtype": "pattern-overlay-single-digit-template" },
+      "minNodes": 2,
+      "expectedNodes": [
+        { "id": "pattern-overlay:template-support", "digit": 1 },
+        { "id": "pattern-overlay:targets", "cells": [0, 80], "digit": 1 }
+      ],
+      "expectedNoteIncludes": [
+        "enumerates 1 legal template",
+        "4096 template budget"
+      ]
+    },
+    {
+      "technique": "tridagons",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 4]],
+        [11, [1, 3]],
+        [19, [2, 3]],
+        [3, [1, 2]],
+        [13, [1, 3]],
+        [23, [2, 3]],
+        [27, [1, 2]],
+        [37, [1, 3]],
+        [47, [2, 3]],
+        [30, [1, 2]],
+        [40, [1, 3]],
+        [50, [2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 0, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "pattern", "subtype": "tridagon-four-box-guardian" },
+      "minNodes": 5,
+      "expectedNodes": [
+        { "id": "tridagons:guardian", "cells": [0] },
+        { "id": "tridagons:box:0" },
+        { "id": "tridagons:box:1" },
+        { "id": "tridagons:box:3" },
+        { "id": "tridagons:box:4" }
+      ],
+      "expectedNoteIncludes": [
+        "uses 4 box pattern",
+        "3 tridagon digit",
+        "one guardian cell"
+      ]
+    },
+    {
+      "technique": "sk-loops",
+      "stateKind": "trusted",
+      "puzzle": "900800000000000000000000000700600000000000000000000000000000000000000000000000000",
+      "candidates": [
+        [1, [1, 2]],
+        [2, [1, 2]],
+        [4, [1, 2]],
+        [5, [1, 2]],
+        [12, [1, 2]],
+        [21, [1, 2]],
+        [39, [1, 2]],
+        [48, [1, 2]],
+        [31, [1, 2]],
+        [32, [1, 2]],
+        [28, [1, 2]],
+        [29, [1, 2]],
+        [36, [1, 2]],
+        [45, [1, 2]],
+        [9, [1, 2]],
+        [18, [1, 2]],
+        [6, [1]]
+      ],
+      "expectedEliminations": [
+        { "cell": 6, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "pattern", "subtype": "sk-loop-eight-node" },
+      "minNodes": 9,
+      "expectedNodes": [
+        { "id": "sk-loops:pivots", "cells": [0, 3, 27, 30] },
+        { "id": "sk-loops:node:0", "cells": [1, 2] },
+        { "id": "sk-loops:node:1", "cells": [4, 5] },
+        { "id": "sk-loops:node:2", "cells": [12, 21] },
+        { "id": "sk-loops:node:3", "cells": [39, 48] },
+        { "id": "sk-loops:node:4", "cells": [31, 32] },
+        { "id": "sk-loops:node:5", "cells": [28, 29] },
+        { "id": "sk-loops:node:6", "cells": [36, 45] },
+        { "id": "sk-loops:node:7", "cells": [9, 18] }
+      ],
+      "expectedNoteIncludes": [
+        "lock 8 node",
+        "4 pivot",
+        "8 link house"
+      ]
+    }
+  ],
+  "uniqueness": [
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 12, "digit": 1 },
+        { "cell": 12, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-1" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 3, 9] },
+        { "id": "ur-roof", "cells": [12] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2, 3]],
+        [9, [1, 2]],
+        [12, [1, 2, 4]],
+        [21, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 },
+        { "cell": 12, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-4" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 9] },
+        { "id": "ur-roof", "cells": [3, 12] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [12, [1, 2, 4]],
+        [10, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 1 },
+        { "cell": 12, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-4" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 3] },
+        { "id": "ur-roof", "cells": [9, 12] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2, 3]],
+        [9, [1, 2]],
+        [12, [1, 2, 4]],
+        [4, [1, 8]],
+        [13, [2, 8]],
+        [21, [1, 3, 4]],
+        [30, [2, 3, 4]],
+        [39, [3, 4, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 39, "digit": 3 },
+        { "cell": 39, "digit": 4 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-3-naked-set" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 9] },
+        { "id": "ur-roof", "cells": [3, 12] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2, 3]],
+        [9, [1, 2]],
+        [12, [1, 2, 4]],
+        [4, [1, 8]],
+        [13, [2, 8]],
+        [21, [1, 3, 5]],
+        [30, [2, 3, 6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 21, "digit": 5 },
+        { "cell": 30, "digit": 6 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-3-hidden-set" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 9] },
+        { "id": "ur-roof", "cells": [3, 12] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [12, [1, 2]],
+        [18, [3, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 18, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-2-shared-extra" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [3, 12] },
+        { "id": "ur-roof", "cells": [0, 9] }
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2, 3]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [6, [3, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 6, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-2-shared-extra" },
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [9, 12] },
+        { "id": "ur-roof", "cells": [0, 3] }
+      ]
+    },
+    {
+      "technique": "avoidable-rectangle",
+      "stateKind": "trusted",
+      "puzzle": "020000000000000000000000000210000000000000000000000000000000000000000000000000000",
+      "candidates": [
+        [0, [1, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "avoidable-rectangle", "subtype": "three-solved-corners" }
+    },
+    {
+      "technique": "rectangle-elimination",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [31, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 27, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "rectangle-elimination", "subtype": "row-strong-link" },
+      "minLinks": 1
+    },
+    {
+      "technique": "rectangle-elimination",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [6, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [31, [1, 8]],
+        [39, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "rectangle-elimination", "subtype": "col-strong-link" },
+      "minLinks": 1
+    },
+    {
+      "technique": "extended-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [15, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 15, "digit": 1 },
+        { "cell": 15, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "extended-rectangle", "subtype": "2x3-or-3x2-type-1" }
+    },
+    {
+      "technique": "extended-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]],
+        [27, [1, 2]],
+        [28, [1, 2]],
+        [54, [1, 2]],
+        [55, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 55, "digit": 1 },
+        { "cell": 55, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "extended-rectangle", "subtype": "2x3-or-3x2-type-1" }
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [15, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 15, "digit": 1 },
+        { "cell": 15, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-loop", "subtype": "2x3-or-3x2-single-roof" },
+      "minNodes": 4,
+      "expectedNodes": [
+        { "id": "unique-loop", "cells": [0, 3, 6, 9, 12, 15] },
+        { "id": "unique-loop:base-pair", "cells": [0, 3, 6, 9, 12] },
+        { "id": "unique-loop:guardians", "cells": [15] },
+        { "id": "unique-loop:targets", "cells": [15] }
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2, 9]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [15, [1, 2, 9]],
+        [24, [8, 9]]
+      ],
+      "expectedEliminations": [
+        { "cell": 24, "digit": 9 }
+      ],
+      "expectedPattern": { "family": "unique-loop", "subtype": "2x3-or-3x2-shared-guardian" },
+      "minNodes": 4,
+      "expectedNodes": [
+        { "id": "unique-loop", "cells": [0, 3, 6, 9, 12, 15] },
+        { "id": "unique-loop:base-pair", "cells": [0, 3, 9, 12] },
+        { "id": "unique-loop:guardians", "cells": [6, 15] },
+        { "id": "unique-loop:targets", "cells": [24], "digit": 9 }
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [10, [1, 2]],
+        [12, [1, 2]],
+        [28, [1, 2]],
+        [31, [1, 2]],
+        [36, [1, 2, 3]],
+        [40, [1, 2]]
+      ],
+      "expectedEliminations": [
+        { "cell": 36, "digit": 1 },
+        { "cell": 36, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-loop", "subtype": "generalized-single-roof" },
+      "minNodes": 4,
+      "expectedNodes": [
+        { "id": "unique-loop", "cells": [0, 3, 10, 12, 28, 31, 36, 40] },
+        { "id": "unique-loop:base-pair", "cells": [0, 3, 10, 12, 28, 31, 40] },
+        { "id": "unique-loop:guardians", "cells": [36] },
+        { "id": "unique-loop:targets", "cells": [36] }
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 2]],
+        [28, [1, 2]],
+        [31, [1, 2]],
+        [40, [1, 2]],
+        [43, [1, 2]],
+        [47, [1, 2]],
+        [52, [1, 2]],
+        [56, [1, 2]],
+        [59, [1, 2]],
+        [68, [1, 2]],
+        [71, [1, 2]],
+        [72, [1, 2]],
+        [80, [1, 2]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 0, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-loop", "subtype": "generalized-single-roof" },
+      "minNodes": 4,
+      "expectedNodes": [
+        { "id": "unique-loop", "cells": [0, 1, 28, 31, 40, 43, 47, 52, 56, 59, 68, 71, 72, 80] },
+        { "id": "unique-loop:base-pair", "cells": [1, 28, 31, 40, 43, 47, 52, 56, 59, 68, 71, 72, 80] },
+        { "id": "unique-loop:guardians", "cells": [0] },
+        { "id": "unique-loop:targets", "cells": [0] }
+      ]
+    },
+    {
+      "technique": "hidden-unique-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "hidden-unique-rectangle", "subtype": "type-6-strong-link-corner" },
+      "minLinks": 2,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [9] },
+        { "id": "ur-roof", "cells": [0, 3, 12] }
+      ]
+    },
+    {
+      "technique": "hidden-unique-rectangle",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]],
+        [27, [1, 2]],
+        [28, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 1, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "hidden-unique-rectangle", "subtype": "type-6-strong-link-corner" },
+      "minLinks": 2,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 1, 27, 28] },
+        { "id": "ur-floor", "cells": [27] },
+        { "id": "ur-roof", "cells": [0, 1, 28] }
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle-aic", "subtype": "single-roof-chain" },
+      "minLinks": 2,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [9] },
+        { "id": "ur-roof", "cells": [0, 3, 12] }
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [10, [1, 2, 8]],
+        [12, [1, 2, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 12, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle-aic", "subtype": "floor-roof-chain" },
+      "minLinks": 1,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 3] },
+        { "id": "ur-roof", "cells": [9, 12] }
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "mask",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2, 4]],
+        [10, [2, 8]],
+        [12, [1, 2, 3]],
+        [13, [1, 8]],
+        [18, [1, 8]]
+      ],
+      "expectedEliminations": [
+        { "cell": 9, "digit": 2 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle-aic", "subtype": "floor-roof-chain" },
+      "minLinks": 1,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [0, 3, 9, 12] },
+        { "id": "ur-floor", "cells": [0, 3] },
+        { "id": "ur-roof", "cells": [9, 12] }
+      ]
+    },
+    {
+      "id": "ur-type-5-two-diagonal-extra-hodoku-u501-shape",
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [57, [1, 4, 7]],
+        [58, [4, 6]],
+        [61, [1, 4, 6]],
+        [67, [1, 4, 6]],
+        [70, [4, 6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 57, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-5" },
+      "minNodes": 5,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [58, 61, 67, 70] },
+        { "id": "ur-floor", "cells": [58, 70] },
+        { "id": "ur-roof", "cells": [61, 67] },
+        { "id": "ur-extra", "cells": [61, 67], "digit": 1 },
+        { "id": "ur-targets", "cells": [57], "digit": 1 }
+      ]
+    },
+    {
+      "id": "ur-type-5-three-extra-hodoku-u502-shape",
+      "technique": "unique-rectangle",
+      "stateKind": "mask",
+      "candidates": [
+        [68, [2, 6, 9]],
+        [69, [6, 9]],
+        [71, [2, 6, 9]],
+        [77, [2, 9]],
+        [80, [2, 6, 9]]
+      ],
+      "expectedEliminations": [
+        { "cell": 69, "digit": 6 }
+      ],
+      "expectedPattern": { "family": "unique-rectangle", "subtype": "type-5" },
+      "minNodes": 5,
+      "expectedNodes": [
+        { "id": "ur-rectangle", "cells": [68, 71, 77, 80] },
+        { "id": "ur-floor", "cells": [77] },
+        { "id": "ur-roof", "cells": [68, 71, 80] },
+        { "id": "ur-extra", "cells": [68, 71, 80], "digit": 6 },
+        { "id": "ur-targets", "cells": [69], "digit": 6 }
+      ]
+    },
+    {
+      "technique": "bug-plus-one",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 2]],
+        [2, [1, 2]],
+        [3, [1, 2]],
+        [4, [1, 2]],
+        [5, [1, 2]],
+        [6, [1, 2]],
+        [7, [1, 2]],
+        [8, [1, 2]],
+        [9, [1, 2]],
+        [10, [1, 2]],
+        [11, [1, 2]],
+        [12, [1, 2]],
+        [13, [1, 2]],
+        [14, [1, 2]],
+        [15, [1, 2]],
+        [16, [1, 2]],
+        [17, [1, 2]],
+        [18, [1, 2]],
+        [19, [1, 2]],
+        [20, [1, 2]],
+        [21, [1, 2]],
+        [22, [1, 2]],
+        [23, [1, 2]],
+        [24, [1, 2]],
+        [25, [1, 2]],
+        [26, [1, 2]],
+        [27, [1, 2]],
+        [28, [1, 2]],
+        [29, [1, 2]],
+        [30, [1, 2]],
+        [31, [1, 2]],
+        [32, [1, 2]],
+        [33, [1, 2]],
+        [34, [1, 2]],
+        [35, [1, 2]],
+        [36, [1, 2]],
+        [37, [1, 2]],
+        [38, [1, 2]],
+        [39, [1, 2]],
+        [40, [1, 2]],
+        [41, [1, 2]],
+        [42, [1, 2]],
+        [43, [1, 2]],
+        [44, [1, 2]],
+        [45, [1, 2]],
+        [46, [1, 2]],
+        [47, [1, 2]],
+        [48, [1, 2]],
+        [49, [1, 2]],
+        [50, [1, 2]],
+        [51, [1, 2]],
+        [52, [1, 2]],
+        [53, [1, 2]],
+        [54, [1, 2]],
+        [55, [1, 2]],
+        [56, [1, 2]],
+        [57, [1, 2]],
+        [58, [1, 2]],
+        [59, [1, 2]],
+        [60, [1, 2]],
+        [61, [1, 2]],
+        [62, [1, 2]],
+        [63, [1, 2]],
+        [64, [1, 2]],
+        [65, [1, 2]],
+        [66, [1, 2]],
+        [67, [1, 2]],
+        [68, [1, 2]],
+        [69, [1, 2]],
+        [70, [1, 2]],
+        [71, [1, 2]],
+        [72, [1, 2]],
+        [73, [1, 2]],
+        [74, [1, 2]],
+        [75, [1, 2]],
+        [76, [1, 2]],
+        [77, [1, 2]],
+        [78, [1, 2]],
+        [79, [1, 2]],
+        [80, [1, 2]]
+      ],
+      "expectedPlacements": [
+        { "cell": 0, "digit": 1 }
+      ],
+      "expectedPattern": { "family": "bug", "subtype": "bug-plus-one" },
+      "minNodes": 5,
+      "expectedNodes": [
+        { "id": "bug-extra", "cells": [0], "digit": 1 },
+        { "id": "bug-elimination-targets", "cells": [0], "digit": 2 },
+        { "id": "bug-elimination-targets", "cells": [0], "digit": 3 },
+        { "id": "bug-parity-row", "cells": [0], "digit": 1 },
+        { "id": "bug-parity-col", "cells": [0], "digit": 1 },
+        { "id": "bug-parity-box", "cells": [0], "digit": 1 }
+      ]
+    },
+    {
+      "technique": "bug-plus-one",
+      "stateKind": "trusted",
+      "puzzle": "140780009280450107370610008953871002724965813861324975618237594597148326432596781",
+      "candidates": [
+        [2, [5, 6]],
+        [5, [2, 3]],
+        [6, [2, 6]],
+        [7, [3, 5, 6]],
+        [11, [6, 9]],
+        [14, [3, 9]],
+        [16, [3, 6]],
+        [20, [5, 9]],
+        [23, [2, 9]],
+        [24, [2, 4]],
+        [25, [4, 5]],
+        [33, [4, 6]],
+        [34, [4, 6]]
+      ],
+      "expectedPlacements": [
+        { "cell": 7, "digit": 6 }
+      ],
+      "expectedPattern": { "family": "bug", "subtype": "bug-plus-one" },
+      "minNodes": 5,
+      "expectedNodes": [
+        { "id": "bug-base", "cells": [2, 5, 6, 11, 14, 16, 20, 23, 24, 25, 33, 34] },
+        { "id": "bug-extra", "cells": [7], "digit": 6 },
+        { "id": "bug-elimination-targets", "cells": [7], "digit": 3 },
+        { "id": "bug-elimination-targets", "cells": [7], "digit": 5 },
+        { "id": "bug-parity-row", "cells": [2, 6, 7], "digit": 6 },
+        { "id": "bug-parity-col", "cells": [7, 16, 34], "digit": 6 },
+        { "id": "bug-parity-box", "cells": [6, 7, 16], "digit": 6 }
+      ]
+    },
+    {
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "puzzle": "004008912002005348198342567859761423426853791713924856961537284287419635345286179",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [3, 4]],
+        [3, [1, 2, 3]],
+        [4, [3, 4]],
+        [9, [1, 2]],
+        [10, [3, 4]],
+        [12, [1, 2]],
+        [13, [3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 1, "digit": 3 },
+        { "cell": 4, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "bug", "subtype": "bug-plus-two-common-extra" },
+      "minLinks": 8,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "bug-extra", "cells": [0, 3], "digit": 3 },
+        { "id": "bug-common-extra-targets", "cells": [1, 4], "digit": 3 }
+      ]
+    },
+    {
+      "id": "bug-plus-two-parity-elimination-bounded-positive",
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "puzzle": "003400789456789123789123456004300897365897214897214365531642978642978531978531642",
+      "candidates": [
+        [0, [1, 2, 5]],
+        [1, [1, 2, 6]],
+        [4, [5, 6]],
+        [5, [5, 6]],
+        [27, [1, 2]],
+        [28, [1, 2]],
+        [31, [5, 6]],
+        [32, [5, 6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 5 }
+      ],
+      "expectedPattern": { "family": "bug", "subtype": "bug-plus-two-parity-elimination" },
+      "minLinks": 8,
+      "minNodes": 9,
+      "expectedNodes": [
+        { "id": "bug-extra", "cells": [0, 1] },
+        { "id": "bug-extra-group:5", "cells": [0], "digit": 5 },
+        { "id": "bug-extra-group:6", "cells": [1], "digit": 6 },
+        { "id": "bug-elimination-targets", "cells": [0], "digit": 5 }
+      ]
+    },
+    {
+      "id": "bug-plus-n-common-extra-positive",
+      "technique": "bug-plus-n",
+      "stateKind": "trusted",
+      "puzzle": "000006789456789123789123456000007891567891234891234567345678912678912345912345678",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 3, 4]],
+        [2, [2, 3, 4]],
+        [3, [3, 5]],
+        [4, [3, 5]],
+        [27, [1, 2]],
+        [28, [1, 4]],
+        [29, [2, 4]],
+        [30, [3, 5]],
+        [31, [3, 5]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 3 },
+        { "cell": 4, "digit": 3 }
+      ],
+      "expectedPattern": { "family": "bug", "subtype": "bug-plus-n-common-extra" },
+      "minLinks": 8,
+      "minNodes": 3,
+      "expectedNodes": [
+        { "id": "bug-base", "cells": [0, 1, 2, 3, 4, 27, 28, 29, 30, 31] },
+        { "id": "bug-extra", "cells": [0, 1, 2], "digit": 3 },
+        { "id": "bug-common-extra-targets", "cells": [3, 4], "digit": 3 }
+      ]
+    }
+  ],
+  "negative": [
+    {
+      "technique": "direct-pointing",
+      "stateKind": "mask",
+      "reason": "direct pointing without a line target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]]
+      ]
+    },
+    {
+      "technique": "direct-claiming",
+      "stateKind": "mask",
+      "reason": "direct claiming without a box target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]]
+      ]
+    },
+    {
+      "technique": "direct-hidden-pair",
+      "stateKind": "mask",
+      "reason": "direct hidden pair without extra candidates to remove should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]]
+      ]
+    },
+    {
+      "technique": "direct-hidden-triplet",
+      "stateKind": "mask",
+      "reason": "direct hidden triplet without extra candidates to remove should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [1, 3]]
+      ]
+    },
+    {
+      "technique": "tridagons",
+      "stateKind": "mask",
+      "reason": "tridagons require exactly one guardian cell",
+      "candidates": [
+        [0, [1, 2, 4]],
+        [11, [1, 3]],
+        [19, [2, 3]],
+        [3, [1, 2, 4]],
+        [13, [1, 3]],
+        [23, [2, 3]],
+        [27, [1, 2]],
+        [37, [1, 3]],
+        [47, [2, 3]],
+        [30, [1, 2]],
+        [40, [1, 3]],
+        [50, [2, 3]]
+      ]
+    },
+    {
+      "technique": "sk-loops",
+      "stateKind": "trusted",
+      "reason": "SK Loops require all four pivot cells to be solved",
+      "puzzle": "900800000000000000000000000700000000000000000000000000000000000000000000000000000",
+      "candidates": [
+        [1, [1, 2]],
+        [2, [1, 2]],
+        [4, [1, 2]],
+        [5, [1, 2]],
+        [12, [1, 2]],
+        [21, [1, 2]],
+        [39, [1, 2]],
+        [48, [1, 2]],
+        [31, [1, 2]],
+        [32, [1, 2]],
+        [28, [1, 2]],
+        [29, [1, 2]],
+        [36, [1, 2]],
+        [45, [1, 2]],
+        [9, [1, 2]],
+        [18, [1, 2]]
+      ]
+    },
+    {
+      "technique": "fireworks",
+      "stateKind": "mask",
+      "reason": "fireworks without non-pattern extra candidates should not produce an empty-action step",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2, 3]],
+        [27, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "twinned-xy-chains",
+      "stateKind": "mask",
+      "reason": "twinned XY chains without an external paired-digit target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [3, 4]],
+        [9, [1, 5]],
+        [10, [5, 6]],
+        [11, [4, 6]]
+      ]
+    },
+    {
+      "technique": "death-blossom",
+      "stateKind": "mask",
+      "reason": "death blossom without a shared petal target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 4]],
+        [9, [2, 4]],
+        [10, [3, 4]]
+      ]
+    },
+    {
+      "technique": "sue-de-coq",
+      "stateKind": "mask",
+      "reason": "Sue de Coq without line or box wing target candidates should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [3, 4]],
+        [3, [1, 5]],
+        [4, [2, 5]],
+        [5, [3, 5]],
+        [9, [1, 6]],
+        [10, [2, 6]],
+        [11, [3, 6]]
+      ]
+    },
+    {
+      "technique": "almost-locked-pair",
+      "stateKind": "mask",
+      "reason": "almost locked pair with no ALS or AHS target candidates should not produce a step",
+      "candidates": [
+        [3, [1, 2]],
+        [9, [1]]
+      ]
+    },
+    {
+      "technique": "almost-locked-triple",
+      "stateKind": "mask",
+      "reason": "almost locked triple with no ALS or AHS target candidates should not produce a step",
+      "candidates": [
+        [3, [1, 2]],
+        [4, [2, 3]],
+        [9, [1]],
+        [10, [3]]
+      ]
+    },
+    {
+      "technique": "aligned-pair-exclusion",
+      "stateKind": "mask",
+      "reason": "aligned pair exclusion should not remove candidates when every pair value has a surviving assignment",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]]
+      ]
+    },
+    {
+      "technique": "xyz-wing",
+      "stateKind": "exact",
+      "reason": "XYZ-Wing without a target seeing pivot and both wings should not produce a step",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 3]],
+        [9, [2, 3]]
+      ]
+    },
+    {
+      "technique": "wxyz-wing",
+      "stateKind": "mask",
+      "reason": "WXYZ-Wing without an outside shared-digit target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [1, 4]],
+        [10, [2, 3, 4]]
+      ]
+    },
+    {
+      "technique": "w-wing",
+      "stateKind": "mask",
+      "reason": "W-Wing without a common-peer target for the non-bridge digit should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [30, [1, 2]],
+        [4, [1, 8]],
+        [31, [1, 8]]
+      ]
+    },
+    {
+      "technique": "big-wings",
+      "stateKind": "mask",
+      "reason": "BigWings ALS-stem shape without an external target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [2, [2, 3, 4]],
+        [3, [1, 4]]
+      ]
+    },
+    {
+      "technique": "chute-remote-pairs",
+      "stateKind": "mask",
+      "reason": "chute remote pairs without a common-peer target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [13, [1, 2]]
+      ]
+    },
+    {
+      "technique": "remote-pairs",
+      "stateKind": "exact",
+      "reason": "remote pairs without an outside cell seeing opposite-color endpoints should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [4, [1, 2]],
+        [40, [1, 2]],
+        [44, [1, 2]]
+      ]
+    },
+    {
+      "technique": "exocet",
+      "stateKind": "exact",
+      "reason": "exocet target cells restricted to base digits should not produce an empty-action step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [15, [1, 2, 3]],
+        [21, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "double-exocet",
+      "stateKind": "exact",
+      "reason": "double exocet target cells restricted to shared base digits should not produce an empty-action step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [13, [1, 2]],
+        [14, [2, 3]],
+        [15, [1, 2, 3]],
+        [21, [1, 2, 3]],
+        [8, [1, 2, 3]],
+        [19, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "pattern-overlay",
+      "stateKind": "exact",
+      "reason": "pattern overlay with multiple templates and no common placement or outside target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [12, [1, 8]],
+        [13, [1, 8]],
+        [24, [1, 8]],
+        [25, [1, 8]],
+        [28, [1, 8]],
+        [29, [1, 8]],
+        [40, [1, 8]],
+        [41, [1, 8]],
+        [52, [1, 8]],
+        [53, [1, 8]],
+        [56, [1, 8]],
+        [57, [1, 8]],
+        [68, [1, 8]],
+        [69, [1, 8]],
+        [72, [1, 8]],
+        [80, [1, 8]]
+      ]
+    },
+    {
+      "technique": "bidirectional-x-cycle",
+      "stateKind": "exact",
+      "reason": "bidirectional X-cycle trap without a target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [18, [1, 8]],
+        [10, [2, 8]]
+      ]
+    },
+    {
+      "technique": "simple-coloring",
+      "stateKind": "exact",
+      "reason": "simple coloring trap without a target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [18, [1, 8]]
+      ]
+    },
+    {
+      "technique": "forcing-x-chain",
+      "stateKind": "exact",
+      "reason": "forcing X-chain without an endpoint target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [1, [1, 8]],
+        [2, [2, 8]]
+      ]
+    },
+    {
+      "technique": "x-chain",
+      "stateKind": "exact",
+      "reason": "X-Chain open-chain path without an endpoint target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [1, [1, 8]],
+        [2, [2, 8]]
+      ]
+    },
+    {
+      "technique": "skyscraper",
+      "stateKind": "exact",
+      "reason": "skyscraper without a target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [2, 8]],
+        [13, [1, 8]],
+        [18, [1, 8]],
+        [22, [1, 8]]
+      ]
+    },
+    {
+      "technique": "two-string-kite",
+      "stateKind": "exact",
+      "reason": "two-string kite without a target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [5, [1, 8]],
+        [10, [1, 8]],
+        [28, [1, 8]],
+        [32, [2, 8]]
+      ]
+    },
+    {
+      "technique": "turbot-fish",
+      "stateKind": "exact",
+      "reason": "turbot fish without a target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [19, [2, 8]]
+      ]
+    },
+    {
+      "technique": "empty-rectangle",
+      "stateKind": "exact",
+      "reason": "empty rectangle without a target candidate should not produce a step",
+      "candidates": [
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [3, [1, 8]],
+        [9, [1, 8]],
+        [18, [1, 8]],
+        [36, [2, 8]],
+        [39, [1, 8]]
+      ]
+    },
+    {
+      "technique": "xy-wing",
+      "stateKind": "exact",
+      "reason": "XY-Wing without a target seeing both pincers should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [2, 3]],
+        [10, [4, 5]]
+      ]
+    },
+    {
+      "technique": "bidirectional-y-cycle",
+      "stateKind": "mask",
+      "reason": "bidirectional Y-cycle without a common endpoint target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [2, 3]],
+        [10, [1, 3]]
+      ]
+    },
+    {
+      "technique": "xy-chain",
+      "stateKind": "mask",
+      "reason": "XY-Chain open-chain path without a common endpoint target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [2, 3]],
+        [10, [1, 3]]
+      ]
+    },
+    {
+      "technique": "multi-colors",
+      "stateKind": "exact",
+      "reason": "multi-colors weakly connected coloring chains without a shared target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [18, [1, 8]],
+        [8, [1, 8]],
+        [26, [1, 8]],
+        [4, [1, 8]]
+      ]
+    },
+    {
+      "technique": "three-d-medusa",
+      "stateKind": "mask",
+      "reason": "3D Medusa two-color cell without an uncolored target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [1, 2]]
+      ]
+    },
+    {
+      "technique": "grouped-x-cycles",
+      "stateKind": "mask",
+      "reason": "grouped X-Cycles path without an available common-seen target should not produce a step",
+      "candidates": [
+        [8, [1]],
+        [21, [1]],
+        [22, [1]],
+        [51, [1]],
+        [55, [1]],
+        [66, [1]],
+        [67, [1]]
+      ]
+    },
+    {
+      "technique": "x-wing",
+      "stateKind": "exact",
+      "reason": "X-Wing without a cover-line target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [18, [1, 8]],
+        [21, [1, 8]]
+      ]
+    },
+    {
+      "technique": "swordfish",
+      "stateKind": "exact",
+      "reason": "Swordfish without a cover-line target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [10, [1, 8]],
+        [11, [1, 8]],
+        [18, [1, 8]],
+        [20, [1, 8]]
+      ]
+    },
+    {
+      "technique": "jellyfish",
+      "stateKind": "exact",
+      "reason": "Jellyfish without a cover-line target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]]
+      ]
+    },
+    {
+      "technique": "finned-x-wing",
+      "stateKind": "exact",
+      "reason": "Finned X-Wing without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [18, [1, 8]],
+        [21, [1, 8]],
+        [22, [1, 8]]
+      ]
+    },
+    {
+      "technique": "sashimi-x-wing",
+      "stateKind": "exact",
+      "reason": "Sashimi X-Wing without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]]
+      ]
+    },
+    {
+      "technique": "finned-swordfish",
+      "stateKind": "exact",
+      "reason": "Finned Swordfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [55, [1, 8]],
+        [57, [1, 8]]
+      ]
+    },
+    {
+      "technique": "finned-jellyfish",
+      "stateKind": "exact",
+      "reason": "Finned Jellyfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]]
+      ]
+    },
+    {
+      "technique": "sashimi-swordfish",
+      "stateKind": "exact",
+      "reason": "Sashimi Swordfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [55, [1, 8]],
+        [57, [1, 8]]
+      ]
+    },
+    {
+      "technique": "sashimi-jellyfish",
+      "stateKind": "exact",
+      "reason": "Sashimi Jellyfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [30, [1, 8]],
+        [45, [1, 8]],
+        [49, [1, 8]],
+        [64, [1, 8]],
+        [67, [1, 8]]
+      ]
+    },
+    {
+      "technique": "franken-swordfish",
+      "stateKind": "exact",
+      "reason": "Franken Swordfish without a cover-line target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [36, [1, 8]],
+        [37, [1, 8]],
+        [55, [1, 8]],
+        [56, [1, 8]]
+      ]
+    },
+    {
+      "technique": "finned-franken-swordfish",
+      "stateKind": "exact",
+      "reason": "Finned Franken Swordfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [2, [1, 8]],
+        [8, [1, 8]],
+        [9, [1, 8]],
+        [17, [1, 8]],
+        [54, [1, 8]],
+        [55, [1, 8]]
+      ]
+    },
+    {
+      "technique": "finned-franken-jellyfish",
+      "stateKind": "exact",
+      "reason": "Finned Franken Jellyfish without an elimination target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [60, [1, 8]],
+        [61, [1, 8]],
+        [78, [1, 8]],
+        [79, [1, 8]]
+      ]
+    },
+    {
+      "technique": "larger-fish",
+      "stateKind": "exact",
+      "reason": "Larger Fish without a cover-line target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [2, [1, 8]],
+        [3, [1, 8]],
+        [4, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [11, [1, 8]],
+        [12, [1, 8]],
+        [13, [1, 8]],
+        [18, [1, 8]],
+        [19, [1, 8]],
+        [20, [1, 8]],
+        [21, [1, 8]],
+        [22, [1, 8]],
+        [27, [1, 8]],
+        [28, [1, 8]],
+        [29, [1, 8]],
+        [30, [1, 8]],
+        [31, [1, 8]],
+        [36, [1, 8]],
+        [37, [1, 8]],
+        [38, [1, 8]],
+        [39, [1, 8]],
+        [40, [1, 8]]
+      ]
+    },
+    {
+      "technique": "mutant-fish",
+      "stateKind": "exact",
+      "reason": "Mutant Fish without a mixed-cover target should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [60, [1, 8]],
+        [61, [1, 8]]
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "continuous AIC loop without weak-link target candidates should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]]
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "same-digit endpoint AIC without a common peer target should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [9, [1, 3]]
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "different-digit endpoint AIC without endpoint cross-candidates should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [9, [3, 4]]
+      ]
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "same-digit endpoint AIC should not be labeled as a continuous loop",
+      "candidates": [
+        [4, [4]],
+        [17, [1, 2, 3]],
+        [23, [1]],
+        [30, [3]],
+        [31, [3, 4]],
+        [35, [2, 3, 4]],
+        [38, [4]],
+        [39, [1]],
+        [45, [1]],
+        [47, [4]],
+        [55, [1]],
+        [58, [3, 4]],
+        [73, [3, 4]],
+        [75, [1]],
+        [76, [1]]
+      ],
+      "forbiddenPattern": { "family": "aic", "subtype": "continuous-loop" }
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "same-digit endpoint AIC should not be labeled as a weak/weak discontinuous loop",
+      "candidates": [
+        [4, [4]],
+        [17, [1, 2, 3]],
+        [23, [1]],
+        [30, [3]],
+        [31, [3, 4]],
+        [35, [2, 3, 4]],
+        [38, [4]],
+        [39, [1]],
+        [45, [1]],
+        [47, [4]],
+        [55, [1]],
+        [58, [3, 4]],
+        [73, [3, 4]],
+        [75, [1]],
+        [76, [1]]
+      ],
+      "forbiddenPattern": { "family": "aic", "subtype": "discontinuous-loop-weak-weak" }
+    },
+    {
+      "technique": "aic",
+      "stateKind": "mask",
+      "reason": "same-digit endpoint AIC should not be labeled as a strong/strong discontinuous loop",
+      "candidates": [
+        [4, [4]],
+        [17, [1, 2, 3]],
+        [23, [1]],
+        [30, [3]],
+        [31, [3, 4]],
+        [35, [2, 3, 4]],
+        [38, [4]],
+        [39, [1]],
+        [45, [1]],
+        [47, [4]],
+        [55, [1]],
+        [58, [3, 4]],
+        [73, [3, 4]],
+        [75, [1]],
+        [76, [1]]
+      ],
+      "forbiddenPattern": { "family": "aic", "subtype": "discontinuous-loop-strong-strong" }
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "reason": "unique rectangle type-2 shared extra without an external target should not produce a step",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [12, [1, 2]]
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "reason": "diagonal shared-extra roof cells are not the current type-2 shared-extra subtype",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]]
+      ],
+      "forbiddenPattern": { "family": "unique-rectangle", "subtype": "type-2-shared-extra" }
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "reason": "row or column shared-extra Type 2 shape should not be labeled as Type 5",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [10, [3, 8]],
+        [12, [1, 2]]
+      ],
+      "forbiddenPattern": { "family": "unique-rectangle", "subtype": "type-5" }
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "reason": "Unique Rectangle Type 5 without an external target should not produce a step",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "unique-rectangle",
+      "stateKind": "exact",
+      "reason": "Unique Rectangle Type 5 requires every rectangle cell to contain the deadly pair",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2]],
+        [9, [1, 4]],
+        [10, [3, 8]],
+        [12, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "avoidable-rectangle",
+      "stateKind": "trusted",
+      "reason": "avoidable rectangle should not eliminate when the forbidden digit is not a candidate",
+      "puzzle": "020000000000000000000000000210000000000000000000000000000000000000000000000000000",
+      "candidates": [
+        [0, [3, 4]]
+      ]
+    },
+    {
+      "technique": "rectangle-elimination",
+      "stateKind": "exact",
+      "reason": "rectangle elimination without any fourth-box candidate should not produce a step",
+      "candidates": [
+        [0, [1, 8]],
+        [3, [1, 8]],
+        [27, [1, 8]]
+      ]
+    },
+    {
+      "technique": "extended-rectangle",
+      "stateKind": "exact",
+      "reason": "extended rectangle requires five pure pair cells and one roof cell",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]],
+        [15, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "reason": "unique loop shared guardians require a common visible target",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]],
+        [15, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "reason": "generalized unique loop must form a closed deadly loop",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [10, [1, 2]],
+        [12, [1, 2]],
+        [28, [1, 2]],
+        [31, [1, 2]],
+        [36, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "reason": "unique loop target must contain the full deadly pair",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [10, [1, 2]],
+        [12, [1, 2]],
+        [28, [1, 2]],
+        [31, [1, 2]],
+        [36, [1, 3]],
+        [40, [1, 2]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "exact",
+      "reason": "unique loop currently requires exactly one guardian roof cell",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [10, [1, 2]],
+        [12, [1, 2]],
+        [28, [1, 2]],
+        [31, [1, 2]],
+        [36, [1, 2, 3]],
+        [40, [1, 2, 4]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "mask",
+      "reason": "unique loop shared guardians require the same extra digit",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2, 9]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [15, [1, 2, 8]],
+        [24, [8, 9]]
+      ]
+    },
+    {
+      "technique": "unique-loop",
+      "stateKind": "mask",
+      "reason": "unique loop shared guardians require exactly one shared extra digit",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [6, [1, 2, 8, 9]],
+        [9, [1, 2]],
+        [12, [1, 2]],
+        [15, [1, 2, 9]],
+        [24, [8, 9]]
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "mask",
+      "reason": "UR-AIC floor-roof chain without the opposite roof target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2, 3]],
+        [10, [1, 2, 8]],
+        [12, [1, 4]]
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "mask",
+      "reason": "mirrored UR-AIC floor-roof chain without the opposite roof target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 4]],
+        [10, [2, 8]],
+        [12, [1, 2, 3]],
+        [13, [1, 8]],
+        [18, [1, 8]]
+      ]
+    },
+    {
+      "technique": "aic-ur",
+      "stateKind": "exact",
+      "reason": "UR-AIC single-roof chain requires row and column conjugates at the same corner",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]],
+        [14, [1, 2]],
+        [21, [1, 2]]
+      ],
+      "forbiddenPattern": { "family": "unique-rectangle-aic", "subtype": "single-roof-chain" }
+    },
+    {
+      "technique": "hidden-unique-rectangle",
+      "stateKind": "exact",
+      "reason": "hidden unique rectangle requires a common base pair across all four corners",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 3]]
+      ]
+    },
+    {
+      "technique": "hidden-unique-rectangle",
+      "stateKind": "exact",
+      "reason": "hidden unique rectangle Type 6 strong-link corner requires both row and column conjugates",
+      "candidates": [
+        [0, [1, 2]],
+        [3, [1, 2]],
+        [9, [1, 2]],
+        [12, [1, 2, 3]],
+        [14, [1, 2]],
+        [21, [1, 2]]
+      ]
+    },
+    {
+      "technique": "bug-plus-one",
+      "stateKind": "exact",
+      "reason": "BUG+1 requires exactly one trivalue cell",
+      "defaultCandidates": [1, 2],
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2, 3]]
+      ],
+      "forbiddenPlacements": [
+        { "cell": 0, "digit": 1 },
+        { "cell": 3, "digit": 1 }
+      ]
+    },
+    {
+      "technique": "bug-plus-one",
+      "stateKind": "trusted",
+      "reason": "HoDoKu bug102 has one trivalue cell but violates the BUG parity condition",
+      "puzzle": "000090801392008000000000200030600502600040003109003040080000000000800465403050000",
+      "candidates": [
+        [2, [6, 7]],
+        [3, [2, 3]],
+        [5, [2, 6]],
+        [7, [3, 7]],
+        [12, [1, 4]],
+        [13, [1, 7]],
+        [15, [6, 7]],
+        [17, [4, 6]],
+        [18, [7, 8]],
+        [20, [6, 8]],
+        [21, [3, 5]],
+        [22, [6, 7]],
+        [23, [4, 5]],
+        [24, [3, 9]],
+        [26, [4, 9]],
+        [27, [7, 8]],
+        [31, [1, 8]],
+        [32, [1, 7]],
+        [38, [7, 8]],
+        [39, [5, 9]],
+        [41, [5, 9]],
+        [43, [7, 8]],
+        [48, [2, 7]],
+        [49, [2, 8]],
+        [51, [6, 7]],
+        [53, [6, 8]],
+        [54, [2, 9]],
+        [57, [4, 9]],
+        [58, [2, 6]],
+        [59, [1, 4, 6]],
+        [60, [3, 9]],
+        [61, [1, 3]],
+        [63, [2, 9]],
+        [68, [2, 9]],
+        [75, [1, 7]],
+        [77, [7, 9]],
+        [79, [1, 8]],
+        [80, [8, 9]]
+      ],
+      "forbiddenPlacements": [
+        { "cell": 59, "digit": 1 },
+        { "cell": 59, "digit": 4 },
+        { "cell": 59, "digit": 6 }
+      ]
+    },
+    {
+      "technique": "bug-plus-two",
+      "stateKind": "exact",
+      "reason": "two trivalue cells with different extra digits do not form common-extra BUG+2",
+      "defaultCandidates": [1, 2],
+      "candidates": [
+        [0, [1, 2, 3]],
+        [3, [1, 2, 4]]
+      ]
+    },
+    {
+      "technique": "bug-plus-two",
+      "stateKind": "exact",
+      "reason": "common-extra BUG+2 without a cell seeing both extra cells has no elimination",
+      "defaultCandidates": [1, 2],
+      "candidates": [
+        [0, [1, 2, 3]],
+        [80, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "reason": "common-extra BUG+2 requires the declared extras to leave a closed BUG base graph",
+      "puzzle": "004008912002005348198342567859761423426853791713924856961537284287419635345286179",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [3, 4]],
+        [3, [1, 2, 3]],
+        [4, [3, 4]],
+        [9, [1, 4]],
+        [10, [3, 4]],
+        [12, [1, 2]],
+        [13, [3, 4]]
+      ]
+    },
+    {
+      "id": "bug-plus-two-non-common-not-common-extra",
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "reason": "non-common BUG+2 extra pairs require a parity proof and must not be reported as common-extra BUG+2",
+      "puzzle": "004008912002005348198342567859761423426853791713924856961537284287419635345286179",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [3, 4]],
+        [3, [1, 2, 4]],
+        [4, [3, 4]],
+        [9, [1, 2]],
+        [10, [3, 4]],
+        [12, [1, 2]],
+        [13, [3, 4]]
+      ],
+      "forbiddenPattern": { "family": "bug", "subtype": "bug-plus-two-common-extra" }
+    },
+    {
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "reason": "non-common BUG+2 extra pairs with common seen cells still need target parity proof before elimination",
+      "puzzle": "004008912002005348198342567859761423426853791713924856961537284287419635345286179",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [3, 4]],
+        [3, [1, 2, 4]],
+        [4, [3, 4]],
+        [9, [1, 2]],
+        [10, [3, 4]],
+        [12, [1, 2]],
+        [13, [3, 4]]
+      ],
+      "forbiddenPattern": { "family": "bug", "subtype": "bug-plus-two-parity-elimination" },
+      "forbiddenEliminations": [
+        { "cell": 1, "digit": 3 }
+      ]
+    },
+    {
+      "id": "bug-plus-two-parity-budget-no-hit",
+      "technique": "bug-plus-two",
+      "stateKind": "trusted",
+      "reason": "bounded non-common BUG+2 parity proof must not eliminate when the candidate completion search exceeds its cell budget",
+      "puzzle": "000400089450709020789103450004300897005897004007214005031042978042078531978531642",
+      "candidates": [
+        [0, [1, 2, 5]],
+        [1, [1, 2, 6]],
+        [4, [5, 6]],
+        [5, [5, 6]],
+        [27, [1, 2]],
+        [28, [1, 2]],
+        [31, [5, 6]],
+        [32, [5, 6]],
+        [2, [7, 8]],
+        [6, [7, 8]],
+        [11, [7, 8]],
+        [15, [7, 8]],
+        [13, [3, 4]],
+        [17, [3, 4]],
+        [22, [3, 4]],
+        [26, [3, 4]],
+        [36, [5, 9]],
+        [42, [5, 9]],
+        [45, [5, 9]],
+        [51, [5, 9]],
+        [37, [3, 4]],
+        [43, [3, 4]],
+        [46, [3, 4]],
+        [52, [3, 4]],
+        [54, [3, 4]],
+        [57, [3, 4]],
+        [63, [3, 4]],
+        [66, [3, 4]]
+      ]
+    },
+    {
+      "id": "bug-plus-n-common-extra-no-target",
+      "technique": "bug-plus-n",
+      "stateKind": "trusted",
+      "reason": "BUG+n common-extra shape without a common visible target should not produce a step",
+      "puzzle": "000006789456789123789123456000007891567891234891234567345678912678912345912345678",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 3, 4]],
+        [2, [2, 3, 4]],
+        [3, [5]],
+        [4, [5]],
+        [27, [1, 2]],
+        [28, [1, 4]],
+        [29, [2, 4]],
+        [30, [3, 5]],
+        [31, [3, 5]]
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "reason": "grouped AIC path without an available endpoint cross-candidate target should not produce a step",
+      "candidates": [
+        [1, [1, 2, 4, 5]],
+        [2, [2, 3, 4, 5]],
+        [11, [3]],
+        [12, [1, 3]],
+        [18, [5]],
+        [19, [1]],
+        [24, [1, 4]],
+        [34, [3]],
+        [44, [1, 5]],
+        [51, [5]],
+        [52, [4]],
+        [55, [1, 5]],
+        [61, [1, 2, 3]],
+        [62, [5]],
+        [63, [1, 3, 5]],
+        [68, [4]],
+        [74, [1, 2, 3, 5]]
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "reason": "mirrored grouped AIC path without an available endpoint cross-candidate target should not produce a step",
+      "candidates": [
+        [6, [2, 3, 4, 5]],
+        [7, [1, 2, 4, 5]],
+        [14, [1, 3]],
+        [15, [3]],
+        [20, [1, 4]],
+        [25, [1]],
+        [26, [5]],
+        [28, [3]],
+        [36, [1, 5]],
+        [46, [4]],
+        [47, [5]],
+        [54, [5]],
+        [55, [1, 2, 3]],
+        [61, [1, 5]],
+        [66, [4]],
+        [71, [1, 3, 5]],
+        [78, [1, 2, 3, 5]]
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "reason": "transposed grouped AIC path without an available endpoint cross-candidate target should not produce a step",
+      "candidates": [
+        [2, [5]],
+        [7, [1, 3, 5]],
+        [9, [1, 2, 4, 5]],
+        [11, [1]],
+        [15, [1, 5]],
+        [18, [2, 3, 4, 5]],
+        [19, [3]],
+        [26, [1, 2, 3, 5]],
+        [28, [1, 3]],
+        [52, [4]],
+        [56, [1, 4]],
+        [59, [5]],
+        [66, [3]],
+        [68, [4]],
+        [69, [1, 2, 3]],
+        [76, [1, 5]],
+        [78, [5]]
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "reason": "ordinary same-endpoint AIC without a grouped node must not be reported as grouped AIC",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [9, [1, 3]],
+        [10, [1, 8]]
+      ]
+    },
+    {
+      "technique": "grouped-aic",
+      "stateKind": "mask",
+      "reason": "ordinary continuous AIC loop without a grouped node must not be reported as grouped AIC",
+      "candidates": [
+        [0, [1, 2, 4]],
+        [1, [1, 2, 3]]
+      ]
+    },
+    {
+      "technique": "almost-locked-quad",
+      "stateKind": "mask",
+      "reason": "quad ALS/AHS candidate union must have exactly five digits",
+      "candidates": [
+        [3, [1, 2]],
+        [4, [2, 3]],
+        [5, [3, 4, 5]],
+        [6, [1, 9]],
+        [9, [1, 5]],
+        [10, [2, 6]],
+        [18, [4, 7]]
+      ]
+    },
+    {
+      "technique": "als-xz",
+      "stateKind": "mask",
+      "reason": "ALS-XZ with no external non-RCC target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [9, [1, 4]],
+        [14, [2, 4]],
+        [3, [8]]
+      ]
+    },
+    {
+      "technique": "als-xy-wing",
+      "stateKind": "mask",
+      "reason": "ALS-XY-Wing with no shared wing target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [9, [1, 3]],
+        [1, [2, 3]],
+        [10, [8]]
+      ]
+    },
+    {
+      "technique": "aic-als",
+      "stateKind": "mask",
+      "reason": "ALS-AIC with no endpoint target candidate should not produce a step",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [1, 3]],
+        [3, [4]]
+      ]
     }
   ]
 }

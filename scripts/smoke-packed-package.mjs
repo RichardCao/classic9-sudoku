@@ -42,9 +42,18 @@ try {
     stdio: 'inherit',
   });
   execFileSync(process.execPath, ['--input-type=module', '-e', [
-    "import { parsePuzzle, getPackageInfo } from '@sudoku-tools/classic9';",
+    "import { fromMatrix, hint, parsePuzzle, getPackageInfo, summarizeRating, rate, toNullableBoard } from '@sudoku-tools/classic9';",
     "if (typeof parsePuzzle !== 'function') throw new Error('parsePuzzle missing');",
+    "if (typeof hint !== 'function') throw new Error('hint missing');",
+    "if (typeof summarizeRating !== 'function') throw new Error('summarizeRating missing');",
+    "if (typeof fromMatrix !== 'function') throw new Error('fromMatrix missing');",
+    "if (typeof toNullableBoard !== 'function') throw new Error('toNullableBoard missing');",
     "if (getPackageInfo().name !== '@sudoku-tools/classic9') throw new Error('package info mismatch');",
+    "const board = parsePuzzle('534678912672195348198342567859761423426853791713924856961537284287419635345286170');",
+    "if (!hint(board).found) throw new Error('hint did not find a step');",
+    "if (summarizeRating(rate(board)).stepCount !== 1) throw new Error('summary mismatch');",
+    "if (fromMatrix([[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]).length !== 81) throw new Error('matrix adapter mismatch');",
+    "if (toNullableBoard(board).length !== 81) throw new Error('nullable adapter mismatch');",
   ].join(' ')], {
     cwd: tempDir,
     stdio: 'inherit',

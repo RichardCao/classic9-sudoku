@@ -11,6 +11,8 @@ import type {
   StepBranchEvidence,
   StepCellEvidence,
   StepLinkEvidence,
+  StepNodeEvidence,
+  StepPatternEvidence,
   StepVerificationIssue,
   StepVerificationIssueCode,
   StepVerificationOptions,
@@ -330,6 +332,21 @@ function validateEvidence(
     }
     validateEvidenceLink(link as unknown as StepLinkEvidence, issues, `evidence.links.${index}`);
   }
+  for (let index = 0; index < (step.evidence.nodes ?? []).length; index += 1) {
+    const node = step.evidence.nodes![index]!;
+    if (!isPlainObject(node)) {
+      addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node：evidence.nodes.${index}`, { path: `evidence.nodes.${index}` });
+      continue;
+    }
+    validateEvidenceNode(node as unknown as StepNodeEvidence, issues, `evidence.nodes.${index}`);
+  }
+  if (step.evidence.pattern !== undefined) {
+    if (!isPlainObject(step.evidence.pattern)) {
+      addIssue(issues, 'error', 'invalid-evidence-pattern', '无效 evidence pattern：evidence.pattern', { path: 'evidence.pattern' });
+    } else {
+      validateEvidencePattern(step.evidence.pattern as unknown as StepPatternEvidence, issues, 'evidence.pattern');
+    }
+  }
   for (let index = 0; index < (step.evidence.branches ?? []).length; index += 1) {
     const branch = step.evidence.branches![index]!;
     if (!isPlainObject(branch)) {
@@ -353,6 +370,19 @@ function validateHouse(
 ): void {
   if (!['row', 'col', 'box'].includes(house.type) || !Number.isInteger(house.index) || house.index < 0 || house.index > 8) {
     addIssue(issues, 'error', code, `无效区域引用：${path}`, { path });
+  }
+}
+
+function validateEvidencePattern(
+  pattern: StepPatternEvidence,
+  issues: StepVerificationIssue[],
+  path: string,
+): void {
+  if (typeof pattern.family !== 'string' || pattern.family.length === 0) {
+    addIssue(issues, 'error', 'invalid-evidence-pattern', `无效 pattern family：${path}.family`, { path: `${path}.family` });
+  }
+  if (pattern.subtype !== undefined && (typeof pattern.subtype !== 'string' || pattern.subtype.length === 0)) {
+    addIssue(issues, 'error', 'invalid-evidence-pattern', `无效 pattern subtype：${path}.subtype`, { path: `${path}.subtype` });
   }
 }
 
@@ -405,6 +435,45 @@ function validateEvidenceLink(
   }
 }
 
+function validateEvidenceNode(
+  node: StepNodeEvidence,
+  issues: StepVerificationIssue[],
+  path: string,
+): void {
+  if (typeof node.id !== 'string' || node.id.length === 0) {
+    addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node id：${path}.id`, { path: `${path}.id` });
+  }
+  if (!Array.isArray(node.cells) || node.cells.length === 0) {
+    addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node cells：${path}.cells`, { path: `${path}.cells` });
+  } else {
+    const seenCells = new Set<number>();
+    for (let index = 0; index < node.cells.length; index += 1) {
+      const cell = node.cells[index]!;
+      if (!isCellIndex(cell) || seenCells.has(cell)) {
+        addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node cell：${path}.cells.${index}`, {
+          path: `${path}.cells.${index}`,
+          cell,
+        });
+      }
+      if (isCellIndex(cell)) {
+        seenCells.add(cell);
+      }
+    }
+  }
+  if (node.digit !== undefined && !isDigit(node.digit)) {
+    addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node digit：${path}.digit`, {
+      path: `${path}.digit`,
+      digit: node.digit,
+    });
+  }
+  if (!['reason', 'target', 'link', 'pivot'].includes(node.role)) {
+    addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node role：${path}.role`, { path: `${path}.role` });
+  }
+  if (node.grouped !== undefined && typeof node.grouped !== 'boolean') {
+    addIssue(issues, 'error', 'invalid-evidence-node', `无效 evidence node grouped：${path}.grouped`, { path: `${path}.grouped` });
+  }
+}
+
 function validateEvidenceBranch(
   branch: StepBranchEvidence,
   issues: StepVerificationIssue[],
@@ -427,6 +496,29 @@ function validateEvidenceBranch(
   }
   if (typeof branch.contradiction !== 'boolean' || typeof branch.exhausted !== 'boolean') {
     addIssue(issues, 'error', 'invalid-evidence-branch', `无效分支状态：${path}`, { path });
+  }
+  if (branch.steps !== undefined && (!Number.isInteger(branch.steps) || branch.steps < 0)) {
+    addIssue(issues, 'error', 'invalid-evidence-branch', `无效分支步数：${path}.steps`, {
+      path: `${path}.steps`,
+    });
+  }
+  if (branch.maxSteps !== undefined && (!Number.isInteger(branch.maxSteps) || branch.maxSteps < 0)) {
+    addIssue(issues, 'error', 'invalid-evidence-branch', `无效分支预算：${path}.maxSteps`, {
+      path: `${path}.maxSteps`,
+    });
+  }
+  if (branch.truncated !== undefined && typeof branch.truncated !== 'boolean') {
+    addIssue(issues, 'error', 'invalid-evidence-branch', `无效分支截断状态：${path}.truncated`, {
+      path: `${path}.truncated`,
+    });
+  }
+  if (
+    branch.stopReason !== undefined
+    && !['contradiction', 'no-step', 'step-limit', 'replay-error'].includes(branch.stopReason)
+  ) {
+    addIssue(issues, 'error', 'invalid-evidence-branch', `无效分支停止原因：${path}.stopReason`, {
+      path: `${path}.stopReason`,
+    });
   }
   if (branch.contradictionAt !== undefined) {
     if (!isPlainObject(branch.contradictionAt)) {

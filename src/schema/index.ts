@@ -311,6 +311,52 @@ export const SOLVE_STEP_SCHEMA: JsonSchema = {
             },
           },
         },
+        nodes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'cells', 'role'],
+            properties: {
+              id: {
+                type: 'string',
+                minLength: 1,
+              },
+              cells: {
+                type: 'array',
+                minItems: 1,
+                uniqueItems: true,
+                items: {
+                  type: 'integer',
+                  minimum: 0,
+                  maximum: 80,
+                },
+              },
+              digit: { type: 'integer', minimum: 1, maximum: 9 },
+              role: {
+                enum: ['target', 'reason', 'link', 'pivot'],
+              },
+              grouped: {
+                type: 'boolean',
+              },
+            },
+          },
+        },
+        pattern: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['family'],
+          properties: {
+            family: {
+              type: 'string',
+              minLength: 1,
+            },
+            subtype: {
+              type: 'string',
+              minLength: 1,
+            },
+          },
+        },
         branches: {
           type: 'array',
           items: {
@@ -335,6 +381,20 @@ export const SOLVE_STEP_SCHEMA: JsonSchema = {
               },
               exhausted: {
                 type: 'boolean',
+              },
+              steps: {
+                type: 'integer',
+                minimum: 0,
+              },
+              maxSteps: {
+                type: 'integer',
+                minimum: 0,
+              },
+              truncated: {
+                type: 'boolean',
+              },
+              stopReason: {
+                enum: ['contradiction', 'no-step', 'step-limit', 'replay-error'],
               },
               contradictionAt: {
                 type: 'object',

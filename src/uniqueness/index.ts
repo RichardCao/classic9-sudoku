@@ -9,24 +9,40 @@ export interface UniquenessCheckOptions {
   maxElapsedMs?: number;
 }
 
+export interface UniquenessSearchDiagnostics {
+  elapsedMs: number;
+  nodesVisited: number;
+  maxElapsedMs?: number;
+}
+
 export interface UniquenessResult {
   solutionCount: 0 | 1 | 2;
+  solutionCountLowerBound: 0 | 1 | 2;
   firstSolution: Board | null;
   aborted: boolean;
+  exhausted: boolean;
   status: 'invalid' | 'no-solution' | 'unique' | 'multiple' | 'aborted';
   hasSolution: boolean;
   uniqueSolution: boolean;
   multipleSolutions: boolean;
   diagnostics: string[];
+  searchDiagnostics: UniquenessSearchDiagnostics;
 }
 
 export function checkUniqueness(input: StateInput, options?: UniquenessCheckOptions): UniquenessResult {
+  const startedAt = Date.now();
+  let nodesVisited = 0;
+  const makeDiagnostics = (): UniquenessSearchDiagnostics => ({
+    elapsedMs: Date.now() - startedAt,
+    nodesVisited,
+    ...(typeof options?.maxElapsedMs === 'number' && options.maxElapsedMs > 0 ? { maxElapsedMs: options.maxElapsedMs } : {}),
+  });
   const validation = validate(input);
   if (!validation.legal) {
     return toResult(0, null, false, 'invalid', [
       ...validation.contradictions,
       ...validation.conflictIndexes.map((index) => `Conflict at cell ${index}`),
-    ]);
+    ], makeDiagnostics());
   }
 
   const normalized = normalizeState(input);
@@ -35,10 +51,9 @@ export function checkUniqueness(input: StateInput, options?: UniquenessCheckOpti
   let solutionCount: 0 | 1 | 2 = 0;
   let firstSolution: Board | null = null;
   let aborted = false;
-  const startedAt = Date.now();
 
   if (hasContradiction(board, candidates)) {
-    return toResult(0, null, false, 'no-solution', []);
+    return toResult(0, null, false, 'no-solution', [], makeDiagnostics());
   }
 
   const timedOut = (): boolean => {
@@ -56,6 +71,7 @@ export function checkUniqueness(input: StateInput, options?: UniquenessCheckOpti
     if (timedOut() || solutionCount >= 2) {
       return;
     }
+    nodesVisited += 1;
 
     let bestIndex = -1;
     let bestMask = 0;
@@ -101,7 +117,7 @@ export function checkUniqueness(input: StateInput, options?: UniquenessCheckOpti
   search();
 
   if (aborted) {
-    return toResult(solutionCount, firstSolution, true, 'aborted', ['Uniqueness check aborted by time budget']);
+    return toResult(solutionCount, firstSolution, true, 'aborted', ['Uniqueness check aborted by time budget'], makeDiagnostics());
   }
   return toResult(
     solutionCount,
@@ -109,6 +125,7 @@ export function checkUniqueness(input: StateInput, options?: UniquenessCheckOpti
     false,
     solutionCount === 0 ? 'no-solution' : solutionCount === 1 ? 'unique' : 'multiple',
     [],
+    makeDiagnostics(),
   );
 }
 
@@ -167,15 +184,19 @@ function toResult(
   aborted: boolean,
   status: UniquenessResult['status'],
   diagnostics: string[],
+  searchDiagnostics: UniquenessSearchDiagnostics,
 ): UniquenessResult {
   return {
     solutionCount,
+    solutionCountLowerBound: solutionCount,
     firstSolution,
     aborted,
+    exhausted: aborted,
     status,
     hasSolution: solutionCount > 0,
     uniqueSolution: solutionCount === 1,
     multipleSolutions: solutionCount === 2,
     diagnostics,
+    searchDiagnostics,
   };
 }

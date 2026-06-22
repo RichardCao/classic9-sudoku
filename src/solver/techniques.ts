@@ -17,6 +17,7 @@ import type {
   SolveStep,
   SolverContextLike,
   SolverTechnique,
+  StepAction,
   StepPlacement,
   TechniqueDefinition,
   TechniqueId,
@@ -161,6 +162,22 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'stable',
   },
   {
+    id: 'finned-franken-swordfish',
+    nameZh: '带鳍 Franken Swordfish',
+    nameEn: 'Finned Franken Swordfish',
+    family: 'fish',
+    defaultScore: 172,
+    stability: 'experimental',
+  },
+  {
+    id: 'finned-franken-jellyfish',
+    nameZh: '带鳍 Franken Jellyfish',
+    nameEn: 'Finned Franken Jellyfish',
+    family: 'fish',
+    defaultScore: 212,
+    stability: 'experimental',
+  },
+  {
     id: 'jellyfish',
     nameZh: '水母',
     nameEn: 'Jellyfish',
@@ -175,6 +192,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'fish',
     defaultScore: 110,
     stability: 'stable',
+  },
+  {
+    id: 'sashimi-x-wing',
+    nameZh: '刺身 X-Wing',
+    nameEn: 'Sashimi X-Wing',
+    family: 'fish',
+    defaultScore: 116,
+    stability: 'experimental',
   },
   {
     id: 'finned-swordfish',
@@ -207,6 +232,22 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'fish',
     defaultScore: 218,
     stability: 'stable',
+  },
+  {
+    id: 'larger-fish',
+    nameZh: '大鱼',
+    nameEn: 'Larger Fish',
+    family: 'fish',
+    defaultScore: 230,
+    stability: 'experimental',
+  },
+  {
+    id: 'mutant-fish',
+    nameZh: 'Mutant Fish',
+    nameEn: 'Mutant Fish',
+    family: 'fish',
+    defaultScore: 234,
+    stability: 'experimental',
   },
   {
     id: 'xy-wing',
@@ -257,6 +298,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'stable',
   },
   {
+    id: 'remote-pairs',
+    nameZh: '远程数对',
+    nameEn: 'Remote Pairs',
+    family: 'wing',
+    defaultScore: 167,
+    stability: 'experimental',
+  },
+  {
     id: 'almost-locked-pair',
     nameZh: '准锁定数对',
     nameEn: 'Almost Locked Pair',
@@ -271,6 +320,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'als',
     defaultScore: 144,
     stability: 'stable',
+  },
+  {
+    id: 'almost-locked-quad',
+    nameZh: '准锁定四数组',
+    nameEn: 'Almost Locked Quad',
+    family: 'als',
+    defaultScore: 164,
+    stability: 'experimental',
   },
   {
     id: 'als-xz',
@@ -449,11 +506,43 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'experimental',
   },
   {
+    id: 'region-forcing-chains',
+    nameZh: 'Region 强制链',
+    nameEn: 'Region Forcing Chains',
+    family: 'forcing',
+    defaultScore: 224,
+    stability: 'experimental',
+  },
+  {
     id: 'table-chain',
     nameZh: 'Table Chain',
     nameEn: 'Table Chain',
     family: 'forcing',
     defaultScore: 226,
+    stability: 'experimental',
+  },
+  {
+    id: 'dynamic-forcing-chains',
+    nameZh: '动态强制链',
+    nameEn: 'Dynamic Forcing Chains',
+    family: 'forcing',
+    defaultScore: 227,
+    stability: 'experimental',
+  },
+  {
+    id: 'dynamic-forcing-chains-plus',
+    nameZh: '动态强制链+',
+    nameEn: 'Dynamic Forcing Chains (+)',
+    family: 'forcing',
+    defaultScore: 238,
+    stability: 'experimental',
+  },
+  {
+    id: 'nested-forcing-chains',
+    nameZh: '嵌套强制链',
+    nameEn: 'Nested Forcing Chains',
+    family: 'forcing',
+    defaultScore: 246,
     stability: 'experimental',
   },
   {
@@ -609,6 +698,14 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     stability: 'stable',
   },
   {
+    id: 'unique-loop',
+    nameZh: '唯一环',
+    nameEn: 'Unique Loop',
+    family: 'uniqueness',
+    defaultScore: 202,
+    stability: 'experimental',
+  },
+  {
     id: 'hidden-unique-rectangle',
     nameZh: '隐藏唯一矩形',
     nameEn: 'Hidden Unique Rectangle',
@@ -631,6 +728,22 @@ export const TECHNIQUE_DEFINITIONS: TechniqueDefinition[] = [
     family: 'uniqueness',
     defaultScore: 210,
     stability: 'stable',
+  },
+  {
+    id: 'bug-plus-two',
+    nameZh: 'BUG+2',
+    nameEn: 'BUG+2',
+    family: 'uniqueness',
+    defaultScore: 214,
+    stability: 'experimental',
+  },
+  {
+    id: 'bug-plus-n',
+    nameZh: 'BUG+n',
+    nameEn: 'BUG+n',
+    family: 'uniqueness',
+    defaultScore: 218,
+    stability: 'experimental',
   },
 ];
 
@@ -655,6 +768,7 @@ const SE_METADATA_BY_ID: Partial<Record<TechniqueId, TechniqueSeMetadata>> = {
   'xyz-wing': { aliases: ['XYZ-Wing'], seDifficulty: '4.4', seStatus: 'covered' },
   'unique-rectangle': { aliases: ['Unique Rectangle'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
   'extended-rectangle': { aliases: ['Unique Loop'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
+  'unique-loop': { aliases: ['Generalized Unique Loop', 'Unique Loop'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
   'hidden-unique-rectangle': { aliases: ['Hidden Unique Rectangle'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
   'aic-ur': { aliases: ['Unique Rectangle AIC'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
   'rectangle-elimination': { aliases: ['Unique Rectangle elimination'], seDifficulty: '4.5..5.0', seStatus: 'partial' },
@@ -663,6 +777,8 @@ const SE_METADATA_BY_ID: Partial<Record<TechniqueId, TechniqueSeMetadata>> = {
   'jellyfish': { aliases: ['Jellyfish'], seDifficulty: '5.2', seStatus: 'covered' },
   'hidden-quad': { aliases: ['Hidden Quad'], seDifficulty: '5.4', seStatus: 'covered' },
   'bug-plus-one': { aliases: ['BUG+1', 'Bivalue Universal Grave +1'], seDifficulty: '5.6..6.0', seStatus: 'partial' },
+  'bug-plus-two': { aliases: ['BUG+2', 'Bivalue Universal Grave +2'], seDifficulty: '5.6..6.0', seStatus: 'partial' },
+  'bug-plus-n': { aliases: ['BUG+n', 'Bivalue Universal Grave +n'], seDifficulty: '5.6..6.0', seStatus: 'partial' },
   'aligned-pair-exclusion': { aliases: ['Aligned Pair Exclusion'], seDifficulty: '6.2', seStatus: 'covered' },
   'bidirectional-x-cycle': { aliases: ['Bidirectional X-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'covered-as-variant' },
   'bidirectional-y-cycle': { aliases: ['Bidirectional Y-Cycle'], seDifficulty: '6.5..7.5', seStatus: 'covered-as-variant' },
@@ -678,22 +794,33 @@ const SE_METADATA_BY_ID: Partial<Record<TechniqueId, TechniqueSeMetadata>> = {
   'nishio-forcing-chains': { aliases: ['Nishio'], seDifficulty: '7.5..8.5', seStatus: 'covered' },
   'cell-forcing-chains': { aliases: ['Cell Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
   'unit-forcing-chains': { aliases: ['Region Forcing Chains', 'Unit Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
+  'region-forcing-chains': { aliases: ['Region Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'covered-as-variant' },
   'forcing-nets': { aliases: ['Forcing Nets'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
   'digit-forcing-chains': { aliases: ['Digit Forcing Chains'], seDifficulty: '8.0..9.0', seStatus: 'partial' },
   'table-chain': { aliases: ['Table Chain'], seDifficulty: '8.5..9.5', seStatus: 'partial' },
+  'dynamic-forcing-chains': { aliases: ['Dynamic Forcing Chains'], seDifficulty: '8.5..9.5', seStatus: 'partial' },
+  'dynamic-forcing-chains-plus': { aliases: ['Dynamic Forcing Chains (+)'], seDifficulty: '9.0..10.0', seStatus: 'partial' },
+  'nested-forcing-chains': { aliases: ['Nested Forcing Chains'], seDifficulty: '>9.5', seStatus: 'partial' },
   'bowmans-bingo': { aliases: ["Bowman's Bingo"], seStatus: 'non-se-extension' },
   'franken-swordfish': { aliases: ['Franken Swordfish'], seStatus: 'non-se-extension' },
+  'finned-franken-swordfish': { aliases: ['Finned Franken Swordfish'], seStatus: 'non-se-extension' },
+  'finned-franken-jellyfish': { aliases: ['Finned Franken Jellyfish'], seStatus: 'non-se-extension' },
   'finned-x-wing': { aliases: ['Finned X-Wing'], seStatus: 'non-se-extension' },
+  'sashimi-x-wing': { aliases: ['Sashimi X-Wing'], seStatus: 'non-se-extension' },
   'finned-swordfish': { aliases: ['Finned Swordfish'], seStatus: 'non-se-extension' },
   'finned-jellyfish': { aliases: ['Finned Jellyfish'], seStatus: 'non-se-extension' },
   'sashimi-swordfish': { aliases: ['Sashimi Swordfish'], seStatus: 'non-se-extension' },
   'sashimi-jellyfish': { aliases: ['Sashimi Jellyfish'], seStatus: 'non-se-extension' },
+  'larger-fish': { aliases: ['Larger Fish', 'Squirmbag'], seStatus: 'non-se-extension' },
+  'mutant-fish': { aliases: ['Mutant Fish'], seStatus: 'non-se-extension' },
   'wxyz-wing': { aliases: ['WXYZ-Wing'], seStatus: 'non-se-extension' },
   'w-wing': { aliases: ['W-Wing'], seStatus: 'non-se-extension' },
   'big-wings': { aliases: ['BigWings'], seStatus: 'non-se-extension' },
   'chute-remote-pairs': { aliases: ['Chute Remote Pairs'], seStatus: 'non-se-extension' },
+  'remote-pairs': { aliases: ['Remote Pairs'], seStatus: 'non-se-extension' },
   'almost-locked-pair': { aliases: ['Almost Locked Pair'], seStatus: 'non-se-extension' },
   'almost-locked-triple': { aliases: ['Almost Locked Triple'], seStatus: 'non-se-extension' },
+  'almost-locked-quad': { aliases: ['Almost Locked Quad'], seStatus: 'non-se-extension' },
   'als-xz': { aliases: ['ALS-XZ'], seStatus: 'non-se-extension' },
   'als-xy-wing': { aliases: ['ALS-XY-Wing'], seStatus: 'non-se-extension' },
   'aic-als': { aliases: ['ALS-AIC'], seStatus: 'non-se-extension' },
@@ -743,21 +870,28 @@ const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
   'hidden-quad',
   'x-wing',
   'finned-x-wing',
+  'sashimi-x-wing',
   'xy-wing',
   'swordfish',
   'franken-swordfish',
+  'finned-franken-swordfish',
   'finned-swordfish',
   'sashimi-swordfish',
   'jellyfish',
+  'finned-franken-jellyfish',
   'finned-jellyfish',
   'sashimi-jellyfish',
+  'larger-fish',
+  'mutant-fish',
   'xyz-wing',
   'almost-locked-pair',
   'almost-locked-triple',
+  'almost-locked-quad',
   'wxyz-wing',
   'w-wing',
   'big-wings',
   'chute-remote-pairs',
+  'remote-pairs',
   'avoidable-rectangle',
   'rectangle-elimination',
   'grouped-x-cycles',
@@ -784,9 +918,13 @@ const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
   'forcing-nets',
   'digit-forcing-chains',
   'table-chain',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
+  'nested-forcing-chains',
   'bowmans-bingo',
   'cell-forcing-chains',
   'unit-forcing-chains',
+  'region-forcing-chains',
   'exocet',
   'double-exocet',
   'pattern-overlay',
@@ -801,8 +939,11 @@ const DEFAULT_TECHNIQUE_ORDER: readonly TechniqueId[] = [
   'three-d-medusa',
   'unique-rectangle',
   'extended-rectangle',
+  'unique-loop',
   'hidden-unique-rectangle',
   'bug-plus-one',
+  'bug-plus-two',
+  'bug-plus-n',
 ] as const;
 
 export function buildDefaultTechniques(): SolverTechnique[] {
@@ -826,18 +967,25 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new FrankenSwordfishTechnique(),
     new BasicFishTechnique(4),
     new FinnedXWingTechnique(),
+    new SashimiXWingTechnique(),
+    new FinnedFrankenFishTechnique(3),
+    new FinnedFrankenFishTechnique(4),
     new FinnedFishTechnique(3, false),
     new FinnedFishTechnique(4, false),
     new FinnedFishTechnique(3, true),
     new FinnedFishTechnique(4, true),
+    new LargerFishTechnique(),
+    new MutantFishTechnique(),
     new XYWingTechnique(),
     new XYZWingTechnique(),
     new WXYZWingTechnique(),
     new WWingTechnique(),
     new BigWingsTechnique(),
     new ChuteRemotePairsTechnique(),
+    new RemotePairsTechnique(),
     new AlmostLockedCandidatesTechnique(2),
     new AlmostLockedCandidatesTechnique(3),
+    new AlmostLockedCandidatesTechnique(4),
     new AlsXZTechnique(),
     new AlsXYWingTechnique(),
     new AICWithAlsTechnique(),
@@ -860,7 +1008,10 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new NishioForcingChainsTechnique(),
     new CellForcingChainsTechnique(),
     new UnitForcingChainsTechnique(),
+    new UnitForcingChainsTechnique('region-forcing-chains'),
     new TableChainTechnique(),
+    new DynamicForcingChainsTechnique(),
+    new DynamicForcingChainsPlusTechnique(),
     new BowmansBingoTechnique(),
     new SimpleColoringTechnique(),
     new XColoringTechnique(),
@@ -880,11 +1031,21 @@ export function buildDefaultTechniques(): SolverTechnique[] {
     new AvoidableRectangleTechnique(),
     new RectangleEliminationTechnique(),
     new ExtendedRectangleTechnique(),
+    new UniqueLoopTechnique(),
     new HiddenUniqueRectangleTechnique(),
     new AICWithUrTechnique(),
     new BugPlusOneTechnique(),
+    new BugPlusTwoTechnique(),
+    new BugPlusNTechnique(),
   ];
   return orderTechniquesByPriority(techniques);
+}
+
+export function buildExplicitTechnique(id: TechniqueId): SolverTechnique | null {
+  if (id === 'nested-forcing-chains') {
+    return new NestedForcingChainsTechnique();
+  }
+  return null;
 }
 
 function orderTechniquesByPriority(techniques: readonly SolverTechnique[]): SolverTechnique[] {
@@ -923,7 +1084,15 @@ class FullHouseTechnique implements SolverTechnique {
       }
       for (let digit = 1; digit <= 9; digit += 1) {
         if (!seen.has(digit)) {
-          return placementStep(this.id, this.score, emptyCell, digit as Digit, house, 'Only one empty cell remains in this house.');
+          return placementStep(
+            this.id,
+            this.score,
+            emptyCell,
+            digit as Digit,
+            house,
+            'Only one empty cell remains in this house.',
+            { family: 'full-house', subtype: housePatternSubtype(house) },
+          );
         }
       }
     }
@@ -979,6 +1148,7 @@ class HiddenSingleTechnique implements SolverTechnique {
             digit as Digit,
             house,
             'This digit appears in only one candidate cell in the house.',
+            { family: 'hidden-single', subtype: housePatternSubtype(house) },
           );
         }
       }
@@ -1381,6 +1551,7 @@ class BasicFishTechnique implements SolverTechnique {
         [...basisHouses, ...coverHouses],
         reasonCells,
         `${this.id} removes cover-line candidates outside the selected basis lines.`,
+        { family: 'fish', subtype: this.id },
       );
     }
     return null;
@@ -1403,6 +1574,198 @@ class BasicFishTechnique implements SolverTechnique {
     basisIndex: number,
   ): number[] {
     return context.getHouseCandidateCells({ type: basisType, index: basisIndex }, digit);
+  }
+}
+
+class LargerFishTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'larger-fish';
+  public readonly score = 230;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    for (let size = 5; size <= 7; size += 1) {
+      for (let digit = 1; digit <= 9; digit += 1) {
+        const rowFish = this.findByBasis(context, digit as Digit, size, 'row');
+        if (rowFish) {
+          return rowFish;
+        }
+        const colFish = this.findByBasis(context, digit as Digit, size, 'col');
+        if (colFish) {
+          return colFish;
+        }
+      }
+    }
+    return null;
+  }
+
+  private findByBasis(
+    context: SolverContextLike,
+    digit: Digit,
+    size: number,
+    basisType: 'row' | 'col',
+  ): SolveStep | null {
+    const basisIndexes = Array.from({ length: 9 }, (_, index) => index)
+      .filter((index) => {
+        const coverIndexes = this.getCoverIndexes(context, digit, basisType, index);
+        return coverIndexes.length >= 2 && coverIndexes.length <= size;
+      });
+
+    for (const basisCombo of createCombinations(basisIndexes, size)) {
+      const coverUnion = uniqueNumbers(
+        basisCombo.flatMap((basisIndex) => this.getCoverIndexes(context, digit, basisType, basisIndex)),
+      ).sort((left, right) => left - right);
+      if (coverUnion.length !== size) {
+        continue;
+      }
+
+      const selectedBasis = new Set(basisCombo);
+      const reasonCells = uniqueNumbers(
+        basisCombo.flatMap((basisIndex) => this.getCandidateCells(context, digit, basisType, basisIndex)),
+      );
+      const targetCells: number[] = [];
+      for (const coverIndex of coverUnion) {
+        const coverHouse: HouseRef = { type: basisType === 'row' ? 'col' : 'row', index: coverIndex };
+        for (const cell of context.getHouseCandidateCells(coverHouse, digit)) {
+          const cellBasis = basisType === 'row' ? context.getCellRow(cell) : context.getCellCol(cell);
+          if (!selectedBasis.has(cellBasis)) {
+            targetCells.push(cell);
+          }
+        }
+      }
+
+      const uniqueTargets = uniqueNumbers(targetCells);
+      if (uniqueTargets.length === 0) {
+        continue;
+      }
+
+      const basisHouses: HouseRef[] = basisCombo.map((index) => ({ type: basisType, index }));
+      const coverHouses: HouseRef[] = coverUnion.map((index) => ({
+        type: basisType === 'row' ? 'col' : 'row',
+        index,
+      }));
+      return eliminationStep(
+        this.id,
+        this.score,
+        uniqueTargets,
+        digit,
+        [...basisHouses, ...coverHouses],
+        reasonCells,
+        `Larger Fish size ${size} removes cover-line candidates outside the selected basis lines.`,
+        { family: 'fish', subtype: this.id },
+      );
+    }
+    return null;
+  }
+
+  private getCoverIndexes(
+    context: SolverContextLike,
+    digit: Digit,
+    basisType: 'row' | 'col',
+    basisIndex: number,
+  ): number[] {
+    return this.getCandidateCells(context, digit, basisType, basisIndex)
+      .map((cell) => basisType === 'row' ? context.getCellCol(cell) : context.getCellRow(cell));
+  }
+
+  private getCandidateCells(
+    context: SolverContextLike,
+    digit: Digit,
+    basisType: 'row' | 'col',
+    basisIndex: number,
+  ): number[] {
+    return context.getHouseCandidateCells({ type: basisType, index: basisIndex }, digit);
+  }
+}
+
+class MutantFishTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'mutant-fish';
+  public readonly score = 234;
+  private readonly size = 3;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const houses = this.allHouses();
+    for (let digit = 1; digit <= 9; digit += 1) {
+      for (const basisHouses of createCombinations(houses, this.size)) {
+        if (!this.isValidBasis(context, basisHouses, digit as Digit)) {
+          continue;
+        }
+        const basisCells = new Set<number>(basisHouses.flatMap((house) => context.getHouseCells(house)));
+        const reasonCells = uniqueNumbers(
+          basisHouses.flatMap((house) => context.getHouseCandidateCells(house, digit as Digit)),
+        );
+        const coverCandidates = houses.filter((house) => (
+          !basisHouses.some((basis) => sameHouse(basis, house))
+          && reasonCells.some((cell) => houseContainsCell(house, cell))
+        ));
+        for (const coverHouses of createCombinations(coverCandidates, this.size)) {
+          if (!this.isValidCover(context, basisHouses, coverHouses, reasonCells)) {
+            continue;
+          }
+          const targetCells = uniqueNumbers(
+            coverHouses.flatMap((house) => context.getHouseCandidateCells(house, digit as Digit))
+              .filter((cell) => !basisCells.has(cell)),
+          );
+          if (targetCells.length === 0) {
+            continue;
+          }
+          return eliminationStep(
+            this.id,
+            this.score,
+            targetCells,
+            digit as Digit,
+            [...basisHouses, ...coverHouses],
+            reasonCells,
+            'Mutant Fish uses disjoint mixed cover sectors to lock all candidates from the selected base sectors.',
+            { family: 'fish', subtype: 'mutant-fish-size-3' },
+          );
+        }
+      }
+    }
+    return null;
+  }
+
+  private allHouses(): HouseRef[] {
+    return [
+      ...Array.from({ length: 9 }, (_, index): HouseRef => ({ type: 'row', index })),
+      ...Array.from({ length: 9 }, (_, index): HouseRef => ({ type: 'col', index })),
+      ...Array.from({ length: 9 }, (_, index): HouseRef => ({ type: 'box', index })),
+    ];
+  }
+
+  private isValidBasis(
+    context: SolverContextLike,
+    basisHouses: readonly HouseRef[],
+    digit: Digit,
+  ): boolean {
+    if (!arePairwiseDisjointHouses(context, basisHouses)) {
+      return false;
+    }
+    return basisHouses.every((house) => {
+      const cells = context.getHouseCandidateCells(house, digit);
+      return cells.length >= 2 && cells.length <= this.size;
+    });
+  }
+
+  private isValidCover(
+    context: SolverContextLike,
+    basisHouses: readonly HouseRef[],
+    coverHouses: readonly HouseRef[],
+    reasonCells: readonly number[],
+  ): boolean {
+    if (!arePairwiseDisjointHouses(context, coverHouses)) {
+      return false;
+    }
+    const basisTypes = new Set(basisHouses.map((house) => house.type));
+    const coverTypes = new Set(coverHouses.map((house) => house.type));
+    if (!basisHouses.some((house) => house.type === 'box') && !coverHouses.some((house) => house.type === 'box')) {
+      return false;
+    }
+    if (basisTypes.size === 1 && coverTypes.size === 1 && !coverHouses.some((house) => house.type === 'box')) {
+      return false;
+    }
+    return (
+      reasonCells.every((cell) => coverHouses.some((house) => houseContainsCell(house, cell)))
+      && coverHouses.every((house) => reasonCells.some((cell) => houseContainsCell(house, cell)))
+    );
   }
 }
 
@@ -1490,6 +1853,7 @@ class FrankenSwordfishTechnique implements SolverTechnique {
         actions,
         evidence: {
           houses: [...combo, ...coverHouses],
+          pattern: { family: 'fish', subtype: this.id },
           cells: [
             ...Array.from(reasonCellSet).map((cell) => ({ cell, digit, role: 'reason' as const })),
             ...uniqueNumbers(actions.map((action) => action.cell)).map((cell) => ({ cell, digit, role: 'target' as const })),
@@ -1621,6 +1985,230 @@ class FrankenSwordfishTechnique implements SolverTechnique {
   }
 }
 
+class FinnedFrankenFishTechnique implements SolverTechnique {
+  public readonly id: TechniqueId;
+  public readonly score: number;
+
+  public constructor(private readonly size: 3 | 4) {
+    this.id = size === 3 ? 'finned-franken-swordfish' : 'finned-franken-jellyfish';
+    this.score = size === 3 ? 172 : 212;
+  }
+
+  public find(context: SolverContextLike): SolveStep | null {
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const rowStep = this.findForOrientation(context, digit as Digit, 'row');
+      if (rowStep) {
+        return rowStep;
+      }
+      const colStep = this.findForOrientation(context, digit as Digit, 'col');
+      if (colStep) {
+        return colStep;
+      }
+    }
+    return null;
+  }
+
+  private findForOrientation(
+    context: SolverContextLike,
+    digit: Digit,
+    orientation: FrankenOrientation,
+  ): SolveStep | null {
+    const basisHouses = this.getBasisHouses(orientation).filter((house) => {
+      const coverIndexes = this.getCoverIndexes(context, house, digit, orientation);
+      return coverIndexes.length >= 2 && coverIndexes.length <= this.size + 1;
+    });
+
+    for (const combo of createCombinations(basisHouses, this.size)) {
+      if (
+        !this.isMixedCombo(combo, orientation)
+        || this.hasRedundantBasisHouse(context, combo, digit)
+        || this.hasOverlappingBasisCandidate(context, combo, digit)
+      ) {
+        continue;
+      }
+
+      const coverUnion = uniqueNumbers(combo.flatMap((house) => this.getCoverIndexes(context, house, digit, orientation)))
+        .sort((left, right) => left - right);
+      if (coverUnion.length !== this.size + 1) {
+        continue;
+      }
+
+      for (const baseCoverSet of createCombinations(coverUnion, this.size)) {
+        const baseCover = new Set(baseCoverSet);
+        const finCells = combo.flatMap((house) =>
+          this.getCandidateCells(context, house, digit)
+            .filter((cell) => !baseCover.has(this.getCoverIndex(cell, orientation))),
+        );
+        if (finCells.length === 0) {
+          continue;
+        }
+
+        const finBoxes = uniqueNumbers(finCells.map((cell) => context.getCellBox(cell)));
+        if (finBoxes.length !== 1) {
+          continue;
+        }
+        if (!this.everyBasisHouseHasBaseSupport(context, combo, digit, orientation, baseCover)) {
+          continue;
+        }
+
+        const finBox = finBoxes[0]!;
+        const basisCellSet = new Set<number>();
+        const reasonCellSet = new Set<number>();
+        for (const house of combo) {
+          for (const cell of context.getHouseCells(house)) {
+            basisCellSet.add(cell);
+          }
+          for (const cell of this.getCandidateCells(context, house, digit)) {
+            reasonCellSet.add(cell);
+          }
+        }
+
+        const actions: SolveStep['actions'] = [];
+        for (const coverIndex of baseCoverSet) {
+          const coverCells = orientation === 'row' ? COL_HOUSES[coverIndex]! : ROW_HOUSES[coverIndex]!;
+          for (const cell of coverCells) {
+            if (basisCellSet.has(cell) || context.getCellBox(cell) !== finBox || !context.isCandidatePresent(cell, digit)) {
+              continue;
+            }
+            actions.push({ type: 'eliminate', cell, digit });
+          }
+        }
+        if (actions.length === 0) {
+          continue;
+        }
+
+        const coverHouses: HouseRef[] = baseCoverSet.map((index) => ({
+          type: orientation === 'row' ? 'col' : 'row',
+          index,
+        }));
+        return {
+          technique: this.id,
+          score: this.score,
+          actions,
+          evidence: {
+            houses: uniqueHouses([...combo, ...coverHouses, { type: 'box', index: finBox }]),
+            cells: [
+              ...Array.from(reasonCellSet).map((cell) => ({ cell, digit, role: 'reason' as const })),
+              ...uniqueNumbers(actions.map((action) => action.cell)).map((cell) => ({ cell, digit, role: 'target' as const })),
+            ],
+            pattern: { family: 'fish', subtype: this.id },
+            note: this.size === 3
+              ? 'Finned Franken Swordfish uses mixed line and box basis houses plus a single fin box to remove cover-line candidates that see the fin.'
+              : 'Finned Franken Jellyfish uses mixed line and box basis houses plus a single fin box to remove cover-line candidates that see the fin.',
+          },
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private getBasisHouses(orientation: FrankenOrientation): FrankenBasisHouse[] {
+    const houses: FrankenBasisHouse[] = [];
+    for (let index = 0; index < 9; index += 1) {
+      houses.push({ type: orientation, index });
+      houses.push({ type: 'box', index });
+    }
+    return houses;
+  }
+
+  private isMixedCombo(combo: FrankenBasisHouse[], orientation: FrankenOrientation): boolean {
+    let boxCount = 0;
+    let lineCount = 0;
+    for (const house of combo) {
+      if (house.type === 'box') {
+        boxCount += 1;
+      } else if (house.type === orientation) {
+        lineCount += 1;
+      } else {
+        return false;
+      }
+    }
+    return boxCount >= 1 && lineCount >= 1;
+  }
+
+  private hasRedundantBasisHouse(
+    context: SolverContextLike,
+    combo: FrankenBasisHouse[],
+    digit: Digit,
+  ): boolean {
+    const candidateSets = combo.map((house) => this.getCandidateCells(context, house, digit));
+    for (let index = 0; index < candidateSets.length; index += 1) {
+      const current = candidateSets[index]!;
+      if (current.length === 0) {
+        return true;
+      }
+      const otherCells = new Set<number>();
+      for (let otherIndex = 0; otherIndex < candidateSets.length; otherIndex += 1) {
+        if (otherIndex === index) {
+          continue;
+        }
+        for (const cell of candidateSets[otherIndex]!) {
+          otherCells.add(cell);
+        }
+      }
+      if (current.every((cell) => otherCells.has(cell))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private hasOverlappingBasisCandidate(
+    context: SolverContextLike,
+    combo: FrankenBasisHouse[],
+    digit: Digit,
+  ): boolean {
+    const seenCells = new Set<number>();
+    for (const house of combo) {
+      for (const cell of this.getCandidateCells(context, house, digit)) {
+        if (seenCells.has(cell)) {
+          return true;
+        }
+        seenCells.add(cell);
+      }
+    }
+    return false;
+  }
+
+  private everyBasisHouseHasBaseSupport(
+    context: SolverContextLike,
+    combo: FrankenBasisHouse[],
+    digit: Digit,
+    orientation: FrankenOrientation,
+    baseCover: Set<number>,
+  ): boolean {
+    return combo.every((house) =>
+      this.getCandidateCells(context, house, digit)
+        .some((cell) => baseCover.has(this.getCoverIndex(cell, orientation))),
+    );
+  }
+
+  private getCandidateCells(
+    context: SolverContextLike,
+    house: FrankenBasisHouse,
+    digit: Digit,
+  ): number[] {
+    return context.getHouseCandidateCells(house, digit);
+  }
+
+  private getCoverIndexes(
+    context: SolverContextLike,
+    house: FrankenBasisHouse,
+    digit: Digit,
+    orientation: FrankenOrientation,
+  ): number[] {
+    return uniqueNumbers(
+      this.getCandidateCells(context, house, digit)
+        .map((cell) => this.getCoverIndex(cell, orientation)),
+    ).sort((left, right) => left - right);
+  }
+
+  private getCoverIndex(cell: number, orientation: FrankenOrientation): number {
+    return orientation === 'row' ? CELL_TO_COL[cell]! : CELL_TO_ROW[cell]!;
+  }
+}
+
 class FinnedXWingTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'finned-x-wing';
   public readonly score = 110;
@@ -1709,6 +2297,7 @@ class FinnedXWingTechnique implements SolverTechnique {
         [...basisHouses, ...coverHouses, { type: 'box', index: finBox }],
         reasonCells,
         'Finned X-Wing removes cover-line candidates that see the fin.',
+        { family: 'fish', subtype: this.id },
       );
     }
     return null;
@@ -1720,6 +2309,142 @@ class FinnedXWingTechnique implements SolverTechnique {
 
   private getCoverIndex(context: SolverContextLike, cell: number, basisType: 'row' | 'col'): number {
     return basisType === 'row' ? context.getCellCol(cell) : context.getCellRow(cell);
+  }
+}
+
+class SashimiXWingTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'sashimi-x-wing';
+  public readonly score = 116;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const rowStep = this.findByBasis(context, digit as Digit, 'row');
+      if (rowStep) {
+        return rowStep;
+      }
+      const colStep = this.findByBasis(context, digit as Digit, 'col');
+      if (colStep) {
+        return colStep;
+      }
+    }
+    return null;
+  }
+
+  private findByBasis(
+    context: SolverContextLike,
+    digit: Digit,
+    basisType: 'row' | 'col',
+  ): SolveStep | null {
+    const basisSets = Array.from({ length: 9 }, (_, index) => ({
+      index,
+      cells: context.getHouseCandidateCells({ type: basisType, index }, digit),
+    })).filter((entry) => entry.cells.length >= 2 && entry.cells.length <= 3);
+
+    for (const [left, right] of createCombinations(basisSets, 2)) {
+      if (!left || !right) {
+        continue;
+      }
+      const leftStep = this.tryPair(context, digit, basisType, left, right);
+      if (leftStep) {
+        return leftStep;
+      }
+      const rightStep = this.tryPair(context, digit, basisType, right, left);
+      if (rightStep) {
+        return rightStep;
+      }
+    }
+
+    return null;
+  }
+
+  private tryPair(
+    context: SolverContextLike,
+    digit: Digit,
+    basisType: 'row' | 'col',
+    complete: { index: number; cells: number[] },
+    sashimi: { index: number; cells: number[] },
+  ): SolveStep | null {
+    const completeCovers = uniqueNumbers(complete.cells.map((cell) => this.getCoverIndex(context, cell, basisType)));
+    if (complete.cells.length !== 2 || completeCovers.length !== 2) {
+      return null;
+    }
+
+    for (const presentCover of completeCovers) {
+      const missingCover = completeCovers.find((cover) => cover !== presentCover);
+      if (missingCover == null) {
+        continue;
+      }
+      const baseCells = sashimi.cells.filter((cell) => this.getCoverIndex(context, cell, basisType) === presentCover);
+      const finCells = sashimi.cells.filter((cell) => this.getCoverIndex(context, cell, basisType) !== presentCover);
+      if (baseCells.length !== 1 || finCells.length === 0) {
+        continue;
+      }
+      if (finCells.some((cell) => this.getCoverIndex(context, cell, basisType) === missingCover)) {
+        continue;
+      }
+
+      const missingCorner = this.cellFromBasisAndCover(sashimi.index, missingCover, basisType);
+      const finBox = context.getCellBox(missingCorner);
+      if (!finCells.every((cell) => context.getCellBox(cell) === finBox)) {
+        continue;
+      }
+
+      const targetCells: number[] = [];
+      const coverCells = basisType === 'row' ? COL_HOUSES[missingCover]! : ROW_HOUSES[missingCover]!;
+      for (const cell of coverCells) {
+        if (cell === missingCorner || context.getCellBox(cell) !== finBox || !context.isCandidatePresent(cell, digit)) {
+          continue;
+        }
+        const basisIndex = this.getBasisIndex(context, cell, basisType);
+        if (basisIndex === complete.index || basisIndex === sashimi.index) {
+          continue;
+        }
+        targetCells.push(cell);
+      }
+
+      const uniqueTargets = uniqueNumbers(targetCells);
+      if (uniqueTargets.length === 0) {
+        continue;
+      }
+
+      const coverType = basisType === 'row' ? 'col' : 'row';
+      const basisHouses: HouseRef[] = [
+        { type: basisType, index: complete.index },
+        { type: basisType, index: sashimi.index },
+      ];
+      const coverHouses: HouseRef[] = completeCovers.map((index) => ({ type: coverType, index }));
+      const reasonCells = uniqueNumbers([...complete.cells, ...sashimi.cells]);
+      return eliminationStep(
+        this.id,
+        this.score,
+        uniqueTargets,
+        digit,
+        [...basisHouses, ...coverHouses, { type: 'box', index: finBox }],
+        reasonCells,
+        'Sashimi X-Wing removes candidates in the missing-corner box that see the fin.',
+        { family: 'fish', subtype: this.id },
+      );
+    }
+
+    return null;
+  }
+
+  private getBasisIndex(context: SolverContextLike, cell: number, basisType: 'row' | 'col'): number {
+    return basisType === 'row' ? context.getCellRow(cell) : context.getCellCol(cell);
+  }
+
+  private getCoverIndex(context: SolverContextLike, cell: number, basisType: 'row' | 'col'): number {
+    return basisType === 'row' ? context.getCellCol(cell) : context.getCellRow(cell);
+  }
+
+  private cellFromBasisAndCover(
+    basisIndex: number,
+    coverIndex: number,
+    basisType: 'row' | 'col',
+  ): number {
+    return basisType === 'row'
+      ? basisIndex * 9 + coverIndex
+      : coverIndex * 9 + basisIndex;
   }
 }
 
@@ -1844,6 +2569,7 @@ class FinnedFishTechnique implements SolverTechnique {
           this.sashimi
             ? 'Sashimi fish removes cover-line candidates that see the fin in the missing-corner box.'
             : 'Finned fish removes cover-line candidates that see the fin.',
+          { family: 'fish', subtype: this.id },
         );
       }
     }
@@ -1914,6 +2640,7 @@ class XYWingTechnique implements SolverTechnique {
             [],
             [pivot, leftWing, rightWing],
             'XY-Wing removes the shared wing digit from cells seeing both wings.',
+            { family: 'wing', subtype: 'xy-wing' },
           );
         }
       }
@@ -1980,6 +2707,7 @@ class XYZWingTechnique implements SolverTechnique {
             [],
             [pivot, leftWing, rightWing],
             'XYZ-Wing removes the shared wing digit from cells seeing pivot and both wings.',
+            { family: 'wing', subtype: 'xyz-wing' },
           );
         }
       }
@@ -2100,6 +2828,10 @@ class WXYZWingTechnique implements SolverTechnique {
         actions,
         evidence: {
           houses: coveringHouses,
+          pattern: {
+            family: 'wing',
+            subtype: nonRestrictedDigits.length === 1 ? 'wxyz-non-restricted-digit' : 'wxyz-restricted-digits',
+          },
           cells: [
             ...cells.map((cell) => ({ cell, role: 'reason' as const })),
             ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
@@ -2182,6 +2914,7 @@ class BigWingsTechnique implements SolverTechnique {
               ...collectAlsHouses(als),
               ...context.getCellHouses(stem),
             ]),
+            pattern: { family: 'wing', subtype: 'big-wings-als-stem' },
             cells: [
               ...als.cells.map((cell) => ({ cell, role: 'reason' as const })),
               { cell: stem, role: 'pivot' as const },
@@ -2246,6 +2979,8 @@ class WWingTechnique implements SolverTechnique {
             strongLink.houses,
             [left, right, strongLink.leftCell, strongLink.rightCell],
             'Two equal bivalue cells are connected by a strong link on one digit, so the other digit is eliminated from common peers.',
+            { family: 'wing', subtype: 'w-wing-strong-link-bridge' },
+            [{ from: strongLink.leftCell, to: strongLink.rightCell, digit: bridgeDigit, type: 'strong', house: strongLink.houses[0]! }],
           );
         }
       }
@@ -2409,6 +3144,7 @@ class ChuteRemotePairsTechnique implements SolverTechnique {
       actions,
       evidence: {
         houses: uniqueHouses([...context.getCellHouses(left), ...context.getCellHouses(right), yellowHouse]),
+        pattern: { family: 'wing', subtype: yellowHouse.type === 'row' ? 'chute-horizontal' : 'chute-vertical' },
         cells: [
           { cell: left, role: 'reason' as const },
           { cell: right, role: 'reason' as const },
@@ -2419,6 +3155,224 @@ class ChuteRemotePairsTechnique implements SolverTechnique {
       },
     };
   }
+}
+
+class RemotePairsTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'remote-pairs';
+  public readonly score = 167;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const groups = new Map<string, { digits: [Digit, Digit]; cells: number[] }>();
+
+    for (let cell = 0; cell < context.board.length; cell += 1) {
+      if (context.board[cell] !== EMPTY_VALUE || context.getCandidateCount(cell) !== 2) {
+        continue;
+      }
+      const digits = context.getCandidateDigits(cell);
+      const left = digits[0];
+      const right = digits[1];
+      if (left == null || right == null) {
+        continue;
+      }
+      const key = `${left}:${right}`;
+      const group = groups.get(key) ?? { digits: [left, right], cells: [] };
+      group.cells.push(cell);
+      groups.set(key, group);
+    }
+
+    for (const group of Array.from(groups.values()).sort((left, right) => left.digits[0] - right.digits[0] || left.digits[1] - right.digits[1])) {
+      if (group.cells.length < 4) {
+        continue;
+      }
+      const adjacency = buildRemotePairAdjacency(group.cells);
+      const components = colorRemotePairComponents(group.cells, adjacency);
+
+      for (const component of components) {
+        if (component.cells.length < 4 || component.conflicted) {
+          continue;
+        }
+        const step = this.findInComponent(context, group.digits, component, adjacency);
+        if (step) {
+          return step;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private findInComponent(
+    context: SolverContextLike,
+    digits: [Digit, Digit],
+    component: RemotePairComponent,
+    adjacency: Map<number, number[]>,
+  ): SolveStep | null {
+    const cells = [...component.cells].sort((left, right) => left - right);
+    for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
+      const left = cells[leftIndex]!;
+      for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
+        const right = cells[rightIndex]!;
+        if (component.colors.get(left) === component.colors.get(right)) {
+          continue;
+        }
+        if ((CELL_TO_PEERS[left] ?? []).includes(right)) {
+          continue;
+        }
+        const path = findRemotePairPath(adjacency, left, right);
+        if (path.length < 4 || path.length % 2 === 1) {
+          continue;
+        }
+
+        const pathSet = new Set(path);
+        const actions: SolveStep['actions'] = [];
+        for (const cell of intersectNumbers(CELL_TO_PEERS[left] ?? [], CELL_TO_PEERS[right] ?? [])) {
+          if (pathSet.has(cell)) {
+            continue;
+          }
+          for (const digit of digits) {
+            if (context.isCandidatePresent(cell, digit)) {
+              actions.push({ type: 'eliminate', cell, digit });
+            }
+          }
+        }
+        if (actions.length === 0) {
+          continue;
+        }
+
+        return {
+          technique: this.id,
+          score: this.score,
+          actions,
+          evidence: {
+            houses: uniqueHouses(path.flatMap((cell) => context.getCellHouses(cell))),
+            pattern: { family: 'wing', subtype: 'remote-pairs-opposite-color-endpoints' },
+            cells: [
+              ...path.map((cell) => ({ cell, role: 'reason' as const })),
+              ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
+            ],
+            links: buildRemotePairLinks(path, digits),
+            note: 'Remote Pairs use an odd chain of equal bivalue pairs, so any common peer of opposite-color endpoints cannot keep either pair digit.',
+          },
+        };
+      }
+    }
+    return null;
+  }
+}
+
+interface RemotePairComponent {
+  cells: number[];
+  colors: Map<number, 0 | 1>;
+  conflicted: boolean;
+}
+
+function buildRemotePairAdjacency(cells: readonly number[]): Map<number, number[]> {
+  const adjacency = new Map<number, number[]>();
+  for (const cell of cells) {
+    adjacency.set(cell, []);
+  }
+  for (let leftIndex = 0; leftIndex < cells.length; leftIndex += 1) {
+    const left = cells[leftIndex]!;
+    for (let rightIndex = leftIndex + 1; rightIndex < cells.length; rightIndex += 1) {
+      const right = cells[rightIndex]!;
+      if (!(CELL_TO_PEERS[left] ?? []).includes(right)) {
+        continue;
+      }
+      adjacency.get(left)!.push(right);
+      adjacency.get(right)!.push(left);
+    }
+  }
+  for (const neighbors of adjacency.values()) {
+    neighbors.sort((left, right) => left - right);
+  }
+  return adjacency;
+}
+
+function colorRemotePairComponents(
+  cells: readonly number[],
+  adjacency: Map<number, number[]>,
+): RemotePairComponent[] {
+  const components: RemotePairComponent[] = [];
+  const visited = new Set<number>();
+
+  for (const start of cells) {
+    if (visited.has(start)) {
+      continue;
+    }
+    const colors = new Map<number, 0 | 1>();
+    const componentCells: number[] = [];
+    const queue = [start];
+    let conflicted = false;
+    visited.add(start);
+    colors.set(start, 0);
+
+    for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+      const cell = queue[queueIndex]!;
+      componentCells.push(cell);
+      const nextColor = colors.get(cell) === 0 ? 1 : 0;
+      for (const neighbor of adjacency.get(cell) ?? []) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          colors.set(neighbor, nextColor);
+          queue.push(neighbor);
+          continue;
+        }
+        if (colors.get(neighbor) !== nextColor) {
+          conflicted = true;
+        }
+      }
+    }
+
+    components.push({ cells: componentCells, colors, conflicted });
+  }
+
+  return components;
+}
+
+function findRemotePairPath(adjacency: Map<number, number[]>, start: number, end: number): number[] {
+  const queue = [start];
+  const parent = new Map<number, number | null>([[start, null]]);
+
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const cell = queue[queueIndex]!;
+    if (cell === end) {
+      break;
+    }
+    for (const neighbor of adjacency.get(cell) ?? []) {
+      if (parent.has(neighbor)) {
+        continue;
+      }
+      parent.set(neighbor, cell);
+      queue.push(neighbor);
+    }
+  }
+
+  if (!parent.has(end)) {
+    return [];
+  }
+
+  const path: number[] = [];
+  let current: number | null = end;
+  while (current != null) {
+    path.push(current);
+    current = parent.get(current) ?? null;
+  }
+  return path.reverse();
+}
+
+function buildRemotePairLinks(
+  path: readonly number[],
+  digits: readonly [Digit, Digit],
+): NonNullable<SolveStep['evidence']['links']> {
+  const links: NonNullable<SolveStep['evidence']['links']> = [];
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const from = path[index]!;
+    const to = path[index + 1]!;
+    for (const digit of digits) {
+      links.push({ from, to, digit, type: 'weak' });
+    }
+  }
+  return links;
 }
 
 interface AlsSegment {
@@ -2494,6 +3448,18 @@ class AlignedPairExclusionTechnique implements SolverTechnique {
           actions,
           evidence: {
             houses: uniqueHouses([...context.getCellHouses(left), ...context.getCellHouses(right)]),
+            pattern: { family: 'als', subtype: 'aligned-pair-exclusion' },
+            nodes: [
+              { id: 'aligned-pair-exclusion:pair', cells: [left, right], role: 'pivot' as const, grouped: true },
+              ...excludedPairs
+                .filter((item) => item.als !== null)
+                .map((item, index) => ({
+                  id: `aligned-pair-exclusion:als:${index}`,
+                  cells: [...item.als!.cells],
+                  role: 'link' as const,
+                  ...(item.als!.cells.length > 1 ? { grouped: true } : {}),
+                })),
+            ],
             cells: [
               { cell: left, role: 'reason' as const },
               { cell: right, role: 'reason' as const },
@@ -2675,11 +3641,28 @@ class PatternOverlayTechnique implements SolverTechnique {
         actions,
         evidence: {
           houses: uniqueHouses(result.supportingCells.flatMap((cell) => context.getCellHouses(cell))),
+          pattern: { family: 'pattern', subtype: 'pattern-overlay-single-digit-template' },
+          nodes: [
+            {
+              id: 'pattern-overlay:template-support',
+              cells: result.supportingCells,
+              role: 'reason' as const,
+              grouped: true,
+              digit: digit as Digit,
+            },
+            {
+              id: 'pattern-overlay:targets',
+              cells: uniqueNumbers(actions.map((action) => action.cell)),
+              role: 'target' as const,
+              grouped: true,
+              digit: digit as Digit,
+            },
+          ],
           cells: [
             ...result.supportingCells.map((cell) => ({ cell, digit: digit as Digit, role: 'reason' as const })),
             ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
           ],
-          note: 'Pattern Overlay enumerates all legal templates for one digit and applies common placements or eliminations.',
+          note: `Pattern Overlay enumerates ${result.templates.length} legal template(s) for digit ${digit} within a ${PatternOverlayTechnique.MAX_TEMPLATES} template budget and applies common placements or eliminations.`,
         },
       };
     }
@@ -2865,6 +3848,21 @@ class TridagonsTechnique implements SolverTechnique {
                     actions,
                     evidence: {
                       houses: uniqueHouses(chosen.flatMap((pattern) => context.getCellHouses(pattern.cells[0]!))),
+                      pattern: { family: 'pattern', subtype: 'tridagon-four-box-guardian' },
+                      nodes: [
+                        ...chosen.map((pattern) => ({
+                          id: `tridagons:box:${pattern.box}`,
+                          cells: pattern.cells,
+                          role: 'reason' as const,
+                          grouped: true,
+                        })),
+                        {
+                          id: 'tridagons:guardian',
+                          cells: [guardianCell],
+                          role: 'pivot' as const,
+                          grouped: true,
+                        },
+                      ],
                       cells: [
                         ...chosen.flatMap((pattern) =>
                           pattern.cells.map((cell) => ({ cell, role: 'reason' as const })),
@@ -2872,7 +3870,7 @@ class TridagonsTechnique implements SolverTechnique {
                         { cell: guardianCell, role: 'reason' as const },
                         ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
                       ],
-                      note: 'Tridagons uses a four-box parity structure with one guardian cell.',
+                      note: `Tridagons uses ${chosen.length} box pattern(s), ${digits.length} tridagon digit(s) and one guardian cell.`,
                     },
                   };
                 }
@@ -3137,11 +4135,26 @@ class SKLoopsTechnique implements SolverTechnique {
       actions,
       evidence: {
         houses: uniqueHouses(structure.links.map((link) => link.house)),
+        pattern: { family: 'pattern', subtype: 'sk-loop-eight-node' },
+        nodes: [
+          {
+            id: 'sk-loops:pivots',
+            cells: structure.pivots,
+            role: 'pivot' as const,
+            grouped: true,
+          },
+          ...structure.nodes.map((node, index) => ({
+            id: `sk-loops:node:${index}`,
+            cells: [...node.cells],
+            role: 'reason' as const,
+            grouped: true,
+          })),
+        ],
         cells: [
           ...reasonCells.map((cell) => ({ cell, role: 'reason' as const })),
           ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
         ],
-        note: 'SK Loops lock candidates into an eight-node loop and eliminate linked digits from outside cells.',
+        note: `SK Loops lock ${structure.nodes.length} node(s), ${structure.pivots.length} pivot(s) and ${structure.links.length} link house(s), then eliminate linked digits from outside cells.`,
       },
     };
   }
@@ -3156,10 +4169,8 @@ class SKLoopsTechnique implements SolverTechnique {
     const digits: Digit[] = [];
 
     for (let digit = 1; digit <= 9; digit += 1) {
-      const houseCells = context.getHouseCells(house).filter((cell) =>
-        context.board[cell] === digit || context.isCandidatePresent(cell, digit as Digit),
-      );
-      if (houseCells.length === 0 || !houseCells.every((cell) => allowed.has(cell))) {
+      const solvedHouseCells = context.getHouseCells(house).filter((cell) => context.board[cell] === digit);
+      if (solvedHouseCells.some((cell) => !allowed.has(cell))) {
         continue;
       }
       if (!this.nodeContainsDigit(context, leftCells, digit as Digit) || !this.nodeContainsDigit(context, rightCells, digit as Digit)) {
@@ -3208,10 +4219,16 @@ interface BranchOutcome {
   };
   contradiction: boolean;
   exhausted: boolean;
+  steps: number;
+  maxSteps: number;
+  truncated: boolean;
+  stopReason: NonNullable<NonNullable<SolveStep['evidence']['branches']>[number]['stopReason']>;
   contradictionAt?: NonNullable<SolveStep['evidence']['branches']>[number]['contradictionAt'];
   placements: Array<{ cell: number; digit: Digit }>;
   eliminations: Array<{ cell: number; digit: Digit }>;
 }
+
+type BranchContradictionLocation = NonNullable<NonNullable<SolveStep['evidence']['branches']>[number]['contradictionAt']>;
 
 class ForcingNetsTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'forcing-nets';
@@ -3269,10 +4286,11 @@ class NishioForcingChainsTechnique implements SolverTechnique {
         if ((entry.strongLinkCounts[index] ?? 0) <= 0 && entry.digits.length > 4) {
           continue;
         }
-        if (!this.exactBranchContradicts(context, entry.cellIndex, digit)) {
+        const contradictionAt = this.exactBranchContradictionAt(context, entry.cellIndex, digit);
+        if (!contradictionAt) {
           continue;
         }
-        return this.buildEliminationStep(context, entry.cellIndex, digit, true);
+        return this.buildEliminationStep(context, entry.cellIndex, digit, true, contradictionAt);
       }
     }
 
@@ -3304,14 +4322,20 @@ class NishioForcingChainsTechnique implements SolverTechnique {
     cell: number,
     digit: Digit,
     useExactContradiction: boolean,
+    contradictionAt?: BranchContradictionLocation,
   ): SolveStep {
     const branch = context.clone();
     branch.placeDigit(cell, digit, { allowConflict: true });
+    const locatedContradiction = contradictionAt ?? inspectContradiction(branch);
     const outcome: BranchOutcome = {
       assumption: { type: 'place', cell, digit },
       contradiction: true,
       exhausted: true,
-      contradictionAt: inspectContradiction(branch),
+      steps: 0,
+      maxSteps: 0,
+      truncated: false,
+      stopReason: 'contradiction',
+      ...(locatedContradiction ? { contradictionAt: locatedContradiction } : {}),
       placements: [],
       eliminations: [],
     };
@@ -3326,6 +4350,12 @@ class NishioForcingChainsTechnique implements SolverTechnique {
           { cell, digit, role: 'target' as const },
         ],
         branches: buildBranchEvidence([outcome]),
+        pattern: {
+          family: 'forcing',
+          subtype: useExactContradiction
+            ? 'nishio-forcing-chains-exact-contradiction'
+            : 'nishio-forcing-chains-logic-contradiction',
+        },
         note: useExactContradiction
           ? 'Nishio removes a candidate whose direct assumption has no valid completion.'
           : 'Nishio removes a candidate whose logical branch reaches a contradiction.',
@@ -3368,13 +4398,15 @@ class NishioForcingChainsTechnique implements SolverTechnique {
     return branchHasNoSolution([...branch.board] as Board, [...branch.candidates], 1000);
   }
 
-  private exactBranchContradicts(context: SolverContextLike, cellIndex: number, digit: Digit): boolean {
+  private exactBranchContradictionAt(context: SolverContextLike, cellIndex: number, digit: Digit): BranchContradictionLocation | null {
     const branch = context.clone();
     branch.placeDigit(cellIndex, digit, { allowConflict: true });
-    if (branch.hasContradiction()) {
-      return true;
+    const immediate = inspectContradiction(branch);
+    if (immediate) {
+      return immediate;
     }
-    return branchHasNoSolution([...branch.board] as Board, [...branch.candidates], 1000);
+    const probe = probeBranchNoSolution([...branch.board] as Board, [...branch.candidates], 1000);
+    return probe.noSolution ? probe.contradictionAt ?? null : null;
   }
 }
 
@@ -3396,8 +4428,12 @@ class CellForcingChainsTechnique implements SolverTechnique {
 }
 
 class UnitForcingChainsTechnique implements SolverTechnique {
-  public readonly id: TechniqueId = 'unit-forcing-chains';
+  public readonly id: TechniqueId;
   public readonly score = 224;
+
+  public constructor(id: TechniqueId = 'unit-forcing-chains') {
+    this.id = id;
+  }
 
   public find(context: SolverContextLike): SolveStep | null {
     const sources = collectUnitBranchSources(context).slice(0, 24);
@@ -3455,6 +4491,7 @@ class TableChainTechnique implements SolverTechnique {
             { cell: source.cell, digit: source.digit, role: 'target' as const },
           ],
           branches: buildBranchEvidence([outcome]),
+          pattern: { family: 'forcing', subtype: 'table-chain-candidate-contradiction' },
           note: 'Table Chain removes a candidate whose static implication branch reaches a contradiction.',
         },
       };
@@ -3503,6 +4540,228 @@ class TableChainTechnique implements SolverTechnique {
   }
 }
 
+class DynamicForcingChainsTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'dynamic-forcing-chains';
+  public readonly score = 227;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const contradiction = this.findCandidateContradiction(context);
+    if (contradiction) {
+      return contradiction;
+    }
+
+    const digitReduction = this.findDigitReduction(context);
+    if (digitReduction) {
+      return digitReduction;
+    }
+
+    const cellReduction = this.findCellReduction(context);
+    if (cellReduction) {
+      return cellReduction;
+    }
+
+    return this.findRegionReduction(context);
+  }
+
+  private findCandidateContradiction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context).slice(0, 40)) {
+      const outcome = evaluateDynamicForcingBranch(context, source.cell, source.digit);
+      if (!outcome.contradiction) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: [{ type: 'eliminate', cell: source.cell, digit: source.digit }],
+        evidence: {
+          houses: context.getCellHouses(source.cell),
+          cells: [
+            { cell: source.cell, digit: source.digit, role: 'reason' as const },
+            { cell: source.cell, digit: source.digit, role: 'target' as const },
+          ],
+          branches: buildBranchEvidence([outcome]),
+          pattern: { family: 'forcing', subtype: 'dynamic-forcing-chains-candidate-contradiction' },
+          note: 'Dynamic Forcing Chains removes a candidate whose bounded dynamic branch reaches a contradiction.',
+        },
+      };
+    }
+    return null;
+  }
+
+  private findDigitReduction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context).slice(0, 32)) {
+      const outcomes = [
+        evaluateDynamicForcingBranch(context, source.cell, source.digit),
+        evaluateDynamicForcingRemovalBranch(context, source.cell, source.digit),
+      ];
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        [{ cell: source.cell, digit: source.digit, role: 'reason' as const }],
+        outcomes,
+        [source.cell],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains compares both states of one candidate and keeps their shared conclusion.';
+        return step;
+      }
+    }
+    return null;
+  }
+
+  private findCellReduction(context: SolverContextLike): SolveStep | null {
+    for (const pivot of collectBranchCells(context, 5).slice(0, 16)) {
+      const outcomes = context.getCandidateDigits(pivot)
+        .map((digit) => evaluateDynamicForcingBranch(context, pivot, digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        [{ cell: pivot, role: 'reason' as const }],
+        outcomes,
+        [pivot],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains keeps the conclusion shared by every candidate branch of one cell.';
+        return step;
+      }
+    }
+    return null;
+  }
+
+  private findRegionReduction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectUnitBranchSources(context).slice(0, 24)) {
+      const outcomes = source.cells.map((cell) => evaluateDynamicForcingBranch(context, cell, source.digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        source.cells.map((cell) => ({ cell, digit: source.digit, role: 'reason' as const })),
+        outcomes,
+        source.cells,
+        [source.house],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains keeps the conclusion shared by every possible position for one digit in one house.';
+        return step;
+      }
+    }
+    return null;
+  }
+}
+
+class DynamicForcingChainsPlusTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'dynamic-forcing-chains-plus';
+  public readonly score = 238;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const contradiction = this.findCandidateContradiction(context);
+    if (contradiction) {
+      return contradiction;
+    }
+
+    const digitReduction = this.findDigitReduction(context);
+    if (digitReduction) {
+      return digitReduction;
+    }
+
+    const cellReduction = this.findCellReduction(context);
+    if (cellReduction) {
+      return cellReduction;
+    }
+
+    return this.findRegionReduction(context);
+  }
+
+  private findCandidateContradiction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context).slice(0, 56)) {
+      const outcome = evaluateDynamicForcingPlusBranch(context, source.cell, source.digit);
+      if (!outcome.contradiction) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: [{ type: 'eliminate', cell: source.cell, digit: source.digit }],
+        evidence: {
+          houses: context.getCellHouses(source.cell),
+          cells: [
+            { cell: source.cell, digit: source.digit, role: 'reason' as const },
+            { cell: source.cell, digit: source.digit, role: 'target' as const },
+          ],
+          branches: buildBranchEvidence([outcome]),
+          pattern: { family: 'forcing', subtype: 'dynamic-forcing-chains-plus-candidate-contradiction' },
+          note: 'Dynamic Forcing Chains (+) removes a candidate whose deeper bounded dynamic branch reaches a contradiction.',
+        },
+      };
+    }
+    return null;
+  }
+
+  private findDigitReduction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context).slice(0, 48)) {
+      const outcomes = [
+        evaluateDynamicForcingPlusBranch(context, source.cell, source.digit),
+        evaluateDynamicForcingPlusRemovalBranch(context, source.cell, source.digit),
+      ];
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        [{ cell: source.cell, digit: source.digit, role: 'reason' as const }],
+        outcomes,
+        [source.cell],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains (+) compares deeper ON/OFF candidate branches and keeps their shared conclusion.';
+        return step;
+      }
+    }
+    return null;
+  }
+
+  private findCellReduction(context: SolverContextLike): SolveStep | null {
+    for (const pivot of collectBranchCells(context, 6).slice(0, 24)) {
+      const outcomes = context.getCandidateDigits(pivot)
+        .map((digit) => evaluateDynamicForcingPlusBranch(context, pivot, digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        [{ cell: pivot, role: 'reason' as const }],
+        outcomes,
+        [pivot],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains (+) keeps the conclusion shared by every deeper candidate branch of one cell.';
+        return step;
+      }
+    }
+    return null;
+  }
+
+  private findRegionReduction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectPlusUnitBranchSources(context).slice(0, 36)) {
+      const outcomes = source.cells.map((cell) => evaluateDynamicForcingPlusBranch(context, cell, source.digit));
+      const step = buildForcingConclusion(
+        context,
+        this.id,
+        this.score,
+        source.cells.map((cell) => ({ cell, digit: source.digit, role: 'reason' as const })),
+        outcomes,
+        source.cells,
+        [source.house],
+      );
+      if (step) {
+        step.evidence.note = 'Dynamic Forcing Chains (+) keeps the conclusion shared by every deeper position branch for one digit in one house.';
+        return step;
+      }
+    }
+    return null;
+  }
+}
+
 class BowmansBingoTechnique implements SolverTechnique {
   public readonly id: TechniqueId = 'bowmans-bingo';
   public readonly score = 248;
@@ -3530,7 +4789,42 @@ class BowmansBingoTechnique implements SolverTechnique {
             { cell: source.cell, digit: source.digit, role: 'target' as const },
           ],
           branches: buildBranchEvidence([result]),
+          pattern: { family: 'forcing', subtype: 'bowmans-bingo-candidate-contradiction' },
           note: "Bowman's Bingo removes a candidate whose bounded logical branch reaches a contradiction.",
+        },
+      };
+    }
+    return null;
+  }
+}
+
+class NestedForcingChainsTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'nested-forcing-chains';
+  public readonly score = 246;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    return this.findCandidateContradiction(context);
+  }
+
+  private findCandidateContradiction(context: SolverContextLike): SolveStep | null {
+    for (const source of collectBranchCandidateSources(context).slice(0, 8)) {
+      const outcome = evaluateNestedForcingBranch(context, source.cell, source.digit);
+      if (!outcome.contradiction) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: [{ type: 'eliminate', cell: source.cell, digit: source.digit }],
+        evidence: {
+          houses: context.getCellHouses(source.cell),
+          cells: [
+            { cell: source.cell, digit: source.digit, role: 'reason' as const },
+            { cell: source.cell, digit: source.digit, role: 'target' as const },
+          ],
+          branches: buildBranchEvidence([outcome]),
+          pattern: { family: 'forcing', subtype: 'nested-forcing-chains-candidate-contradiction' },
+          note: 'Nested Forcing Chains removes a candidate whose one-level nested forcing branch reaches a contradiction.',
         },
       };
     }
@@ -3542,9 +4836,13 @@ class AlmostLockedCandidatesTechnique implements SolverTechnique {
   public readonly id: TechniqueId;
   public readonly score: number;
 
-  public constructor(private readonly size: 2 | 3) {
-    this.id = size === 2 ? 'almost-locked-pair' : 'almost-locked-triple';
-    this.score = size === 2 ? 126 : 144;
+  public constructor(private readonly size: 2 | 3 | 4) {
+    this.id = size === 2
+      ? 'almost-locked-pair'
+      : size === 3
+        ? 'almost-locked-triple'
+        : 'almost-locked-quad';
+    this.score = size === 2 ? 126 : size === 3 ? 144 : 164;
   }
 
   public find(context: SolverContextLike): SolveStep | null {
@@ -3617,6 +4915,27 @@ class AlmostLockedCandidatesTechnique implements SolverTechnique {
         actions,
         evidence: {
           houses: [segment.primaryHouse, segment.secondaryHouse],
+          pattern: { family: 'als', subtype: this.id },
+          nodes: [
+            {
+              id: `${this.id}:als`,
+              cells: [...alsCells],
+              role: 'reason' as const,
+              ...(alsCells.length > 1 ? { grouped: true } : {}),
+            },
+            {
+              id: `${this.id}:ahs`,
+              cells: [...ahsCells],
+              role: 'reason' as const,
+              ...(ahsCells.length > 1 ? { grouped: true } : {}),
+            },
+            ...(intersectionReasons.length > 0 ? [{
+              id: `${this.id}:intersection`,
+              cells: [...intersectionReasons],
+              role: 'link' as const,
+              ...(intersectionReasons.length > 1 ? { grouped: true } : {}),
+            }] : []),
+          ],
           cells: [
             ...alsCells.map((cell) => ({ cell, role: 'reason' as const })),
             ...ahsCells.map((cell) => ({ cell, role: 'reason' as const })),
@@ -3664,6 +4983,9 @@ class AlsXZTechnique implements SolverTechnique {
             collectAlsHouses(left, right),
             [...left.cells, ...right.cells],
             'ALS-XZ uses restricted common digits between two ALS groups to eliminate shared non-restricted digits.',
+            { family: 'als', subtype: 'als-xz' },
+            buildAlsRestrictedCommonEvidenceLinks(left, right, restrictedCommons),
+            buildAlsSetNodes('als-xz', [left, right]),
           );
         }
       }
@@ -3728,6 +5050,15 @@ class AlsXYWingTechnique implements SolverTechnique {
                   collectAlsHouses(pivot, left, right),
                   [...pivot.cells, ...left.cells, ...right.cells],
                   'ALS-XY-Wing uses a pivot ALS and two wing ALS groups to eliminate their shared wing candidate.',
+                  { family: 'als', subtype: 'als-xy-wing' },
+                  [
+                    ...buildAlsRestrictedCommonEvidenceLinks(pivot, left, [leftRestricted]),
+                    ...buildAlsRestrictedCommonEvidenceLinks(pivot, right, [rightRestricted]),
+                  ],
+                  [
+                    ...buildAlsSetNodes('als-xy-wing', [pivot], 'pivot'),
+                    ...buildAlsSetNodes('als-xy-wing', [left, right]),
+                  ],
                 );
               }
             }
@@ -3857,6 +5188,8 @@ class AICWithAlsTechnique implements SolverTechnique {
             ...uniqueTargets.map((cell) => ({ cell, digit, role: 'target' as const })),
           ],
           links: buildAlsRccEvidenceLinks(links),
+          pattern: { family: 'als', subtype: 'aic-als-rcc-chain' },
+          nodes: buildAlsSetNodes('aic-als', pathAls),
           note: `ALS-AIC uses a ${path.length}-ALS RCC chain; endpoint digit ${digit} is removed from cells seeing both endpoint ALSs.`,
         },
       };
@@ -3929,6 +5262,43 @@ function buildAlsRccEvidenceLinks(links: readonly AlsRccLink[]): NonNullable<Sol
   }));
 }
 
+function buildAlsRestrictedCommonEvidenceLinks(
+  left: AlmostLockedSet,
+  right: AlmostLockedSet,
+  digits: readonly Digit[],
+): NonNullable<SolveStep['evidence']['links']> {
+  const links: NonNullable<SolveStep['evidence']['links']> = [];
+  for (const digit of digits) {
+    const leftCell = left.digitCells.get(digit)?.[0];
+    const rightCell = right.digitCells.get(digit)?.[0];
+    if (leftCell == null || rightCell == null) {
+      continue;
+    }
+    const house = housesForCellPair(leftCell, rightCell)[0];
+    links.push({
+      from: leftCell,
+      to: rightCell,
+      digit,
+      type: 'weak',
+      ...(house ? { house } : {}),
+    });
+  }
+  return links;
+}
+
+function buildAlsSetNodes(
+  prefix: string,
+  sets: readonly AlmostLockedSet[],
+  role: 'reason' | 'pivot' | 'link' = 'reason',
+): NonNullable<SolveStep['evidence']['nodes']> {
+  return sets.map((set, index) => ({
+    id: `${prefix}:als:${index}`,
+    cells: [...set.cells],
+    role,
+    ...(set.cells.length > 1 ? { grouped: true } : {}),
+  }));
+}
+
 interface FireworkSignature {
   wingRowCell: number;
   wingColCell: number;
@@ -3983,6 +5353,13 @@ class FireworksTechnique implements SolverTechnique {
           actions,
           evidence: {
             houses: context.getCellHouses(intersection),
+            pattern: { family: 'als', subtype: 'fireworks' },
+            nodes: [{
+              id: 'fireworks:signature',
+              cells: [...patternCells],
+              role: 'reason',
+              grouped: true,
+            }],
             cells: [
               ...patternCells.map((cell) => ({ cell, role: 'reason' as const })),
               ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
@@ -4118,6 +5495,13 @@ class TwinnedXYChainsTechnique implements SolverTechnique {
       score: this.score,
       actions,
       evidence: {
+        pattern: { family: 'als', subtype: 'twinned-xy-chains' },
+        nodes: [{
+          id: 'twinned-xy-chains:pattern',
+          cells: [...cells],
+          role: 'reason',
+          grouped: true,
+        }],
         cells: [
           ...cells.map((cell) => ({ cell, role: 'reason' as const })),
           ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
@@ -4280,6 +5664,27 @@ class SueDeCoqTechnique implements SolverTechnique {
                   { type: lineType, index: lineIndex },
                   { type: 'box', index: boxIndex },
                 ],
+                pattern: { family: 'als', subtype: lineType === 'row' ? 'sue-de-coq-row-box' : 'sue-de-coq-column-box' },
+                nodes: [
+                  {
+                    id: 'sue-de-coq:intersection',
+                    cells: [...intersection],
+                    role: 'reason' as const,
+                    grouped: true,
+                  },
+                  {
+                    id: 'sue-de-coq:line-wing',
+                    cells: [...lineWing],
+                    role: 'reason' as const,
+                    ...(lineWing.length > 1 ? { grouped: true } : {}),
+                  },
+                  {
+                    id: 'sue-de-coq:box-wing',
+                    cells: [...boxWing],
+                    role: 'reason' as const,
+                    ...(boxWing.length > 1 ? { grouped: true } : {}),
+                  },
+                ],
                 cells: [
                   ...intersection.map((cell) => ({ cell, role: 'reason' as const })),
                   ...lineWing.map((cell) => ({ cell, role: 'reason' as const })),
@@ -4419,6 +5824,17 @@ class DeathBlossomTechnique implements SolverTechnique {
             ...getCellHouses(context, pivot),
             ...collectAlsHouses(...choices.map((choice) => choice.als)),
           ]),
+          pattern: { family: 'als', subtype: 'death-blossom' },
+          nodes: [
+            { id: 'death-blossom:pivot', cells: [pivot], role: 'pivot' as const },
+            ...choices.map((choice, index) => ({
+              id: `death-blossom:petal:${index}`,
+              cells: [...choice.als.cells],
+              digit: choice.pivotDigit,
+              role: 'reason' as const,
+              ...(choice.als.cells.length > 1 ? { grouped: true } : {}),
+            })),
+          ],
           cells: [
             { cell: pivot, role: 'reason' as const },
             ...choices.flatMap((choice) => choice.als.cells.map((cell) => ({ cell, role: 'reason' as const }))),
@@ -4516,6 +5932,10 @@ class SimpleColoringTechnique implements SolverTechnique {
               ...targetCells.map((cell) => ({ cell, digit, role: 'target' as const })),
             ],
             links: buildColorLinks(colorMap, digit, linkHouses),
+            pattern: {
+              family: this.id === 'bidirectional-x-cycle' ? 'bidirectional-x-cycle' : 'simple-coloring',
+              subtype: 'same-color-contradiction',
+            },
             note: 'Two cells of the same color see each other, so that color is false.',
           },
         };
@@ -4551,6 +5971,10 @@ class SimpleColoringTechnique implements SolverTechnique {
             { cell, digit, role: 'target' as const },
           ],
           links: buildColorLinks(colorMap, digit, linkHouses),
+          pattern: {
+            family: this.id === 'bidirectional-x-cycle' ? 'bidirectional-x-cycle' : 'simple-coloring',
+            subtype: 'two-color-trap',
+          },
           note: 'The target sees both colors of the chain, so the candidate is eliminated.',
         },
       };
@@ -5291,6 +6715,7 @@ class GroupedAICTechnique implements SolverTechnique {
       nodes,
       targetCells.map((cell) => ({ type: 'eliminate' as const, cell, digit: start.digit })),
       `Grouped AIC endpoints share digit ${start.digit}, so common peers lose that candidate.`,
+      'same-digit-endpoints',
     );
   }
 
@@ -5339,6 +6764,7 @@ class GroupedAICTechnique implements SolverTechnique {
       nodes,
       actions,
       'Grouped AIC endpoints have different digits, so endpoint cross-candidates are eliminated.',
+      'different-digit-endpoints',
     );
   }
 
@@ -5348,6 +6774,7 @@ class GroupedAICTechnique implements SolverTechnique {
     nodes: Map<string, GroupedAicNode>,
     actions: SolveStep['actions'],
     note: string,
+    subtype: string,
   ): SolveStep {
     const reasonCells = path.flatMap((key) => {
       const node = nodes.get(key)!;
@@ -5374,6 +6801,20 @@ class GroupedAICTechnique implements SolverTechnique {
             ...(edge.house ? { house: edge.house } : {}),
           };
         }),
+        nodes: path.map((key) => {
+          const node = nodes.get(key)!;
+          return {
+            id: key,
+            cells: [...node.cells],
+            digit: node.digit,
+            role: 'reason' as const,
+            ...(node.isGroup ? { grouped: true } : {}),
+          };
+        }),
+        pattern: {
+          family: 'grouped-aic',
+          subtype,
+        },
         note: `${note} Path: ${formatGroupedAicPath(path, nodes)}.`,
       },
     };
@@ -5455,6 +6896,10 @@ class XChainTechnique implements SolverTechnique {
                       type: 'strong' as const,
                       house,
                     }))),
+                    pattern: {
+                      family: this.id === 'forcing-x-chain' ? 'forcing-x-chain' : 'x-chain',
+                      subtype: 'even-strong-link-chain',
+                    },
                     note: 'An even-length strong-link chain makes both endpoints true together, so common peers lose the candidate.',
                   },
                 };
@@ -5909,6 +7354,10 @@ class XYChainTechnique implements SolverTechnique {
                       ...uniqueTargets.map((cell) => ({ cell, digit: startDigit, role: 'target' as const })),
                     ],
                     links: buildXYChainLinks(nextPath),
+                    pattern: {
+                      family: 'xy-chain',
+                      subtype: this.id === 'bidirectional-y-cycle' ? 'bidirectional-y-cycle' : 'open-chain',
+                    },
                     note: 'A bivalue chain makes the same digit true at both endpoints, so common peers lose that candidate.',
                   },
                 };
@@ -5947,6 +7396,9 @@ class AICTechnique implements SolverTechnique {
 
   public find(context: SolverContextLike): SolveStep | null {
     const graph = buildAicGraph(context);
+    let firstEndpointStep: SolveStep | null = null;
+    let firstLoopStep: SolveStep | null = null;
+    let firstStrongLoopStep: SolveStep | null = null;
     for (const start of graph.adjacency.keys()) {
       const queue: Array<{
         key: string;
@@ -5970,7 +7422,32 @@ class AICTechnique implements SolverTechnique {
           continue;
         }
         for (const edge of graph.adjacency.get(state.key) ?? []) {
-          if (edge.type !== state.nextType || state.pathSet.has(edge.to) || state.usedCandidates.has(edge.to)) {
+          if (edge.type !== state.nextType) {
+            continue;
+          }
+          const nextEdge: AicPathEdge = {
+            from: state.key,
+            to: edge.to,
+            type: edge.type,
+            ...(edge.house ? { house: edge.house } : {}),
+          };
+          if (edge.to === start) {
+            const loopEdges = [...state.edges, nextEdge];
+            if (loopEdges.length >= 4 && loopEdges.length % 2 === 0) {
+              const loop = this.tryContinuousLoop(context, state.path, loopEdges, graph.nodes);
+              if (loop && !firstLoopStep) {
+                firstLoopStep = loop;
+              }
+            }
+            if (loopEdges.length >= 3 && loopEdges.length % 2 === 1) {
+              const loop = this.tryDiscontinuousStrongLoop(context, state.path, loopEdges, graph.nodes);
+              if (loop && !firstStrongLoopStep) {
+                firstStrongLoopStep = loop;
+              }
+            }
+            continue;
+          }
+          if (state.pathSet.has(edge.to) || state.usedCandidates.has(edge.to)) {
             continue;
           }
           const nextPath = [...state.path, edge.to];
@@ -5978,21 +7455,15 @@ class AICTechnique implements SolverTechnique {
           nextPathSet.add(edge.to);
           const nextUsedCandidates = new Set(state.usedCandidates);
           nextUsedCandidates.add(edge.to);
-          const nextEdge: AicPathEdge = {
-            from: state.key,
-            to: edge.to,
-            type: edge.type,
-            ...(edge.house ? { house: edge.house } : {}),
-          };
           const nextEdges = [...state.edges, nextEdge];
           if (nextEdges.length >= 3 && edge.type === 'strong') {
             const type1 = this.trySameDigitEndpoint(context, nextPath, nextEdges, graph.nodes);
-            if (type1) {
-              return type1;
+            if (type1 && !firstEndpointStep) {
+              firstEndpointStep = type1;
             }
             const type2 = this.tryDifferentDigitEndpoint(context, nextPath, nextEdges, graph.nodes);
-            if (type2) {
-              return type2;
+            if (type2 && !firstEndpointStep) {
+              firstEndpointStep = type2;
             }
           }
           queue.push({
@@ -6005,8 +7476,165 @@ class AICTechnique implements SolverTechnique {
           });
         }
       }
+
+      if (firstEndpointStep || firstStrongLoopStep || firstLoopStep) {
+        continue;
+      }
+
+      const weakLoopQueue: Array<{
+        key: string;
+        path: string[];
+        pathSet: Set<string>;
+        edges: AicPathEdge[];
+        nextType: 'strong' | 'weak';
+        usedCandidates: Set<string>;
+      }> = [{
+        key: start,
+        path: [start],
+        pathSet: new Set([start]),
+        edges: [],
+        nextType: 'weak',
+        usedCandidates: new Set([start]),
+      }];
+
+      for (let queueIndex = 0; queueIndex < weakLoopQueue.length; queueIndex += 1) {
+        const state = weakLoopQueue[queueIndex]!;
+        if (state.edges.length >= AICTechnique.MAX_EDGES) {
+          continue;
+        }
+        for (const edge of graph.adjacency.get(state.key) ?? []) {
+          if (edge.type !== state.nextType) {
+            continue;
+          }
+          const nextEdge: AicPathEdge = {
+            from: state.key,
+            to: edge.to,
+            type: edge.type,
+            ...(edge.house ? { house: edge.house } : {}),
+          };
+          if (edge.to === start) {
+            const loopEdges = [...state.edges, nextEdge];
+            if (loopEdges.length >= 3 && loopEdges.length % 2 === 1) {
+              const loop = this.tryDiscontinuousWeakLoop(context, state.path, loopEdges, graph.nodes);
+              if (loop && !firstLoopStep) {
+                firstLoopStep = loop;
+              }
+            }
+            continue;
+          }
+          if (state.pathSet.has(edge.to) || state.usedCandidates.has(edge.to)) {
+            continue;
+          }
+          const nextPath = [...state.path, edge.to];
+          const nextPathSet = new Set(state.pathSet);
+          nextPathSet.add(edge.to);
+          const nextUsedCandidates = new Set(state.usedCandidates);
+          nextUsedCandidates.add(edge.to);
+          weakLoopQueue.push({
+            key: edge.to,
+            path: nextPath,
+            pathSet: nextPathSet,
+            edges: [...state.edges, nextEdge],
+            nextType: state.nextType === 'strong' ? 'weak' : 'strong',
+            usedCandidates: nextUsedCandidates,
+          });
+        }
+      }
     }
-    return null;
+    return firstEndpointStep ?? firstStrongLoopStep ?? firstLoopStep;
+  }
+
+  private tryContinuousLoop(
+    context: SolverContextLike,
+    path: string[],
+    edges: AicPathEdge[],
+    nodes: Map<string, AicNode>,
+  ): SolveStep | null {
+    const actionMap = new Map<string, StepAction>();
+    const pathNodeKeys = new Set(path);
+
+    for (const edge of edges.filter((item) => item.type === 'weak')) {
+      const from = nodes.get(edge.from)!;
+      const to = nodes.get(edge.to)!;
+      if (from.cell === to.cell && from.digit !== to.digit) {
+        for (const digit of context.getCandidateDigits(from.cell)) {
+          if (digit === from.digit || digit === to.digit) {
+            continue;
+          }
+          const key = aicNodeKey(from.cell, digit);
+          if (!pathNodeKeys.has(key)) {
+            actionMap.set(`${from.cell}:${digit}`, { type: 'eliminate', cell: from.cell, digit });
+          }
+        }
+        continue;
+      }
+
+      if (from.digit === to.digit && edge.house) {
+        for (const cell of context.getHouseCandidateCells(edge.house, from.digit)) {
+          if (cell === from.cell || cell === to.cell) {
+            continue;
+          }
+          const key = aicNodeKey(cell, from.digit);
+          if (!pathNodeKeys.has(key)) {
+            actionMap.set(`${cell}:${from.digit}`, { type: 'eliminate', cell, digit: from.digit });
+          }
+        }
+      }
+    }
+
+    const actions = Array.from(actionMap.values());
+    if (actions.length === 0) {
+      return null;
+    }
+
+    return this.buildStep(
+      path,
+      edges,
+      nodes,
+      actions,
+      'AIC forms a continuous loop, so every weak link in the loop can be treated as a locked pair relation.',
+      'continuous-loop',
+    );
+  }
+
+  private tryDiscontinuousWeakLoop(
+    context: SolverContextLike,
+    path: string[],
+    edges: AicPathEdge[],
+    nodes: Map<string, AicNode>,
+  ): SolveStep | null {
+    const start = nodes.get(path[0]!)!;
+    if (!context.isCandidatePresent(start.cell, start.digit)) {
+      return null;
+    }
+    return this.buildStep(
+      path,
+      edges,
+      nodes,
+      [{ type: 'eliminate', cell: start.cell, digit: start.digit }],
+      'AIC forms a discontinuous loop with two weak links at the same candidate, so that candidate is false.',
+      'discontinuous-loop-weak-weak',
+    );
+  }
+
+  private tryDiscontinuousStrongLoop(
+    context: SolverContextLike,
+    path: string[],
+    edges: AicPathEdge[],
+    nodes: Map<string, AicNode>,
+  ): SolveStep | null {
+    const start = nodes.get(path[0]!)!;
+    if (!context.isCandidatePresent(start.cell, start.digit)) {
+      return null;
+    }
+    return this.buildStep(
+      path,
+      edges,
+      nodes,
+      [{ type: 'place', cell: start.cell, digit: start.digit }],
+      'AIC forms a discontinuous loop with two strong links at the same candidate, so that candidate is true.',
+      'discontinuous-loop-strong-strong',
+    );
   }
 
   private trySameDigitEndpoint(
@@ -6031,7 +7659,7 @@ class AICTechnique implements SolverTechnique {
       type: 'eliminate' as const,
       cell,
       digit: start.digit,
-    })), 'AIC endpoints have the same digit, so common peers lose that candidate.');
+    })), 'AIC endpoints have the same digit, so common peers lose that candidate.', 'same-digit-endpoints');
   }
 
   private tryDifferentDigitEndpoint(
@@ -6056,7 +7684,7 @@ class AICTechnique implements SolverTechnique {
     if (actions.length === 0) {
       return null;
     }
-    return this.buildStep(path, edges, nodes, actions, 'AIC endpoints have different digits, so endpoint cross-candidates are eliminated.');
+    return this.buildStep(path, edges, nodes, actions, 'AIC endpoints have different digits, so endpoint cross-candidates are eliminated.', 'different-digit-endpoints');
   }
 
   private buildStep(
@@ -6065,6 +7693,7 @@ class AICTechnique implements SolverTechnique {
     nodes: Map<string, AicNode>,
     actions: SolveStep['actions'],
     note: string,
+    subtype: string,
   ): SolveStep {
     const reasonCells = path.map((key) => nodes.get(key)!);
     return {
@@ -6088,6 +7717,10 @@ class AICTechnique implements SolverTechnique {
             ...(edge.house ? { house: edge.house } : {}),
           };
         }),
+        pattern: {
+          family: this.id === 'forcing-chain' ? 'forcing-chain' : this.id,
+          subtype,
+        },
         note,
       },
     };
@@ -6156,6 +7789,11 @@ class SkyscraperTechnique implements SolverTechnique {
           [left.house, right.house, { type: coverType, index: shared[0]! }],
           [...left.cells, ...right.cells],
           'Skyscraper removes candidates seen by both roof cells.',
+          { family: 'skyscraper', subtype: `${lineType}-base` },
+          [
+            { from: left.cells[0]!, to: left.cells[1]!, digit, type: 'strong', house: left.house },
+            { from: right.cells[0]!, to: right.cells[1]!, digit, type: 'strong', house: right.house },
+          ],
         );
       }
     }
@@ -6217,6 +7855,12 @@ class TwoStringKiteTechnique implements SolverTechnique {
                 [rowEntry.house, colEntry.house, { type: 'box', index: boxIndex }],
                 [...rowEntry.cells, ...colEntry.cells],
                 'Two-String Kite removes the candidate at the remote row-column intersection.',
+                { family: 'two-string-kite', subtype: `box-linked-row-column-b${boxIndex}` },
+                [
+                  { from: rowEntry.cells[0], to: rowEntry.cells[1], digit: digit as Digit, type: 'strong', house: rowEntry.house },
+                  { from: colEntry.cells[0], to: colEntry.cells[1], digit: digit as Digit, type: 'strong', house: colEntry.house },
+                  { from: boxPair.cells[0], to: boxPair.cells[1], digit: digit as Digit, type: 'strong', house: boxPair.house },
+                ],
               );
             }
           }
@@ -6323,7 +7967,7 @@ class EmptyRectangleTechnique implements SolverTechnique {
         { type: 'row', index: shape.row },
         { type: 'col', index: col },
         { type: 'col', index: shape.col },
-      ]);
+      ], 'column-conjugate');
     }
     return null;
   }
@@ -6361,7 +8005,7 @@ class EmptyRectangleTechnique implements SolverTechnique {
         { type: 'col', index: shape.col },
         { type: 'row', index: row },
         { type: 'row', index: shape.row },
-      ]);
+      ], 'row-conjugate');
     }
     return null;
   }
@@ -6381,6 +8025,7 @@ class EmptyRectangleTechnique implements SolverTechnique {
     pairCells: number[],
     targetCell: number,
     houses: HouseRef[],
+    subtype: string,
   ): SolveStep {
     return eliminationStep(
       this.id,
@@ -6390,6 +8035,8 @@ class EmptyRectangleTechnique implements SolverTechnique {
       houses,
       [...shape.boxCells, ...pairCells],
       'Empty Rectangle combines a box pattern and a conjugate pair to eliminate the target candidate.',
+      { family: 'empty-rectangle', subtype },
+      [{ from: pairCells[0]!, to: pairCells[1]!, digit, type: 'strong', house: houses[2]! }],
     );
   }
 }
@@ -6438,6 +8085,9 @@ class TurbotFishTechnique implements SolverTechnique {
                 continue;
               }
 
+              const firstHouse = firstEdge.houses[0]!;
+              const weakHouse = weakLinkHouses[0]!;
+              const secondHouse = secondEdge.houses[0]!;
               return eliminationStep(
                 this.id,
                 this.score,
@@ -6446,6 +8096,12 @@ class TurbotFishTechnique implements SolverTechnique {
                 uniqueHouses([...firstEdge.houses, ...weakLinkHouses, ...secondEdge.houses]),
                 path,
                 'Turbot Fish uses a strong-weak-strong chain to eliminate candidates seen by both endpoints.',
+                { family: 'turbot-fish', subtype: `${firstHouse.type}-${weakHouse.type}-${secondHouse.type}` },
+                [
+                  { from: start, to: bridgeStart, digit: digit as Digit, type: 'strong', house: firstHouse },
+                  { from: bridgeStart, to: bridgeEnd, digit: digit as Digit, type: 'weak', house: weakHouse },
+                  { from: bridgeEnd, to: end, digit: digit as Digit, type: 'strong', house: secondHouse },
+                ],
               );
             }
           }
@@ -6480,6 +8136,14 @@ class UniqueRectangleTechnique implements SolverTechnique {
 
             const pairDigits = this.getPairDigits(context, cells);
             if (!pairDigits) {
+              const type5PairDigits = this.getPairDigits(context, cells, 1);
+              if (!type5PairDigits) {
+                continue;
+              }
+              const type5 = this.tryType5(context, cells, type5PairDigits);
+              if (type5) {
+                return type5;
+              }
               continue;
             }
             const type1 = this.tryType1(context, cells, pairDigits);
@@ -6489,6 +8153,10 @@ class UniqueRectangleTechnique implements SolverTechnique {
             const sharedRoof = this.trySharedRoofExtra(context, cells, pairDigits);
             if (sharedRoof) {
               return sharedRoof;
+            }
+            const type5 = this.tryType5(context, cells, pairDigits);
+            if (type5) {
+              return type5;
             }
             const type4 = this.tryType4(context, cells, pairDigits);
             if (type4) {
@@ -6509,9 +8177,9 @@ class UniqueRectangleTechnique implements SolverTechnique {
     return null;
   }
 
-  private getPairDigits(context: SolverContextLike, cells: number[]): Digit[] | null {
+  private getPairDigits(context: SolverContextLike, cells: number[], minPairCells = 2): Digit[] | null {
     const pairCells = cells.filter((cell) => context.getCandidateCount(cell) === 2);
-    if (pairCells.length < 2) {
+    if (pairCells.length < minPairCells) {
       return null;
     }
     const pairDigits = context.getCandidateDigits(pairCells[0]!);
@@ -6557,6 +8225,8 @@ class UniqueRectangleTechnique implements SolverTechnique {
       score: this.score,
       actions,
       evidence: {
+        pattern: { family: 'unique-rectangle', subtype: 'type-1' },
+        nodes: buildUniqueRectangleNodes(cells, pairCells, [targetCell]),
         cells: [
           ...pairCells.map((cell) => ({ cell, role: 'reason' as const })),
           { cell: targetCell, role: 'target' as const },
@@ -6591,20 +8261,76 @@ class UniqueRectangleTechnique implements SolverTechnique {
     if (uniqueTargets.length === 0) {
       return null;
     }
-    return eliminationStep(
+    const step = eliminationStep(
       this.id,
       this.score,
       uniqueTargets,
       extraDigit,
       housesForCellPair(roofA, roofB),
       cells,
-      'Unique Rectangle with shared roof extra removes the extra digit from cells seeing both roof cells.',
+      'Unique Rectangle Type 2 removes the shared extra digit from cells seeing both roof cells.',
+      { family: 'unique-rectangle', subtype: 'type-2-shared-extra' },
     );
+    step.evidence.nodes = buildUniqueRectangleNodes(
+      cells,
+      cells.filter((cell) => context.getCandidateMask(cell) === pairMask),
+      roofCells,
+    );
+    return step;
+  }
+
+  private tryType5(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
+    const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
+    const extraDigits = digitsFromMask(cells.reduce((mask, cell) => mask | (context.getCandidateMask(cell) & ~pairMask), 0));
+    for (const extraDigit of extraDigits) {
+      const expectedExtraMask = pairMask | maskForDigit(extraDigit);
+      const extraCells = cells.filter((cell) => hasDigit(context.getCandidateMask(cell) & ~pairMask, extraDigit));
+      if (extraCells.length !== 2 && extraCells.length !== 3) {
+        continue;
+      }
+      if (extraCells.some((cell) => context.getCandidateMask(cell) !== expectedExtraMask)) {
+        continue;
+      }
+      if (cells.some((cell) => !extraCells.includes(cell) && context.getCandidateMask(cell) !== pairMask)) {
+        continue;
+      }
+      if (extraCells.length === 2 && housesForCellPair(extraCells[0]!, extraCells[1]!).length > 0) {
+        continue;
+      }
+
+      const targetCells = intersectManyNumbers(extraCells.map((cell) => CELL_TO_PEERS[cell] ?? []))
+        .filter((cell) =>
+          !cells.includes(cell)
+          && context.board[cell] === EMPTY_VALUE
+          && context.isCandidatePresent(cell, extraDigit));
+      const uniqueTargets = uniqueNumbers(targetCells);
+      if (uniqueTargets.length === 0) {
+        continue;
+      }
+      const step = eliminationStep(
+        this.id,
+        this.score,
+        uniqueTargets,
+        extraDigit,
+        uniqueHouses(extraCells.flatMap((cell) => context.getCellHouses(cell))),
+        cells,
+        'Unique Rectangle Type 5 removes an extra digit from cells seeing every extra cell in the rectangle.',
+        { family: 'unique-rectangle', subtype: 'type-5' },
+      );
+      const floorCells = cells.filter((cell) => !extraCells.includes(cell));
+      step.evidence.nodes = [
+        ...buildUniqueRectangleNodes(cells, floorCells, extraCells),
+        { id: 'ur-extra', cells: uniqueNumbers(extraCells), digit: extraDigit, role: 'pivot' },
+        { id: 'ur-targets', cells: uniqueTargets, digit: extraDigit, role: 'target' },
+      ];
+      return step;
+    }
+    return null;
   }
 
   private tryType3NakedSet(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
-    for (const { roofA, roofB } of getUrLayouts(cells)) {
+    for (const { floorA, floorB, roofA, roofB } of getUrLayouts(cells)) {
       const roofCells = [roofA, roofB];
       if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
         continue;
@@ -6650,14 +8376,17 @@ class UniqueRectangleTechnique implements SolverTechnique {
             if (actions.length === 0) {
               continue;
             }
-            return subsetStep(
+            const step = subsetStep(
               this.id,
               this.score,
               house,
               setCells,
               actions,
               'Unique Rectangle Type 3 forms a naked set with the roof cells and removes those candidates from the rest of the house.',
+              { family: 'unique-rectangle', subtype: 'type-3-naked-set' },
             );
+            step.evidence.nodes = buildUniqueRectangleNodes(cells, [floorA, floorB], roofCells);
+            return step;
           }
         }
       }
@@ -6667,7 +8396,7 @@ class UniqueRectangleTechnique implements SolverTechnique {
 
   private tryType3HiddenSet(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
-    for (const { roofA, roofB } of getUrLayouts(cells)) {
+    for (const { floorA, floorB, roofA, roofB } of getUrLayouts(cells)) {
       const roofCells = [roofA, roofB];
       if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
         continue;
@@ -6713,14 +8442,17 @@ class UniqueRectangleTechnique implements SolverTechnique {
             if (actions.length === 0) {
               continue;
             }
-            return subsetStep(
+            const step = subsetStep(
               this.id,
               this.score,
               house,
               Array.from(hiddenCells),
               actions,
               'Unique Rectangle Type 3 forms a hidden set with the roof cells and removes other candidates from the hidden-set cells.',
+              { family: 'unique-rectangle', subtype: 'type-3-hidden-set' },
             );
+            step.evidence.nodes = buildUniqueRectangleNodes(cells, [floorA, floorB], roofCells);
+            return step;
           }
         }
       }
@@ -6730,7 +8462,7 @@ class UniqueRectangleTechnique implements SolverTechnique {
 
   private tryType4(context: SolverContextLike, cells: number[], pairDigits: Digit[]): SolveStep | null {
     const pairMask = pairDigits.reduce((mask, digit) => mask | maskForDigit(digit), 0);
-    for (const { roofA, roofB } of getUrLayouts(cells)) {
+    for (const { floorA, floorB, roofA, roofB } of getUrLayouts(cells)) {
       const roofCells = [roofA, roofB];
       if (roofCells.some((cell) => (context.getCandidateMask(cell) & pairMask) !== pairMask)) {
         continue;
@@ -6756,7 +8488,7 @@ class UniqueRectangleTechnique implements SolverTechnique {
         if (targetCells.length === 0) {
           continue;
         }
-        return eliminationStep(
+        const step = eliminationStep(
           this.id,
           this.score,
           targetCells,
@@ -6764,7 +8496,10 @@ class UniqueRectangleTechnique implements SolverTechnique {
           [house],
           cells,
           'Unique Rectangle Type 4 removes the other pair digit from the two roof cells because one pair digit is locked in their shared house.',
+          { family: 'unique-rectangle', subtype: 'type-4' },
         );
+        step.evidence.nodes = buildUniqueRectangleNodes(cells, [floorA, floorB], roofCells);
+        return step;
       }
     }
     return null;
@@ -6812,6 +8547,7 @@ class AvoidableRectangleTechnique implements SolverTechnique {
               score: this.score,
               actions: [{ type: 'eliminate', cell: targetCell, digit: forbiddenDigit }],
               evidence: {
+                pattern: { family: 'avoidable-rectangle', subtype: 'three-solved-corners' },
                 cells: [
                   ...solvedCells.map((cell) => ({ cell, role: 'reason' as const })),
                   { cell: targetCell, digit: forbiddenDigit, role: 'target' as const },
@@ -6839,6 +8575,9 @@ class AvoidableRectangleTechnique implements SolverTechnique {
     const sameRowValue = solvedValues[solvedCells.indexOf(sameRow)]!;
     const sameColValue = solvedValues[solvedCells.indexOf(sameCol)]!;
     const diagonalValue = solvedValues[solvedCells.indexOf(diagonal)]!;
+    if (sameRowValue === sameColValue && diagonalValue !== sameRowValue) {
+      return diagonalValue;
+    }
     if (diagonalValue === sameRowValue && diagonalValue !== sameColValue) {
       return sameColValue;
     }
@@ -6912,6 +8651,14 @@ class RectangleEliminationTechnique implements SolverTechnique {
             ],
             [hinge, wingStrong],
             'Rectangle Elimination removes the weak wing candidate because it would cover all candidates in the fourth box.',
+            { family: 'rectangle-elimination', subtype: 'row-strong-link' },
+            [{
+              from: hinge,
+              to: wingStrong,
+              digit,
+              type: 'strong',
+              house: pair.house,
+            }],
           );
         }
       }
@@ -6963,6 +8710,14 @@ class RectangleEliminationTechnique implements SolverTechnique {
             ],
             [hinge, wingStrong],
             'Rectangle Elimination removes the weak wing candidate because it would cover all candidates in the fourth box.',
+            { family: 'rectangle-elimination', subtype: 'col-strong-link' },
+            [{
+              from: hinge,
+              to: wingStrong,
+              digit,
+              type: 'strong',
+              house: pair.house,
+            }],
           );
         }
       }
@@ -7001,7 +8756,7 @@ class ExtendedRectangleTechnique implements SolverTechnique {
         }
       }
     }
-    return null;
+    return this.tryGeneralizedUniqueLoopBoundary(context);
   }
 
   private tryPattern(context: SolverContextLike, cells: number[]): SolveStep | null {
@@ -7014,6 +8769,9 @@ class ExtendedRectangleTechnique implements SolverTechnique {
     }
     const purePairCells = cells.filter((cell) => context.getCandidateMask(cell) === pairMask);
     const roofCells = cells.filter((cell) => context.getCandidateMask(cell) !== pairMask);
+    if (purePairCells.length === 4 && roofCells.length === 2) {
+      return this.trySharedGuardianPattern(context, cells, purePairCells, roofCells, pairMask);
+    }
     if (purePairCells.length !== 5 || roofCells.length !== 1) {
       return null;
     }
@@ -7028,11 +8786,70 @@ class ExtendedRectangleTechnique implements SolverTechnique {
       score: this.score,
       actions: pairDigits.map((digit) => ({ type: 'eliminate' as const, cell: targetCell, digit })),
       evidence: {
+        pattern: { family: 'extended-rectangle', subtype: '2x3-or-3x2-type-1' },
         cells: [
           ...purePairCells.map((cell) => ({ cell, role: 'reason' as const })),
           { cell: targetCell, role: 'target' as const },
         ],
         note: 'Extended Rectangle removes the deadly pair from the only roof cell in a 2x3/3x2 pattern.',
+      },
+    };
+  }
+
+  private trySharedGuardianPattern(
+    context: SolverContextLike,
+    cells: readonly number[],
+    purePairCells: readonly number[],
+    roofCells: readonly number[],
+    pairMask: number,
+  ): SolveStep | null {
+    const [guardianA, guardianB] = roofCells;
+    if (guardianA == null || guardianB == null) {
+      return null;
+    }
+    const guardianHouses = housesForCellPair(guardianA, guardianB);
+    if (guardianHouses.length === 0) {
+      return null;
+    }
+    const extraMasks = roofCells.map((cell) => {
+      const mask = context.getCandidateMask(cell);
+      if ((mask & pairMask) !== pairMask) {
+        return 0;
+      }
+      const extraMask = mask & ~pairMask;
+      return countMaskBits(extraMask) === 1 ? extraMask : 0;
+    });
+    const extraMask = extraMasks[0] ?? 0;
+    if (extraMask === 0 || extraMasks.some((mask) => mask !== extraMask)) {
+      return null;
+    }
+    const extraDigit = digitsFromMask(extraMask)[0];
+    if (extraDigit == null) {
+      return null;
+    }
+    const targetCells = intersectNumbers(CELL_TO_PEERS[guardianA] ?? [], CELL_TO_PEERS[guardianB] ?? [])
+      .filter((cell) =>
+        !cells.includes(cell)
+        && context.board[cell] === EMPTY_VALUE
+        && context.isCandidatePresent(cell, extraDigit));
+    const uniqueTargets = uniqueNumbers(targetCells);
+    if (uniqueTargets.length === 0) {
+      return null;
+    }
+    return {
+      technique: this.id,
+      score: this.score,
+      actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: extraDigit })),
+      evidence: {
+        houses: guardianHouses,
+        pattern: { family: 'extended-rectangle', subtype: '2x3-or-3x2-shared-guardian' },
+        nodes: buildUniqueLoopNodes(cells, purePairCells, roofCells, uniqueTargets, extraDigit),
+        cells: [
+          ...purePairCells.map((cell) => ({ cell, role: 'reason' as const })),
+          ...roofCells.map((cell) => ({ cell, role: 'pivot' as const })),
+          ...uniqueTargets.map((cell) => ({ cell, digit: extraDigit, role: 'target' as const })),
+        ],
+        note: 'Extended Rectangle shared guardians remove their common extra digit from cells seeing both guardians.',
       },
     };
   }
@@ -7046,11 +8863,365 @@ class ExtendedRectangleTechnique implements SolverTechnique {
       }
     }
     for (const [mask, count] of frequency) {
-      if (count >= 5) {
+      if (count >= 4) {
         return mask;
       }
     }
     return 0;
+  }
+
+  private tryGeneralizedUniqueLoopBoundary(context: SolverContextLike): SolveStep | null {
+    const step = new UniqueLoopTechnique().find(context);
+    if (step?.evidence.pattern?.subtype !== 'generalized-single-roof') {
+      return null;
+    }
+    return {
+      ...step,
+      technique: this.id,
+      score: this.score,
+      evidence: {
+        ...step.evidence,
+        pattern: { family: 'extended-rectangle', subtype: 'generalized-single-roof' },
+        note: 'Extended Rectangle uses the generalized unique-loop boundary to remove the deadly pair from the roof cell.',
+      },
+    };
+  }
+}
+
+class UniqueLoopTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'unique-loop';
+  public readonly score = 202;
+  private readonly maxGeneralizedLoopLength = 14;
+  private readonly maxGeneralizedLoopStates = 8000;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    for (let band = 0; band < 3; band += 1) {
+      const rows = [band * 3, band * 3 + 1, band * 3 + 2];
+      for (const rowPair of createCombinations(rows, 2)) {
+        for (let offset = 0; offset < 3; offset += 1) {
+          const cols = [offset, offset + 3, offset + 6];
+          const step = this.trySingleRoofLoop(context, rowPair.flatMap((row) => cols.map((col) => row * 9 + col)));
+          if (step) {
+            return step;
+          }
+        }
+      }
+    }
+
+    for (let stack = 0; stack < 3; stack += 1) {
+      const cols = [stack * 3, stack * 3 + 1, stack * 3 + 2];
+      for (const colPair of createCombinations(cols, 2)) {
+        for (let offset = 0; offset < 3; offset += 1) {
+          const rows = [offset, offset + 3, offset + 6];
+          const step = this.trySingleRoofLoop(context, rows.flatMap((row) => colPair.map((col) => row * 9 + col)));
+          if (step) {
+            return step;
+          }
+        }
+      }
+    }
+
+    const generalized = this.findGeneralizedSingleRoofLoop(context);
+    if (generalized) {
+      return generalized;
+    }
+    return null;
+  }
+
+  private trySingleRoofLoop(context: SolverContextLike, loopCells: number[]): SolveStep | null {
+    if (loopCells.some((cell) => context.board[cell] !== EMPTY_VALUE)) {
+      return null;
+    }
+    const pairMask = this.findBasePairMask(context, loopCells);
+    if (pairMask === 0) {
+      return null;
+    }
+    const basePairCells = loopCells.filter((cell) => context.getCandidateMask(cell) === pairMask);
+    const guardianCells = loopCells.filter((cell) => context.getCandidateMask(cell) !== pairMask);
+    if (basePairCells.length === 4 && guardianCells.length === 2) {
+      return this.trySharedGuardianLoop(context, loopCells, basePairCells, guardianCells, pairMask);
+    }
+    if (basePairCells.length !== 5 || guardianCells.length !== 1) {
+      return null;
+    }
+    const targetCell = guardianCells[0]!;
+    const targetMask = context.getCandidateMask(targetCell);
+    if ((targetMask & pairMask) !== pairMask || countMaskBits(targetMask) <= 2) {
+      return null;
+    }
+    const pairDigits = digitsFromMask(pairMask);
+    const actions = pairDigits
+      .filter((digit) => context.isCandidatePresent(targetCell, digit))
+      .map((digit) => ({ type: 'eliminate' as const, cell: targetCell, digit }));
+    if (actions.length === 0) {
+      return null;
+    }
+    return {
+      technique: this.id,
+      score: this.score,
+      actions,
+      evidence: {
+        pattern: { family: 'unique-loop', subtype: '2x3-or-3x2-single-roof' },
+        nodes: buildUniqueLoopNodes(loopCells, basePairCells, guardianCells, [targetCell]),
+        cells: [
+          ...basePairCells.map((cell) => ({ cell, role: 'reason' as const })),
+          { cell: targetCell, role: 'target' as const },
+        ],
+        note: 'Unique Loop removes the deadly pair from the only roof cell in a 2x3/3x2 loop.',
+      },
+    };
+  }
+
+  private trySharedGuardianLoop(
+    context: SolverContextLike,
+    loopCells: readonly number[],
+    basePairCells: readonly number[],
+    guardianCells: readonly number[],
+    pairMask: number,
+  ): SolveStep | null {
+    const [guardianA, guardianB] = guardianCells;
+    if (guardianA == null || guardianB == null) {
+      return null;
+    }
+    const guardianHouses = housesForCellPair(guardianA, guardianB);
+    if (guardianHouses.length === 0) {
+      return null;
+    }
+    const extraMasks = guardianCells.map((cell) => {
+      const mask = context.getCandidateMask(cell);
+      if ((mask & pairMask) !== pairMask) {
+        return 0;
+      }
+      const extraMask = mask & ~pairMask;
+      return countMaskBits(extraMask) === 1 ? extraMask : 0;
+    });
+    const extraMask = extraMasks[0] ?? 0;
+    if (extraMask === 0 || extraMasks.some((mask) => mask !== extraMask)) {
+      return null;
+    }
+    const extraDigit = digitsFromMask(extraMask)[0];
+    if (extraDigit == null) {
+      return null;
+    }
+    const targetCells = intersectNumbers(CELL_TO_PEERS[guardianA] ?? [], CELL_TO_PEERS[guardianB] ?? [])
+      .filter((cell) =>
+        !loopCells.includes(cell)
+        && context.board[cell] === EMPTY_VALUE
+        && context.isCandidatePresent(cell, extraDigit));
+    const uniqueTargets = uniqueNumbers(targetCells);
+    if (uniqueTargets.length === 0) {
+      return null;
+    }
+    return {
+      technique: this.id,
+      score: this.score,
+      actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: extraDigit })),
+      evidence: {
+        pattern: { family: 'unique-loop', subtype: '2x3-or-3x2-shared-guardian' },
+        houses: guardianHouses,
+        nodes: buildUniqueLoopNodes(loopCells, basePairCells, guardianCells, uniqueTargets, extraDigit),
+        cells: [
+          ...basePairCells.map((cell) => ({ cell, role: 'reason' as const })),
+          ...guardianCells.map((cell) => ({ cell, role: 'pivot' as const })),
+          ...uniqueTargets.map((cell) => ({ cell, role: 'target' as const })),
+        ],
+        note: 'Unique Loop shared guardians remove their common extra digit from cells seeing both guardians.',
+      },
+    };
+  }
+
+  private findBasePairMask(context: SolverContextLike, loopCells: number[]): number {
+    const frequency = new Map<number, number>();
+    for (const cell of loopCells) {
+      const mask = context.getCandidateMask(cell);
+      if (countMaskBits(mask) === 2) {
+        frequency.set(mask, (frequency.get(mask) ?? 0) + 1);
+      }
+    }
+    for (const [mask, count] of frequency) {
+      if (count >= 4) {
+        return mask;
+      }
+    }
+    return 0;
+  }
+
+  private findGeneralizedSingleRoofLoop(context: SolverContextLike): SolveStep | null {
+    for (let firstDigit = 1; firstDigit <= 8; firstDigit += 1) {
+      for (let secondDigit = firstDigit + 1; secondDigit <= 9; secondDigit += 1) {
+        const pairDigits = [firstDigit as Digit, secondDigit as Digit];
+        const pairMask = maskForDigit(pairDigits[0]!) | maskForDigit(pairDigits[1]!);
+        const exactPairCells: number[] = [];
+        const roofCells: number[] = [];
+        for (let cell = 0; cell < 81; cell += 1) {
+          if (context.board[cell] !== EMPTY_VALUE || (context.getCandidateMask(cell) & pairMask) !== pairMask) {
+            continue;
+          }
+          const candidateMask = context.getCandidateMask(cell);
+          if (candidateMask === pairMask) {
+            exactPairCells.push(cell);
+          } else if (countMaskBits(candidateMask) > 2) {
+            roofCells.push(cell);
+          }
+        }
+        if (exactPairCells.length < 5 || roofCells.length === 0) {
+          continue;
+        }
+        for (const targetCell of roofCells) {
+          const step = this.findLoopForTarget(context, targetCell, pairMask, pairDigits, exactPairCells);
+          if (step) {
+            return step;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private findLoopForTarget(
+    context: SolverContextLike,
+    targetCell: number,
+    pairMask: number,
+    pairDigits: readonly Digit[],
+    exactPairCells: readonly number[],
+  ): SolveStep | null {
+    const allowedCells = uniqueNumbers([targetCell, ...exactPairCells]);
+    const adjacency = this.buildLoopAdjacency(allowedCells);
+    let statesVisited = 0;
+    const search = (
+      current: number,
+      path: number[],
+      edgeHouses: HouseRef[],
+      firstHouse: HouseRef | null,
+      previousHouse: HouseRef | null,
+    ): SolveStep | null => {
+      statesVisited += 1;
+      if (statesVisited > this.maxGeneralizedLoopStates) {
+        return null;
+      }
+      for (const edge of adjacency.get(current) ?? []) {
+        if (previousHouse && sameHouse(edge.house, previousHouse)) {
+          continue;
+        }
+        if (edge.to === targetCell) {
+          if (
+            path.length >= 6
+            && path.length % 2 === 0
+            && firstHouse
+            && !sameHouse(edge.house, firstHouse)
+          ) {
+            const closedEdgeHouses = [...edgeHouses, edge.house];
+            if (this.isValidLoop(context, path, closedEdgeHouses, targetCell, pairMask)) {
+              return this.buildGeneralizedLoopStep(path, closedEdgeHouses, targetCell, pairDigits);
+            }
+          }
+          continue;
+        }
+        if (
+          path.length >= this.maxGeneralizedLoopLength
+          || path.includes(edge.to)
+          || context.getCandidateMask(edge.to) !== pairMask
+        ) {
+          continue;
+        }
+        const step = search(
+          edge.to,
+          [...path, edge.to],
+          [...edgeHouses, edge.house],
+          firstHouse ?? edge.house,
+          edge.house,
+        );
+        if (step) {
+          return step;
+        }
+      }
+      return null;
+    };
+
+    return search(targetCell, [targetCell], [], null, null);
+  }
+
+  private buildLoopAdjacency(cells: readonly number[]): Map<number, Array<{ to: number; house: HouseRef }>> {
+    const adjacency = new Map<number, Array<{ to: number; house: HouseRef }>>();
+    const sortedCells = [...cells].sort((left, right) => left - right);
+    for (let leftIndex = 0; leftIndex < sortedCells.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < sortedCells.length; rightIndex += 1) {
+        const left = sortedCells[leftIndex]!;
+        const right = sortedCells[rightIndex]!;
+        for (const house of housesForCellPair(left, right)) {
+          const leftEdges = adjacency.get(left) ?? [];
+          leftEdges.push({ to: right, house });
+          adjacency.set(left, leftEdges);
+          const rightEdges = adjacency.get(right) ?? [];
+          rightEdges.push({ to: left, house });
+          adjacency.set(right, rightEdges);
+        }
+      }
+    }
+    for (const edges of adjacency.values()) {
+      edges.sort((left, right) => left.to - right.to || houseSortKey(left.house).localeCompare(houseSortKey(right.house)));
+    }
+    return adjacency;
+  }
+
+  private isValidLoop(
+    context: SolverContextLike,
+    loopCells: readonly number[],
+    edgeHouses: readonly HouseRef[],
+    targetCell: number,
+    pairMask: number,
+  ): boolean {
+    if (edgeHouses.length !== loopCells.length || loopCells.filter((cell) => cell === targetCell).length !== 1) {
+      return false;
+    }
+    for (let index = 0; index < loopCells.length; index += 1) {
+      const previousHouse = edgeHouses[(index + edgeHouses.length - 1) % edgeHouses.length]!;
+      const nextHouse = edgeHouses[index]!;
+      if (sameHouse(previousHouse, nextHouse)) {
+        return false;
+      }
+    }
+    for (const cell of loopCells) {
+      if (cell === targetCell) {
+        if ((context.getCandidateMask(cell) & pairMask) !== pairMask || countMaskBits(context.getCandidateMask(cell)) <= 2) {
+          return false;
+        }
+      } else if (context.getCandidateMask(cell) !== pairMask) {
+        return false;
+      }
+    }
+    for (const house of ALL_HOUSES) {
+      const count = loopCells.filter((cell) => houseContainsCell(house, cell)).length;
+      if (count !== 0 && count !== 2) {
+        return false;
+      }
+    }
+    return uniqueHouses(edgeHouses).every((house) =>
+      loopCells.filter((cell) => houseContainsCell(house, cell)).length === 2);
+  }
+
+  private buildGeneralizedLoopStep(
+    loopCells: readonly number[],
+    edgeHouses: readonly HouseRef[],
+    targetCell: number,
+    pairDigits: readonly Digit[],
+  ): SolveStep {
+    const basePairCells = loopCells.filter((cell) => cell !== targetCell);
+    return {
+      technique: this.id,
+      score: this.score,
+      actions: pairDigits.map((digit) => ({ type: 'eliminate' as const, cell: targetCell, digit })),
+      evidence: {
+        pattern: { family: 'unique-loop', subtype: 'generalized-single-roof' },
+        houses: uniqueHouses(edgeHouses),
+        nodes: buildUniqueLoopNodes(loopCells, basePairCells, [targetCell], [targetCell]),
+        cells: [
+          ...basePairCells.map((cell) => ({ cell, role: 'reason' as const })),
+          { cell: targetCell, role: 'target' as const },
+        ],
+        note: `Unique Loop removes the deadly pair from the only roof cell in a ${loopCells.length}-cell loop.`,
+      },
+    };
   }
 }
 
@@ -7118,7 +9289,7 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
         if (!otherDigit || !context.isCandidatePresent(opposite, otherDigit)) {
           continue;
         }
-        return eliminationStep(
+        const step = eliminationStep(
           this.id,
           this.score,
           [opposite],
@@ -7129,7 +9300,30 @@ class HiddenUniqueRectangleTechnique implements SolverTechnique {
           ],
           [roles.diagonal, roles.rowMate, roles.colMate],
           'Hidden Unique Rectangle removes the other pair digit from the strong-link corner.',
+          { family: 'hidden-unique-rectangle', subtype: 'type-6-strong-link-corner' },
+          [
+            {
+              from: opposite,
+              to: roles.rowMate,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'row', index: context.getCellRow(opposite) },
+            },
+            {
+              from: opposite,
+              to: roles.colMate,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'col', index: context.getCellCol(opposite) },
+            },
+          ],
         );
+        step.evidence.nodes = buildUniqueRectangleNodes(
+          cells,
+          [roles.diagonal],
+          [opposite, roles.rowMate, roles.colMate],
+        );
+        return step;
       }
     }
     return null;
@@ -7196,7 +9390,25 @@ class AICWithUrTechnique implements SolverTechnique {
             { type: 'row', index: context.getCellRow(opposite) },
             { type: 'col', index: context.getCellCol(opposite) },
           ],
+          [
+            {
+              from: opposite,
+              to: roles.rowMate,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'row', index: context.getCellRow(opposite) },
+            },
+            {
+              from: opposite,
+              to: roles.colMate,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'col', index: context.getCellCol(opposite) },
+            },
+          ],
           'UR-AIC treats the rectangle as a chain node and removes the other pair digit from the strong-link corner.',
+          { family: 'unique-rectangle-aic', subtype: 'single-roof-chain' },
+          buildUniqueRectangleNodes(cells, [roles.diagonal], [opposite, roles.rowMate, roles.colMate]),
         );
       }
     }
@@ -7233,7 +9445,16 @@ class AICWithUrTechnique implements SolverTechnique {
             roofB,
             otherDigit,
             [{ type: 'col', index: context.getCellCol(floorA) }],
+            [{
+              from: floorA,
+              to: roofA,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'col', index: context.getCellCol(floorA) },
+            }],
             'UR-AIC uses a floor-to-roof strong link to remove the opposite roof candidate.',
+            { family: 'unique-rectangle-aic', subtype: 'floor-roof-chain' },
+            buildUniqueRectangleNodes(cells, [floorA, floorB], [roofA, roofB]),
           );
         }
 
@@ -7250,7 +9471,16 @@ class AICWithUrTechnique implements SolverTechnique {
             roofA,
             otherDigit,
             [{ type: 'col', index: context.getCellCol(floorB) }],
+            [{
+              from: floorB,
+              to: roofB,
+              digit: strongDigit,
+              type: 'strong',
+              house: { type: 'col', index: context.getCellCol(floorB) },
+            }],
             'UR-AIC uses a floor-to-roof strong link to remove the opposite roof candidate.',
+            { family: 'unique-rectangle-aic', subtype: 'floor-roof-chain' },
+            buildUniqueRectangleNodes(cells, [floorA, floorB], [roofA, roofB]),
           );
         }
       }
@@ -7264,7 +9494,10 @@ class AICWithUrTechnique implements SolverTechnique {
     targetCell: number,
     targetDigit: Digit,
     houses: HouseRef[],
+    links: NonNullable<SolveStep['evidence']['links']>,
     note: string,
+    pattern: NonNullable<SolveStep['evidence']['pattern']>,
+    nodes: NonNullable<SolveStep['evidence']['nodes']>,
   ): SolveStep {
     return {
       technique: this.id,
@@ -7272,11 +9505,14 @@ class AICWithUrTechnique implements SolverTechnique {
       actions: [{ type: 'eliminate', cell: targetCell, digit: targetDigit }],
       evidence: {
         houses,
+        pattern,
+        nodes,
         cells: [
           ...rectangleCells.map((cell) => ({ cell, role: 'reason' as const })),
           ...reasonCells.map((cell) => ({ cell, role: 'link' as const })),
           { cell: targetCell, digit: targetDigit, role: 'target' as const },
         ],
+        links,
         note,
       },
     };
@@ -7318,12 +9554,159 @@ class BugPlusOneTechnique implements SolverTechnique {
         score: this.score,
         actions: [{ type: 'place', cell: targetCell, digit }],
         evidence: {
+          pattern: { family: 'bug', subtype: 'bug-plus-one' },
           houses,
+          nodes: buildBugPlusOneNodes(
+            context,
+            unsolved.filter((cell) => cell !== targetCell),
+            targetCell,
+            digit,
+            houses,
+          ),
           cells: [{ cell: targetCell, digit, role: 'target' }],
           note: 'BUG+1 places the digit that appears odd times in all houses of the only trivalue cell.',
         },
       };
     }
+    return null;
+  }
+}
+
+class BugPlusTwoTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'bug-plus-two';
+  public readonly score = 214;
+  private static readonly MAX_COMPLETION_CELLS = 24;
+  private static readonly MAX_COMPLETION_STATES = 100000;
+  private static readonly MAX_COMPLETIONS = 256;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const unsolved = Array.from({ length: context.board.length }, (_, cell) => cell)
+      .filter((cell) => context.board[cell] === EMPTY_VALUE);
+    const triValueCells = unsolved.filter((cell) => context.getCandidateCount(cell) === 3);
+    const invalidCells = unsolved.filter((cell) => {
+      const count = context.getCandidateCount(cell);
+      return count !== 2 && count !== 3;
+    });
+    if (triValueCells.length !== 2 || invalidCells.length > 0) {
+      return null;
+    }
+
+    const [left, right] = triValueCells;
+    if (left === undefined || right === undefined) {
+      return null;
+    }
+    for (const candidate of findBugPlusTwoCommonExtraEliminations(context, unsolved, left, right)) {
+      const {
+        extraDigit: resolvedExtraDigit,
+        extraCells,
+        graph,
+        targetCells,
+      } = candidate;
+
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: targetCells.map((cell) => ({ type: 'eliminate' as const, cell, digit: resolvedExtraDigit })),
+        evidence: {
+          houses: uniqueHouses(extraCells.flatMap((cell) => context.getCellHouses(cell))),
+          pattern: { family: 'bug', subtype: 'bug-plus-two-common-extra' },
+          links: buildBugBaseGraphLinks(context, graph),
+          nodes: buildBugPlusTwoNodes(Array.from(graph.baseMasks.keys()), extraCells, targetCells, resolvedExtraDigit),
+          cells: [
+            ...extraCells.map((cell) => ({ cell, digit: resolvedExtraDigit, role: 'reason' as const })),
+            ...targetCells.map((cell) => ({ cell, digit: resolvedExtraDigit, role: 'target' as const })),
+          ],
+          note: 'BUG+2 with a shared extra digit removes that digit from cells seeing both extra cells.',
+        },
+      };
+    }
+    for (const pair of findBugPlusTwoExtraPairs(context, unsolved, left, right)) {
+      const candidate = buildBugPlusTwoParityElimination(context, unsolved, pair, {
+        maxCells: BugPlusTwoTechnique.MAX_COMPLETION_CELLS,
+        maxStates: BugPlusTwoTechnique.MAX_COMPLETION_STATES,
+        maxCompletions: BugPlusTwoTechnique.MAX_COMPLETIONS,
+      });
+      if (!candidate) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: candidate.targetCells.map((cell) => ({ type: 'eliminate' as const, cell, digit: candidate.targetDigit })),
+        evidence: {
+          houses: uniqueHouses(candidate.targetCells.flatMap((cell) => context.getCellHouses(cell))),
+          pattern: { family: 'bug', subtype: 'bug-plus-two-parity-elimination' },
+          links: buildBugBaseGraphLinks(context, pair.graph),
+          nodes: buildBugPlusTwoParityNodes(Array.from(pair.graph.baseMasks.keys()), pair.extras, pair.parity, candidate.targetCells, candidate.targetDigit),
+          cells: [
+            ...pair.extras.map((extra) => ({ cell: extra.cell, digit: extra.digit, role: 'reason' as const })),
+            ...candidate.targetCells.map((cell) => ({ cell, digit: candidate.targetDigit, role: 'target' as const })),
+          ],
+          note: `BUG+2 non-common extras use a bounded completion proof (${candidate.completion.solutionCount} completions within maxCells=${candidate.completion.budget.maxCells}, maxStates=${candidate.completion.budget.maxStates}, maxCompletions=${candidate.completion.budget.maxCompletions}) to remove an extra candidate that appears in no valid BUG completion.`,
+        },
+      };
+    }
+    return null;
+  }
+}
+
+class BugPlusNTechnique implements SolverTechnique {
+  public readonly id: TechniqueId = 'bug-plus-n';
+  public readonly score = 218;
+
+  public find(context: SolverContextLike): SolveStep | null {
+    const unsolved = Array.from({ length: context.board.length }, (_, cell) => cell)
+      .filter((cell) => context.board[cell] === EMPTY_VALUE);
+    const extraCells = unsolved.filter((cell) => context.getCandidateCount(cell) === 3);
+    const invalidCells = unsolved.filter((cell) => {
+      const count = context.getCandidateCount(cell);
+      return count !== 2 && count !== 3;
+    });
+    if (extraCells.length < 3 || invalidCells.length > 0) {
+      return null;
+    }
+
+    for (const extraDigit of [1, 2, 3, 4, 5, 6, 7, 8, 9] as Digit[]) {
+      if (!extraCells.every((cell) => context.isCandidatePresent(cell, extraDigit))) {
+        continue;
+      }
+      const extras = extraCells.map((cell) => ({ cell, digit: extraDigit }));
+      const removedExtraDigits = buildBugRemovedExtraDigitMap(extras);
+      if (!removedExtraDigits) {
+        continue;
+      }
+      const graph = buildBugBaseGraph(context, unsolved, removedExtraDigits);
+      if (!graph) {
+        continue;
+      }
+      const targetCells = intersectManyNumbers(extraCells.map((cell) => CELL_TO_PEERS[cell] ?? []))
+        .filter((cell) => (
+          !extraCells.includes(cell)
+          && context.board[cell] === EMPTY_VALUE
+          && context.isCandidatePresent(cell, extraDigit)
+        ));
+      const uniqueTargets = uniqueNumbers(targetCells);
+      if (uniqueTargets.length === 0) {
+        continue;
+      }
+      return {
+        technique: this.id,
+        score: this.score,
+        actions: uniqueTargets.map((cell) => ({ type: 'eliminate' as const, cell, digit: extraDigit })),
+        evidence: {
+          houses: uniqueHouses(extraCells.flatMap((cell) => context.getCellHouses(cell))),
+          pattern: { family: 'bug', subtype: 'bug-plus-n-common-extra' },
+          links: buildBugBaseGraphLinks(context, graph),
+          nodes: buildBugPlusTwoNodes(Array.from(graph.baseMasks.keys()), extraCells, uniqueTargets, extraDigit),
+          cells: [
+            ...extraCells.map((cell) => ({ cell, digit: extraDigit, role: 'reason' as const })),
+            ...uniqueTargets.map((cell) => ({ cell, digit: extraDigit, role: 'target' as const })),
+          ],
+          note: 'BUG+n with a shared extra digit removes that digit from cells seeing every extra cell.',
+        },
+      };
+    }
+
     return null;
   }
 }
@@ -7335,6 +9718,7 @@ function placementStep(
   digit: Digit,
   house: HouseRef | undefined,
   note: string,
+  pattern?: NonNullable<SolveStep['evidence']['pattern']>,
 ): SolveStep {
   const evidence: SolveStep['evidence'] = {
     cells: [
@@ -7348,6 +9732,9 @@ function placementStep(
   };
   if (house) {
     evidence.houses = [house];
+  }
+  if (pattern) {
+    evidence.pattern = pattern;
   }
 
   return {
@@ -7364,6 +9751,10 @@ function placementStep(
   };
 }
 
+function housePatternSubtype(house: HouseRef): string {
+  return house.type === 'box' ? 'block' : house.type;
+}
+
 function eliminationStep(
   technique: TechniqueId,
   score: number,
@@ -7372,6 +9763,9 @@ function eliminationStep(
   houses: HouseRef[],
   reasonCells: readonly number[],
   note: string,
+  pattern?: NonNullable<SolveStep['evidence']['pattern']>,
+  links?: NonNullable<SolveStep['evidence']['links']>,
+  nodes?: NonNullable<SolveStep['evidence']['nodes']>,
 ): SolveStep {
   return {
     technique,
@@ -7379,10 +9773,13 @@ function eliminationStep(
     actions: targetCells.map((cell) => ({ type: 'eliminate', cell, digit })),
     evidence: {
       houses,
+      ...(pattern ? { pattern } : {}),
       cells: [
         ...reasonCells.map((cell) => ({ cell, digit, role: 'reason' as const })),
         ...targetCells.map((cell) => ({ cell, digit, role: 'target' as const })),
       ],
+      ...(links ? { links } : {}),
+      ...(nodes ? { nodes } : {}),
       note,
     },
   };
@@ -7395,6 +9792,7 @@ function subsetStep(
   reasonCells: readonly number[],
   actions: SolveStep['actions'],
   note: string,
+  pattern?: NonNullable<SolveStep['evidence']['pattern']>,
 ): SolveStep {
   return {
     technique,
@@ -7402,6 +9800,7 @@ function subsetStep(
     actions,
     evidence: {
       houses: [house],
+      ...(pattern ? { pattern } : {}),
       cells: [
         ...reasonCells.map((cell) => ({ cell, role: 'reason' as const })),
         ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
@@ -7502,6 +9901,18 @@ function intersectNumbers(left: readonly number[], right: readonly number[]): nu
   return left.filter((value) => rightSet.has(value));
 }
 
+function intersectManyNumbers(groups: readonly (readonly number[])[]): number[] {
+  const [first, ...rest] = groups;
+  if (!first) {
+    return [];
+  }
+  let current = [...first];
+  for (const group of rest) {
+    current = intersectNumbers(current, group);
+  }
+  return current;
+}
+
 function housesForCellPair(left: number, right: number): HouseRef[] {
   const houses: HouseRef[] = [];
   if ((CELL_TO_ROW[left] ?? -1) === (CELL_TO_ROW[right] ?? -2)) {
@@ -7532,6 +9943,22 @@ function uniqueHouses(houses: readonly HouseRef[]): HouseRef[] {
 
 function sameHouse(left: HouseRef, right: HouseRef): boolean {
   return left.type === right.type && left.index === right.index;
+}
+
+function arePairwiseDisjointHouses(context: SolverContextLike, houses: readonly HouseRef[]): boolean {
+  for (let left = 0; left < houses.length; left += 1) {
+    const leftCells = new Set(context.getHouseCells(houses[left]!));
+    for (let right = left + 1; right < houses.length; right += 1) {
+      if (context.getHouseCells(houses[right]!).some((cell) => leftCells.has(cell))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function houseSortKey(house: HouseRef): string {
+  return `${house.type}:${house.index}`;
 }
 
 interface CandidateHouseCache {
@@ -7678,10 +10105,26 @@ function getFourthCornerBox(hingeBox: number, strongBox: number, weakBox: number
   const strongStack = strongBox % 3;
   const weakBand = Math.floor(weakBox / 3);
   const weakStack = weakBox % 3;
-  if (hingeBand !== strongBand || hingeStack !== weakStack || hingeBand === weakBand || hingeStack === strongStack) {
-    return null;
+
+  if (
+    hingeBand === strongBand
+    && hingeStack === weakStack
+    && hingeBand !== weakBand
+    && hingeStack !== strongStack
+  ) {
+    return weakBand * 3 + strongStack;
   }
-  return weakBand * 3 + strongStack;
+
+  if (
+    hingeStack === strongStack
+    && hingeBand === weakBand
+    && hingeBand !== strongBand
+    && hingeStack !== weakStack
+  ) {
+    return strongBand * 3 + weakStack;
+  }
+
+  return null;
 }
 
 function getBasePairDigits(context: SolverContextLike, cells: number[]): Digit[] | null {
@@ -7726,6 +10169,573 @@ function getUrLayouts(cells: readonly number[]): Array<{ floorA: number; floorB:
     { floorA: cells[0]!, floorB: cells[2]!, roofA: cells[1]!, roofB: cells[3]! },
     { floorA: cells[1]!, floorB: cells[3]!, roofA: cells[0]!, roofB: cells[2]! },
   ];
+}
+
+function buildUniqueRectangleNodes(
+  rectangleCells: readonly number[],
+  floorCells: readonly number[] = [],
+  roofCells: readonly number[] = [],
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes: NonNullable<SolveStep['evidence']['nodes']> = [
+    { id: 'ur-rectangle', cells: uniqueNumbers([...rectangleCells]), role: 'reason' },
+  ];
+  const uniqueFloorCells = uniqueNumbers([...floorCells]);
+  if (uniqueFloorCells.length > 0) {
+    nodes.push({ id: 'ur-floor', cells: uniqueFloorCells, role: 'reason' });
+  }
+  const uniqueRoofCells = uniqueNumbers([...roofCells]);
+  if (uniqueRoofCells.length > 0) {
+    nodes.push({ id: 'ur-roof', cells: uniqueRoofCells, role: 'pivot' });
+  }
+  return nodes;
+}
+
+function buildUniqueLoopNodes(
+  loopCells: readonly number[],
+  basePairCells: readonly number[] = [],
+  guardianCells: readonly number[] = [],
+  targetCells: readonly number[] = [],
+  targetDigit?: Digit,
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes: NonNullable<SolveStep['evidence']['nodes']> = [
+    { id: 'unique-loop', cells: uniqueNumbers([...loopCells]), role: 'reason' },
+  ];
+  const uniqueBasePairCells = uniqueNumbers([...basePairCells]);
+  if (uniqueBasePairCells.length > 0) {
+    nodes.push({ id: 'unique-loop:base-pair', cells: uniqueBasePairCells, role: 'reason' });
+  }
+  const uniqueGuardianCells = uniqueNumbers([...guardianCells]);
+  if (uniqueGuardianCells.length > 0) {
+    nodes.push({ id: 'unique-loop:guardians', cells: uniqueGuardianCells, role: 'pivot' });
+  }
+  const uniqueTargetCells = uniqueNumbers([...targetCells]);
+  if (uniqueTargetCells.length > 0) {
+    nodes.push(targetDigit === undefined
+      ? { id: 'unique-loop:targets', cells: uniqueTargetCells, role: 'target' }
+      : { id: 'unique-loop:targets', cells: uniqueTargetCells, digit: targetDigit, role: 'target' });
+  }
+  return nodes;
+}
+
+function buildBugNodes(
+  baseCells: readonly number[],
+  extraCells: readonly number[],
+  extraDigit?: Digit,
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes: NonNullable<SolveStep['evidence']['nodes']> = [
+    { id: 'bug-base', cells: uniqueNumbers([...baseCells]), role: 'reason' },
+  ];
+  const uniqueExtraCells = uniqueNumbers([...extraCells]);
+  if (uniqueExtraCells.length > 0) {
+    nodes.push(extraDigit === undefined
+      ? { id: 'bug-extra', cells: uniqueExtraCells, role: 'pivot' }
+      : { id: 'bug-extra', cells: uniqueExtraCells, digit: extraDigit, role: 'pivot' });
+  }
+  return nodes;
+}
+
+type BugBaseGraph = {
+  baseMasks: Map<number, CandidateMask>;
+};
+
+type BugExtraCandidate = {
+  cell: number;
+  digit: Digit;
+};
+
+type BugExtraParityHouse = {
+  house: HouseRef;
+  candidateCells: number[];
+  count: number;
+  odd: boolean;
+};
+
+type BugExtraParitySummary = {
+  extra: BugExtraCandidate;
+  houses: readonly BugExtraParityHouse[];
+};
+
+type BugPlusTwoExtraPair = {
+  kind: 'common-extra' | 'non-common-extra';
+  extras: readonly [BugExtraCandidate, BugExtraCandidate];
+  parity: readonly [BugExtraParitySummary, BugExtraParitySummary];
+  graph: BugBaseGraph;
+};
+
+type BugPlusTwoCommonExtraElimination = {
+  extraDigit: Digit;
+  extraCells: readonly [number, number];
+  targetCells: number[];
+  graph: BugBaseGraph;
+};
+
+type BugTargetParityProofDraft = {
+  targetDigit: Digit;
+  targetCells: number[];
+  nodes: NonNullable<SolveStep['evidence']['nodes']>;
+};
+
+type BugPlusTwoParityElimination = {
+  targetDigit: Digit;
+  targetCells: number[];
+  proofMode: 'bounded-completion';
+  completion: {
+    completed: boolean;
+    solutionCount: number;
+    budget: BugCompletionBudget;
+  };
+};
+
+type BugCompletionBudget = {
+  maxCells: number;
+  maxStates: number;
+  maxCompletions: number;
+};
+
+type BugCompletionProbe = {
+  completed: boolean;
+  solutionCount: number;
+  candidateHits: Map<string, number>;
+};
+
+function buildBugBaseGraph(
+  context: SolverContextLike,
+  unsolved: readonly number[],
+  removedExtraDigits: ReadonlyMap<number, Digit>,
+): BugBaseGraph | null {
+  const baseMasks = new Map<number, CandidateMask>();
+  for (const cell of unsolved) {
+    const extraDigit = removedExtraDigits.get(cell);
+    const mask = context.getCandidateMask(cell);
+    const baseMask = extraDigit === undefined ? mask : mask & ~maskForDigit(extraDigit);
+    if (countMaskBits(baseMask) !== 2) {
+      return null;
+    }
+    baseMasks.set(cell, baseMask);
+  }
+
+  for (const house of ALL_HOUSES) {
+    const cells = context.getHouseCells(house).filter((cell) => context.board[cell] === EMPTY_VALUE);
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const digitMask = maskForDigit(digit as Digit);
+      const count = cells.reduce((sum, cell) => sum + ((baseMasks.get(cell)! & digitMask) !== 0 ? 1 : 0), 0);
+      if (count !== 0 && count !== 2) {
+        return null;
+      }
+    }
+  }
+  return { baseMasks };
+}
+
+function buildBugBaseGraphLinks(
+  context: SolverContextLike,
+  graph: BugBaseGraph,
+): NonNullable<SolveStep['evidence']['links']> {
+  const links: NonNullable<SolveStep['evidence']['links']> = [];
+  const seen = new Set<string>();
+  for (const house of ALL_HOUSES) {
+    const unsolvedHouseCells = context.getHouseCells(house)
+      .filter((cell) => graph.baseMasks.has(cell));
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const digitMask = maskForDigit(digit as Digit);
+      const candidateCells = unsolvedHouseCells
+        .filter((cell) => ((graph.baseMasks.get(cell) ?? 0) & digitMask) !== 0);
+      if (candidateCells.length !== 2) {
+        continue;
+      }
+      const [from, to] = candidateCells;
+      if (from === undefined || to === undefined) {
+        continue;
+      }
+      const key = `${house.type}:${house.index}:${digit}:${Math.min(from, to)}:${Math.max(from, to)}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      links.push({
+        from,
+        to,
+        digit: digit as Digit,
+        type: 'strong',
+        house,
+      });
+    }
+  }
+  return links;
+}
+
+function buildBugRemovedExtraDigitMap(extras: readonly BugExtraCandidate[]): ReadonlyMap<number, Digit> | null {
+  const removedExtraDigits = new Map<number, Digit>();
+  for (const extra of extras) {
+    const previous = removedExtraDigits.get(extra.cell);
+    if (previous !== undefined && previous !== extra.digit) {
+      return null;
+    }
+    removedExtraDigits.set(extra.cell, extra.digit);
+  }
+  return removedExtraDigits;
+}
+
+function findBugPlusTwoExtraPairs(
+  context: SolverContextLike,
+  unsolved: readonly number[],
+  left: number,
+  right: number,
+): BugPlusTwoExtraPair[] {
+  const pairs: BugPlusTwoExtraPair[] = [];
+  for (const leftDigit of context.getCandidateDigits(left)) {
+    for (const rightDigit of context.getCandidateDigits(right)) {
+      const extras = [
+        { cell: left, digit: leftDigit },
+        { cell: right, digit: rightDigit },
+      ] as const;
+      const removedExtraDigits = buildBugRemovedExtraDigitMap(extras);
+      if (!removedExtraDigits) {
+        continue;
+      }
+      const graph = buildBugBaseGraph(context, unsolved, removedExtraDigits);
+      if (!graph) {
+        continue;
+      }
+      const parity = buildBugExtraPairParitySummaries(context, extras);
+      const kind = leftDigit === rightDigit ? 'common-extra' : 'non-common-extra';
+      if (kind === 'non-common-extra' && !bugExtraParityIsOddInAllOwnHouses(parity)) {
+        continue;
+      }
+      pairs.push({
+        kind,
+        extras,
+        parity,
+        graph,
+      });
+    }
+  }
+  return pairs;
+}
+
+function buildBugExtraPairParitySummaries(
+  context: SolverContextLike,
+  extras: readonly [BugExtraCandidate, BugExtraCandidate],
+): [BugExtraParitySummary, BugExtraParitySummary] {
+  return [
+    buildBugExtraParitySummary(context, extras[0]),
+    buildBugExtraParitySummary(context, extras[1]),
+  ];
+}
+
+function buildBugExtraParitySummary(
+  context: SolverContextLike,
+  extra: BugExtraCandidate,
+): BugExtraParitySummary {
+  const houses = context.getCellHouses(extra.cell).map((house) => {
+    const candidateCells = context.getHouseCandidateCells(house, extra.digit);
+    return {
+      house,
+      candidateCells,
+      count: candidateCells.length,
+      odd: candidateCells.length % 2 === 1,
+    };
+  });
+  return { extra, houses };
+}
+
+function bugExtraParityIsOddInAllOwnHouses(summaries: readonly BugExtraParitySummary[]): boolean {
+  return summaries.every((summary) =>
+    summary.houses.length === 3
+    && summary.houses.every((parityHouse) => parityHouse.odd));
+}
+
+function buildBugExtraParityNodes(
+  summaries: readonly BugExtraParitySummary[],
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes: NonNullable<SolveStep['evidence']['nodes']> = [];
+  const extrasByDigit = new Map<Digit, number[]>();
+  for (const summary of summaries) {
+    extrasByDigit.set(summary.extra.digit, [
+      ...(extrasByDigit.get(summary.extra.digit) ?? []),
+      summary.extra.cell,
+    ]);
+    for (const parityHouse of summary.houses) {
+      nodes.push({
+        id: `bug-parity-${parityHouse.house.type}`,
+        cells: parityHouse.candidateCells,
+        digit: summary.extra.digit,
+        role: 'reason',
+      });
+    }
+  }
+
+  for (const [digit, cells] of extrasByDigit) {
+    nodes.push({
+      id: `bug-extra-group:${digit}`,
+      cells: uniqueNumbers(cells),
+      digit,
+      role: 'pivot',
+    });
+  }
+  return nodes;
+}
+
+function buildBugEliminationTargetNode(
+  targetCells: readonly number[],
+  targetDigit: Digit,
+): NonNullable<SolveStep['evidence']['nodes']>[number] | null {
+  const uniqueTargetCells = uniqueNumbers([...targetCells]);
+  if (uniqueTargetCells.length === 0) {
+    return null;
+  }
+  return {
+    id: 'bug-elimination-targets',
+    cells: uniqueTargetCells,
+    digit: targetDigit,
+    role: 'target',
+  };
+}
+
+function buildBugTargetParityProofDraft(
+  summaries: readonly BugExtraParitySummary[],
+  targetCells: readonly number[],
+  targetDigit: Digit,
+): BugTargetParityProofDraft | null {
+  const targetNode = buildBugEliminationTargetNode(targetCells, targetDigit);
+  if (!targetNode) {
+    return null;
+  }
+  return {
+    targetDigit,
+    targetCells: targetNode.cells,
+    nodes: [
+      ...buildBugExtraParityNodes(summaries),
+      targetNode,
+    ],
+  };
+}
+
+function buildBugPlusTwoParityElimination(
+  context: SolverContextLike,
+  unsolved: readonly number[],
+  pair: BugPlusTwoExtraPair,
+  budget: BugCompletionBudget,
+): BugPlusTwoParityElimination | null {
+  if (pair.kind !== 'non-common-extra') {
+    return null;
+  }
+  const probe = probeBugCandidateCompletions(context, unsolved, budget);
+  if (!probe.completed || probe.solutionCount === 0) {
+    return null;
+  }
+
+  for (const extra of pair.extras) {
+    const key = buildBugCandidateKey(extra.cell, extra.digit);
+    if ((probe.candidateHits.get(key) ?? 0) === 0) {
+      const proof = buildBugTargetParityProofDraft(pair.parity, [extra.cell], extra.digit);
+      if (!proof) {
+        continue;
+      }
+      return {
+        targetDigit: proof.targetDigit,
+        targetCells: proof.targetCells,
+        proofMode: 'bounded-completion',
+        completion: {
+          completed: probe.completed,
+          solutionCount: probe.solutionCount,
+          budget,
+        },
+      };
+    }
+  }
+  return null;
+}
+
+function probeBugCandidateCompletions(
+  context: SolverContextLike,
+  unsolved: readonly number[],
+  budget: BugCompletionBudget,
+): BugCompletionProbe {
+  const candidateHits = new Map<string, number>();
+  if (unsolved.length > budget.maxCells) {
+    return { completed: false, solutionCount: 0, candidateHits };
+  }
+
+  let states = 0;
+  let solutionCount = 0;
+  let completed = true;
+  const assignments = new Map<number, Digit>();
+  const cells = [...unsolved];
+
+  const canPlace = (cell: number, digit: Digit): boolean => {
+    for (const [assignedCell, assignedDigit] of assignments.entries()) {
+      if (assignedDigit === digit && (CELL_TO_PEERS[cell] ?? []).includes(assignedCell)) {
+        return false;
+      }
+    }
+    for (const peer of CELL_TO_PEERS[cell] ?? []) {
+      if (context.board[peer] === digit) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const search = (index: number): void => {
+    if (!completed || solutionCount >= budget.maxCompletions) {
+      completed = false;
+      return;
+    }
+    states += 1;
+    if (states > budget.maxStates) {
+      completed = false;
+      return;
+    }
+    if (index === cells.length) {
+      solutionCount += 1;
+      for (const [cell, digit] of assignments.entries()) {
+        const key = buildBugCandidateKey(cell, digit);
+        candidateHits.set(key, (candidateHits.get(key) ?? 0) + 1);
+      }
+      return;
+    }
+
+    let bestIndex = -1;
+    let bestOptions: Digit[] | null = null;
+    for (let candidateIndex = index; candidateIndex < cells.length; candidateIndex += 1) {
+      const cell = cells[candidateIndex]!;
+      const options = context.getCandidateDigits(cell).filter((digit) => canPlace(cell, digit));
+      if (bestOptions === null || options.length < bestOptions.length) {
+        bestIndex = candidateIndex;
+        bestOptions = options;
+        if (options.length === 0) {
+          break;
+        }
+      }
+    }
+    if (!bestOptions || bestOptions.length === 0 || bestIndex < 0) {
+      return;
+    }
+
+    [cells[index], cells[bestIndex]] = [cells[bestIndex]!, cells[index]!];
+    const cell = cells[index]!;
+    for (const digit of bestOptions) {
+      assignments.set(cell, digit);
+      search(index + 1);
+      assignments.delete(cell);
+      if (!completed) {
+        break;
+      }
+    }
+    [cells[index], cells[bestIndex]] = [cells[bestIndex]!, cells[index]!];
+  };
+
+  search(0);
+  return { completed, solutionCount, candidateHits };
+}
+
+function buildBugCandidateKey(cell: number, digit: Digit): string {
+  return `${cell}:${digit}`;
+}
+
+function buildBugPlusTwoCommonExtraElimination(
+  context: SolverContextLike,
+  pair: BugPlusTwoExtraPair,
+): BugPlusTwoCommonExtraElimination | null {
+  if (pair.kind !== 'common-extra') {
+    return null;
+  }
+  const [leftExtra, rightExtra] = pair.extras;
+  const extraDigit = leftExtra.digit;
+  const extraCells = [leftExtra.cell, rightExtra.cell] as const;
+
+  const targetCells = intersectNumbers(CELL_TO_PEERS[leftExtra.cell] ?? [], CELL_TO_PEERS[rightExtra.cell] ?? [])
+    .filter((cell) =>
+      cell !== leftExtra.cell
+      && cell !== rightExtra.cell
+      && context.board[cell] === EMPTY_VALUE
+      && context.isCandidatePresent(cell, extraDigit));
+  if (targetCells.length === 0) {
+    return null;
+  }
+
+  return {
+    extraDigit,
+    extraCells,
+    targetCells,
+    graph: pair.graph,
+  };
+}
+
+function findBugPlusTwoCommonExtraEliminations(
+  context: SolverContextLike,
+  unsolved: readonly number[],
+  left: number,
+  right: number,
+): BugPlusTwoCommonExtraElimination[] {
+  const eliminations: BugPlusTwoCommonExtraElimination[] = [];
+  for (const pair of findBugPlusTwoExtraPairs(context, unsolved, left, right)) {
+    const elimination = buildBugPlusTwoCommonExtraElimination(context, pair);
+    if (elimination) {
+      eliminations.push(elimination);
+    }
+  }
+  return eliminations;
+}
+
+function buildBugPlusOneNodes(
+  context: SolverContextLike,
+  baseCells: readonly number[],
+  targetCell: number,
+  targetDigit: Digit,
+  parityHouses: readonly HouseRef[],
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes = buildBugNodes(baseCells, [targetCell], targetDigit);
+  for (const eliminatedDigit of context.getCandidateDigits(targetCell).filter((digit) => digit !== targetDigit)) {
+    nodes.push({
+      id: 'bug-elimination-targets',
+      cells: [targetCell],
+      digit: eliminatedDigit,
+      role: 'target',
+    });
+  }
+  for (const house of parityHouses) {
+    nodes.push({
+      id: `bug-parity-${house.type}`,
+      cells: context.getHouseCandidateCells(house, targetDigit),
+      digit: targetDigit,
+      role: 'reason',
+    });
+  }
+  return nodes;
+}
+
+function buildBugPlusTwoNodes(
+  baseCells: readonly number[],
+  extraCells: readonly number[],
+  targetCells: readonly number[],
+  extraDigit: Digit,
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes = buildBugNodes(baseCells, extraCells, extraDigit);
+  nodes.push({
+    id: 'bug-common-extra-targets',
+    cells: uniqueNumbers([...targetCells]),
+    digit: extraDigit,
+    role: 'target',
+  });
+  return nodes;
+}
+
+function buildBugPlusTwoParityNodes(
+  baseCells: readonly number[],
+  extras: readonly [BugExtraCandidate, BugExtraCandidate],
+  summaries: readonly BugExtraParitySummary[],
+  targetCells: readonly number[],
+  targetDigit: Digit,
+): NonNullable<SolveStep['evidence']['nodes']> {
+  const nodes = buildBugNodes(baseCells, extras.map((extra) => extra.cell));
+  nodes.push(...buildBugExtraParityNodes(summaries));
+  const targetNode = buildBugEliminationTargetNode(targetCells, targetDigit);
+  if (targetNode) {
+    nodes.push(targetNode);
+  }
+  return nodes;
 }
 
 function getUrOppositeRoles(
@@ -8097,6 +11107,22 @@ function collectTableChainUnitSources(context: SolverContextLike): Array<{ house
     .filter((source) => source.cells.length <= 5);
 }
 
+function collectPlusUnitBranchSources(context: SolverContextLike): Array<{ house: HouseRef; digit: Digit; cells: number[] }> {
+  const result: Array<{ house: HouseRef; digit: Digit; cells: number[] }> = [];
+  for (const house of context.getAllHouses()) {
+    for (let digit = 1; digit <= 9; digit += 1) {
+      const cells = context.getHouseCandidateCells(house, digit as Digit);
+      if (cells.length >= 2 && cells.length <= 5) {
+        result.push({ house, digit: digit as Digit, cells });
+      }
+    }
+  }
+  return result.sort((left, right) =>
+    left.cells.length - right.cells.length
+    || left.house.index - right.house.index
+    || left.digit - right.digit);
+}
+
 function evaluateBranchWithPlacement(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
   const branch = context.clone();
   branch.placeDigit(cell, digit, { allowConflict: true });
@@ -8115,17 +11141,49 @@ function evaluateTableChainBranch(context: SolverContextLike, cell: number, digi
   return runBranchWalkthrough(branch, 20, { type: 'place', cell, digit }, [cell]);
 }
 
+function evaluateDynamicForcingBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.placeDigit(cell, digit, { allowConflict: true });
+  return runBranchWalkthrough(branch, 28, { type: 'place', cell, digit }, [cell]);
+}
+
+function evaluateDynamicForcingRemovalBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.removeCandidate(cell, digit);
+  return runBranchWalkthrough(branch, 28, { type: 'eliminate', cell, digit }, [cell]);
+}
+
+function evaluateDynamicForcingPlusBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.placeDigit(cell, digit, { allowConflict: true });
+  return runBranchWalkthrough(branch, 40, { type: 'place', cell, digit }, [cell]);
+}
+
+function evaluateDynamicForcingPlusRemovalBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.removeCandidate(cell, digit);
+  return runBranchWalkthrough(branch, 40, { type: 'eliminate', cell, digit }, [cell]);
+}
+
+function evaluateNestedForcingBranch(context: SolverContextLike, cell: number, digit: Digit): BranchOutcome {
+  const branch = context.clone();
+  branch.placeDigit(cell, digit, { allowConflict: true });
+  return runBranchWalkthrough(branch, 18, { type: 'place', cell, digit }, [cell], getNestedBranchTechniqueCache());
+}
+
 function runBranchWalkthrough(
   branch: SolverContextLike,
   maxSteps: number,
   assumption: BranchOutcome['assumption'],
   excludedCells: readonly number[] = [],
+  branchTechniques: SolverTechnique[] = getBranchTechniqueCache(),
 ): BranchOutcome {
   const excluded = new Set(excludedCells);
   const placements: BranchOutcome['placements'] = [];
   const eliminations: BranchOutcome['eliminations'] = [];
   const seenPlacements = new Set<string>();
   const seenEliminations = new Set<string>();
+  let steps = 0;
 
   for (let stepIndex = 0; stepIndex < maxSteps; stepIndex += 1) {
     if (branch.hasContradiction()) {
@@ -8133,14 +11191,28 @@ function runBranchWalkthrough(
         assumption,
         contradiction: true,
         exhausted: true,
+        steps,
+        maxSteps,
+        truncated: false,
+        stopReason: 'contradiction',
         contradictionAt: inspectContradiction(branch),
         placements,
         eliminations,
       };
     }
-    const step = findBranchStep(branch, getBranchTechniqueCache());
+    const step = findBranchStep(branch, branchTechniques);
     if (!step) {
-      return { assumption, contradiction: false, exhausted: true, placements, eliminations };
+      return {
+        assumption,
+        contradiction: false,
+        exhausted: true,
+        steps,
+        maxSteps,
+        truncated: false,
+        stopReason: 'no-step',
+        placements,
+        eliminations,
+      };
     }
     for (const action of step.actions) {
       const key = `${action.cell}:${action.digit}`;
@@ -8156,13 +11228,32 @@ function runBranchWalkthrough(
         eliminations.push({ cell: action.cell, digit: action.digit });
       }
     }
-    branch.applyStep(step);
+    try {
+      branch.applyStep(step);
+      steps += 1;
+    } catch {
+      return {
+        assumption,
+        contradiction: false,
+        exhausted: true,
+        steps,
+        maxSteps,
+        truncated: false,
+        stopReason: 'replay-error',
+        placements,
+        eliminations,
+      };
+    }
   }
 
   return {
     assumption,
     contradiction: branch.hasContradiction(),
     exhausted: false,
+    steps,
+    maxSteps,
+    truncated: !branch.hasContradiction(),
+    stopReason: branch.hasContradiction() ? 'contradiction' : 'step-limit',
     ...(branch.hasContradiction() ? { contradictionAt: inspectContradiction(branch) } : {}),
     placements,
     eliminations,
@@ -8184,6 +11275,7 @@ const BRANCH_TECHNIQUE_IDS: readonly TechniqueId[] = [
   'multi-colors',
   'almost-locked-pair',
   'almost-locked-triple',
+  'almost-locked-quad',
   'grouped-x-cycles',
   'grouped-aic',
   'als-xz',
@@ -8201,12 +11293,27 @@ const BRANCH_TECHNIQUE_IDS: readonly TechniqueId[] = [
 
 const BRANCH_TECHNIQUES = new Set<TechniqueId>(BRANCH_TECHNIQUE_IDS);
 let branchTechniqueCache: SolverTechnique[] | null = null;
+let nestedBranchTechniqueCache: SolverTechnique[] | null = null;
 
 function getBranchTechniqueCache(): SolverTechnique[] {
   if (!branchTechniqueCache) {
     branchTechniqueCache = buildDefaultTechniques().filter((technique) => BRANCH_TECHNIQUES.has(technique.id));
   }
   return branchTechniqueCache;
+}
+
+function getNestedBranchTechniqueCache(): SolverTechnique[] {
+  if (!nestedBranchTechniqueCache) {
+    const nestedBranchTechniques = new Set<TechniqueId>([
+      ...BRANCH_TECHNIQUE_IDS,
+      'forcing-nets',
+      'digit-forcing-chains',
+      'cell-forcing-chains',
+      'unit-forcing-chains',
+    ]);
+    nestedBranchTechniqueCache = buildDefaultTechniques().filter((technique) => nestedBranchTechniques.has(technique.id));
+  }
+  return nestedBranchTechniqueCache;
 }
 
 function countExternalStrongLinks(context: SolverContextLike, cellIndex: number, digit: Digit): number {
@@ -8223,11 +11330,21 @@ function countExternalStrongLinks(context: SolverContextLike, cellIndex: number,
 function findBranchStep(context: SolverContextLike, techniques: SolverTechnique[]): SolveStep | null {
   for (const technique of techniques) {
     const step = technique.find(context);
-    if (step) {
+    if (step && isBranchStepApplicable(context, step)) {
       return step;
     }
   }
   return null;
+}
+
+function isBranchStepApplicable(context: SolverContextLike, step: SolveStep): boolean {
+  try {
+    const draft = context.clone();
+    draft.applyStep(step);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function buildForcingConclusion(
@@ -8260,6 +11377,7 @@ function buildForcingConclusion(
           { cell: placement.cell, digit: placement.digit, role: 'target' as const },
         ],
         branches: buildBranchEvidence(outcomes),
+        pattern: { family: 'forcing', subtype: `${technique}-shared-placement` },
         note: 'All surviving branches share this placement.',
       },
     };
@@ -8279,6 +11397,7 @@ function buildForcingConclusion(
           { cell: elimination.cell, digit: elimination.digit, role: 'target' as const },
         ],
         branches: buildBranchEvidence(outcomes),
+        pattern: { family: 'forcing', subtype: `${technique}-shared-elimination` },
         note: 'All surviving branches share this elimination.',
       },
     };
@@ -8305,6 +11424,10 @@ function buildBranchEvidence(outcomes: BranchOutcome[]): NonNullable<SolveStep['
       assumption: outcome.assumption,
       contradiction: outcome.contradiction,
       exhausted: outcome.exhausted,
+      steps: outcome.steps,
+      maxSteps: outcome.maxSteps,
+      truncated: outcome.truncated,
+      stopReason: outcome.stopReason,
       ...(outcome.contradictionAt ? { contradictionAt: outcome.contradictionAt } : {}),
       ...(actions.length > 0 ? { actions } : {}),
     };
@@ -8313,7 +11436,7 @@ function buildBranchEvidence(outcomes: BranchOutcome[]): NonNullable<SolveStep['
 
 function inspectContradiction(
   context: SolverContextLike,
-): NonNullable<SolveStep['evidence']['branches']>[number]['contradictionAt'] | undefined {
+): BranchContradictionLocation | undefined {
   for (let cell = 0; cell < 81; cell += 1) {
     if (context.board[cell] === EMPTY_VALUE && context.getCandidateMask(cell) === 0) {
       return {
@@ -8359,9 +11482,18 @@ function branchHasNoSolution(
   candidates: CandidateMask[],
   maxElapsedMs: number,
 ): boolean {
+  return probeBranchNoSolution(board, candidates, maxElapsedMs).noSolution;
+}
+
+function probeBranchNoSolution(
+  board: Board,
+  candidates: CandidateMask[],
+  maxElapsedMs: number,
+): { noSolution: boolean; contradictionAt?: BranchContradictionLocation } {
   const startedAt = Date.now();
   const boardCopy = [...board] as Board;
   const candidateCopy = [...candidates];
+  let firstContradictionAt: BranchContradictionLocation | undefined;
 
   const timedOut = (): boolean => (
     maxElapsedMs > 0
@@ -8372,7 +11504,9 @@ function branchHasNoSolution(
     if (timedOut()) {
       return true;
     }
-    if (hasBranchContradiction(boardCopy, candidateCopy)) {
+    const contradictionAt = inspectBranchContradiction(boardCopy, candidateCopy);
+    if (contradictionAt) {
+      firstContradictionAt ??= contradictionAt;
       return false;
     }
 
@@ -8387,6 +11521,10 @@ function branchHasNoSolution(
       const mask = candidateCopy[index] ?? 0;
       const count = countMaskBits(mask);
       if (count === 0) {
+        firstContradictionAt ??= {
+          kind: 'cell-empty',
+          cell: index,
+        };
         return false;
       }
       if (count < bestCount) {
@@ -8416,13 +11554,19 @@ function branchHasNoSolution(
     return false;
   };
 
-  return !existsSolution();
+  return {
+    noSolution: !existsSolution(),
+    ...(firstContradictionAt ? { contradictionAt: firstContradictionAt } : {}),
+  };
 }
 
-function hasBranchContradiction(board: Board, candidates: CandidateMask[]): boolean {
+function inspectBranchContradiction(board: Board, candidates: CandidateMask[]): BranchContradictionLocation | undefined {
   for (let index = 0; index < board.length; index += 1) {
     if (board[index] === EMPTY_VALUE && (candidates[index] ?? 0) === 0) {
-      return true;
+      return {
+        kind: 'cell-empty',
+        cell: index,
+      };
     }
   }
 
@@ -8438,13 +11582,24 @@ function hasBranchContradiction(board: Board, candidates: CandidateMask[]): bool
           candidateCount += 1;
         }
       }
-      if (solvedCount > 1 || (solvedCount === 0 && candidateCount === 0)) {
-        return true;
+      if (solvedCount > 1) {
+        return {
+          kind: 'house-duplicate',
+          house,
+          digit: digit as Digit,
+        };
+      }
+      if (solvedCount === 0 && candidateCount === 0) {
+        return {
+          kind: 'house-missing',
+          house,
+          digit: digit as Digit,
+        };
       }
     }
   }
 
-  return false;
+  return undefined;
 }
 
 function placeDigitInBranch(board: Board, candidates: CandidateMask[], index: number, digit: Digit): void {
@@ -8532,14 +11687,29 @@ function buildExocetStep(
         ...allBaseCells.flatMap((cell) => context.getCellHouses(cell)),
         ...allTargets.flatMap((cell) => context.getCellHouses(cell)),
       ]),
+      pattern: { family: 'pattern', subtype: technique },
+      nodes: patterns.flatMap((pattern, index) => [
+        {
+          id: `${technique}:base:${index}`,
+          cells: pattern.baseCells,
+          role: 'reason' as const,
+          grouped: true,
+        },
+        {
+          id: `${technique}:targets:${index}`,
+          cells: [...pattern.targets],
+          role: 'pivot' as const,
+          grouped: true,
+        },
+      ]),
       cells: [
         ...allBaseCells.map((cell) => ({ cell, role: 'reason' as const })),
         ...allTargets.map((cell) => ({ cell, role: 'pivot' as const })),
         ...actions.map((action) => ({ cell: action.cell, digit: action.digit, role: 'target' as const })),
       ],
       note: technique === 'double-exocet'
-        ? 'Double Exocet restricts four target cells to the shared base digits.'
-        : 'Exocet restricts both target cells to the base digits.',
+        ? `Double Exocet links ${patterns.length} base pair(s), ${allBaseCells.length} base cells and ${allTargets.length} target cells to the shared ${allBaseDigits.length} base digit(s).`
+        : `Exocet links ${allBaseCells.length} base cells and ${allTargets.length} target cells to ${allBaseDigits.length} base digit(s).`,
     },
   };
 }

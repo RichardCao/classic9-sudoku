@@ -30,9 +30,9 @@ SE compatibility 分四级：
 
 | SE 技巧 / 难度 | 当前映射 | 状态 | 主要差距 |
 | --- | --- | --- | --- |
-| Last value in block/row/column `1.0` | `full-house` | `covered` | SE 会按 block/row/column 细分；当前统一为 `full-house`。 |
-| Hidden Single in block `1.2` | `hidden-single` | `covered-as-variant` | 当前未区分 block 与 row/column difficulty。 |
-| Hidden Single in row/column `1.5` | `hidden-single` | `covered-as-variant` | 需要在 evidence/score 中区分 house 类型。 |
+| Last value in block/row/column `1.0` | `full-house` | `covered` | `evidence.pattern.subtype` 已区分 `block` / `row` / `col`；public id 和 score 仍统一。 |
+| Hidden Single in block `1.2` | `hidden-single` | `covered-as-variant` | `evidence.pattern.subtype` 已区分 `block` / `row` / `col`；difficulty 仍按本包统一分值。 |
+| Hidden Single in row/column `1.5` | `hidden-single` | `covered-as-variant` | `evidence.pattern.subtype` 已区分 row/col，暂不拆 public `TechniqueId`。 |
 | Direct Pointing `1.7` | `direct-pointing` | `covered` | 已返回“删除候选 + 直接落子”步骤；仍需补更多 external-reference corpus 校准。 |
 | Direct Claiming `1.9` | `direct-claiming` | `covered` | 已区分 claiming 来源；仍需补 row/column 方向 fixture。 |
 | Direct Hidden Pair `2.0` | `direct-hidden-pair` | `covered` | 已返回 direct hidden subset 步骤；仍需补真实题面回归。 |
@@ -48,11 +48,11 @@ SE compatibility 分四级：
 | Hidden Triplet `4.0` | `hidden-triple` | `covered` | 命名需保留 SE 的 `Triplet` alias。 |
 | XY-Wing `4.2` | `xy-wing` | `covered` | 无主要差距。 |
 | XYZ-Wing `4.4` | `xyz-wing` | `covered` | 无主要差距。 |
-| Unique Rectangles and Loops `4.5..5.0` | `unique-rectangle`, `extended-rectangle`, `hidden-unique-rectangle`, `aic-ur`, `rectangle-elimination`, `avoidable-rectangle` | `partial` | 需要映射 SE UR/UL 类型、difficulty 分段和避免不稳定路径。 |
+| Unique Rectangles and Loops `4.5..5.0` | `unique-rectangle`, `extended-rectangle`, `unique-loop`, `hidden-unique-rectangle`, `aic-ur`, `rectangle-elimination`, `avoidable-rectangle` | `partial` | `unique-loop` 已作为 experimental 覆盖 2x3 / 3x2 single-roof、2x3 / 3x2 shared-guardian 和最多 14 cell 的有界 generalized single-roof loop；仍需要映射更多 SE UR/UL 类型、difficulty 分段和避免不稳定路径。 |
 | Naked Quad `5.0` | `naked-quad` | `covered` | 无主要差距。 |
 | Jellyfish `5.2` | `jellyfish` | `covered` | 无主要差距。 |
 | Hidden Quad `5.4` | `hidden-quad` | `covered` | 无主要差距。 |
-| Bivalue Universal Graves `5.6..6.0` | `bug-plus-one` | `partial` | 当前只有 BUG+1；需要 BUG type/variant 覆盖矩阵。 |
+| Bivalue Universal Graves `5.6..6.0` | `bug-plus-one`, `bug-plus-two`, `bug-plus-n` | `partial` | 已覆盖 BUG+1、BUG+2 common-extra elimination、bounded non-common parity-elimination，以及 BUG+n shared-extra common-target 的保守形态；更通用 BUG+n / BUG Lite / broader elimination 仍缺真实题面和 proof tree。 |
 | Aligned Pair Exclusion `6.2` | `aligned-pair-exclusion` | `covered` | 需要和 SE 的 APE 搜索范围对齐。 |
 | Bidirectional X-Cycles `6.5..7.5` | `bidirectional-x-cycle`, `x-chain`, `simple-coloring`, `x-coloring`, `grouped-x-cycles` | `covered-as-variant` | 已有 SE 命名入口；仍需统一 X-cycle 子类型和长度分值。 |
 | Bidirectional Y-Cycles `6.5..7.5` | `bidirectional-y-cycle`, `xy-chain`, `aic` | `covered-as-variant` | 已有 SE 命名入口；仍需区分 Y-Cycle、bivalue cycle、AIC 的 SE 分类。 |
@@ -60,10 +60,10 @@ SE compatibility 分四级：
 | Forcing Chains / Bidirectional Cycles `7.0..8.0` | `forcing-chain`, `aic`, `grouped-aic`, `forcing-nets` | `covered-as-variant` | 已有 SE 命名入口；仍需完整统一 implication graph。 |
 | Nishio `7.5..8.5` | `nishio-forcing-chains` | `covered` | 需要用 SE fixture 校准 contradiction evidence。 |
 | Cell Forcing Chains `8.0..9.0` | `cell-forcing-chains` | `partial` | 当前 experimental，需要更多 real-board fixtures。 |
-| Region Forcing Chains `8.0..9.0` | `unit-forcing-chains` | `partial` | 当前 experimental；SE 术语为 region/unit，需要命名 alias。 |
-| Dynamic Forcing Chains `8.5..9.5` | 无 | `missing` | 需要多层 implication search，且必须有时间/节点预算。 |
-| Dynamic Forcing Chains (+) `9.0..10.0` | 无 | `missing` | 需要在 DFC 基础上支持更深/更复杂的动态推导。 |
-| Nested Forcing Chains `>9.5` | 无 | `missing` | 需要嵌套分支模型、proof tree 压缩和严格预算。 |
+| Region Forcing Chains `8.0..9.0` | `region-forcing-chains`, `unit-forcing-chains` | `covered-as-variant` | 已有 SE 命名入口；仍是 experimental，需要更多 real-board fixtures。 |
+| Dynamic Forcing Chains `8.5..9.5` | `dynamic-forcing-chains` | `partial` | experimental；当前是有界动态分支入口，仍需 proof tree、节点预算和真实题面 fixture。 |
+| Dynamic Forcing Chains (+) `9.0..10.0` | `dynamic-forcing-chains-plus` | `partial` | experimental；当前是更深、更宽预算的 DFC 入口，仍需完整 proof tree 和真实题面 fixture。 |
+| Nested Forcing Chains `>9.5` | `nested-forcing-chains` | `partial` | experimental；当前仅提供单候选 contradiction 入口并允许一层受控 forcing 嵌套，仍需完整 proof tree 压缩和真实题面 fixture。 |
 
 ## 技术路线
 
@@ -132,7 +132,7 @@ SE compatibility 分四级：
 
 ### Phase 3：SE cycle / chain 对齐
 
-状态：首版已完成；single-digit strong-link 图已共享，AIC / Grouped AIC 已抽出候选图基础类型；更细 SE 子类型仍在进行中。
+状态：首版已完成；single-digit strong-link 图已共享，AIC / Grouped AIC 已抽出候选图基础类型；更细 SE 子类型仍在进行中。subtype / evidence 边界矩阵见 [SE_CHAIN_MATRIX.md](./SE_CHAIN_MATRIX.md)。当前 reference smoke 已固定 `bidirectional-x-cycle`、`forcing-x-chain`、`bidirectional-y-cycle` 和 `forcing-chain` 的 expected elimination 与 strong/weak link 下限。
 
 目标：把当前分散的 coloring、chain、AIC、single-digit-chain 技巧整理到 SE 的 X/Y cycle 与 forcing chain 语义上。
 
@@ -158,6 +158,8 @@ SE compatibility 分四级：
 4. release audit 校验不删真解候选。
 
 ### Phase 4：BUG / Unique Loop 覆盖
+
+状态：subtype matrix 已建立，详见 [SE_UNIQUENESS_MATRIX.md](./SE_UNIQUENESS_MATRIX.md)；真实题面 fixture、更通用 BUG+2/BUG+n、BUG Lite 和 generalized Unique Loop 仍待补齐。
 
 目标：补齐 SE 的 BUG 和 Unique Rectangle/Loop family。
 
@@ -196,14 +198,14 @@ SE compatibility 分四级：
 
 ### Phase 6：外部参考 corpus 和 release gate
 
-状态：首版 smoke gate 已完成；真实题面 reference rating corpus、每个外部 difficulty bucket 覆盖和 full external-reference audit 仍待补齐。
+状态：首版 smoke gate 已完成；真实题面 reference rating corpus 已建立最小骨架，但每个外部 difficulty bucket 覆盖和 full external-reference audit 仍待补齐。
 
 目标：把兼容性从“技巧存在”推进到“真实题 rating 可回归”。
 
 交付：
 
 1. `tests/fixtures/reference-techniques/*.json`
-2. `tests/fixtures/reference-rating-corpus.json`
+2. `tests/fixtures/reference-techniques/reference-rating-corpus.json`
 3. `scripts/audit-reference-techniques.mjs`
 4. CI 中增加轻量 reference smoke。
 5. 手动 release 增加 full external-reference audit。
@@ -258,11 +260,48 @@ SE compatibility 分四级：
 17. reference smoke fixture 增加运行时形状校验和 v1 技巧覆盖校验。
 18. reference smoke fixture 通过显式技巧 options 校验路径可达性。
 19. 新增 `scripts/audit-reference-techniques.mjs` 和 `npm run audit:reference`，作为轻量 reference smoke release gate。
-20. `npm run verify` 纳入 `audit:reference`，让常规源码验证默认覆盖轻量 reference smoke gate。
-21. CI workflow 增加显式 reference smoke audit 步骤，直接运行 `npm run audit:reference`。
-22. `audit-reference-techniques.mjs` 增加 fixture 输入校验，并在测试中覆盖 JSON 输出和坏输入失败路径。
-23. 新增 `tests/fixtures/reference-techniques/README.md`，明确 smoke fixture 与真实外部 rating corpus 的边界。
-24. `audit:reference` 输出增加 `corpusKind: "reference-smoke"` 和非 full external rating corpus 说明，避免误用。
+20. 新增 `tests/fixtures/reference-techniques/reference-rating-corpus.json` 和 `scripts/audit-reference-rating-corpus.mjs`，把 reference 回归从人工候选态推进到真实题面评分路径的最小骨架。
+21. `npm run verify` 纳入 `audit:reference`，让常规源码验证默认覆盖轻量 reference smoke gate。
+22. CI workflow 增加显式 reference smoke audit 步骤，直接运行 `npm run audit:reference`。
+23. `audit-reference-techniques.mjs` 增加 fixture 输入校验，并在测试中覆盖 JSON 输出和坏输入失败路径。
+24. 新增 `tests/fixtures/reference-techniques/README.md`，明确 smoke fixture 与真实外部 rating corpus 的边界。
+25. `audit:reference` 输出增加 `corpusKind: "reference-smoke"` 和非 full external rating corpus 说明，避免误用。
+26. 新增 `dynamic-forcing-chains` experimental 技巧，提供有界动态分支入口并接入 galaxy fallback。
+27. 新增 `dynamic-forcing-chains-plus` experimental 技巧，提供更深、更宽预算的 DFC+ 入口并接入 galaxy fallback。
+28. 新增 `nested-forcing-chains` experimental 技巧，提供一层受控 forcing 嵌套入口；该技巧比 galaxy fallback 更重，当前仅建议显式启用做离线审计。
+29. forcing branch evidence 增加 `steps`、`maxSteps`、`truncated` 和 `stopReason` 预算摘要，便于调用方判断分支证明是否因预算截断或 replay 隔离停止。
+30. 新增 [SE_UNIQUENESS_MATRIX.md](./SE_UNIQUENESS_MATRIX.md)，固定 BUG / UR / Unique Loop subtype 映射和后续 fixture 目标。
+31. uniqueness finder 增加 `evidence.pattern.family/subtype`，用于审计 UR、AR、BUG 等 SE subtype 覆盖，不拆 public `TechniqueId`。
+32. 新增 `region-forcing-chains` experimental SE 命名入口，复用 unit/region 分支模型，便于外部参考直接按 SE 术语启用。
+33. `full-house` 和 `hidden-single` 增加 `evidence.pattern.subtype`，用于区分 SE 的 block / row / column 变体；当前不拆分 public id 和分值。
+34. 新增 `bug-plus-two` experimental finder，保守覆盖两个三值格共享 extra digit 且可删共同可见候选的 BUG+2 common-extra 形态。
+35. reference smoke audit 增加 `uniqueness` 分组，首个覆盖项为 `bug-plus-two`，并校验 expected elimination、pattern subtype 和 replay。
+36. `avoidable-rectangle` 修正合法三已解角正例判断，并加入 `uniqueness` reference smoke，覆盖 expected elimination、pattern subtype 和 replay。
+37. `unique-rectangle` Type 1、Type 3 naked set、Type 3 hidden set 和 Type 4 加入 `uniqueness` reference smoke，固定 subtype evidence 和 replay 可用性。
+38. `rectangle-elimination`、`extended-rectangle`、`hidden-unique-rectangle` 和 `aic-ur` 加入 `uniqueness` reference smoke，固定已实现边界的 expected elimination、pattern evidence 和 replay。
+39. `bug-plus-one` 加入 `uniqueness` reference smoke，固定 place action、BUG pattern evidence 和 replay。
+40. `unique-rectangle` Type 2 shared-extra 加入 `uniqueness` reference smoke，固定 extra digit elimination、pattern subtype 和 replay。
+41. `aic-ur` reference smoke 拆分 `single-roof-chain` 和 `floor-roof-chain`，避免两个 UR-AIC 证明形态在后续 finder 调整中退化为同一类 evidence。
+42. 修复 `rectangle-elimination` 的 col-strong 几何判断，使列强链 + 行 weak wing 的镜像形态可达；reference smoke 同时覆盖 row-strong 和 col-strong。
+43. `extended-rectangle` reference smoke 增加 3x2 镜像布局，固定 2x3 / 3x2 两个扫描方向都可 replay。
+44. `aic-ur` 输出基础 `evidence.links`，并让 reference smoke 支持 uniqueness `minLinks` 约束，确保 UR-AIC subtype 不只返回 cells 标注。
+45. reference smoke 增加 `negative` no-hit 分组，首批覆盖 UR Type 2 shared-extra 无目标、Avoidable Rectangle forbidden digit 不在候选、Rectangle Elimination 无第四宫候选、Extended Rectangle pure-pair 数不足、HUR 无共同 base pair、UR-AIC 无目标、BUG+1 多三值格、BUG+2 extra 不一致、BUG+2 无共同可见目标，防止高风险 uniqueness finder 误报。
+46. `audit-reference-techniques.mjs` 对 positive smoke step 增加 `verifyStep(..., { mode: "evidence" })` 结构校验；人工候选态的上下文矛盾会被过滤，但 invalid action/evidence/link shape 会失败。
+47. `audit-reference-rating-corpus.mjs` 对真实题面 rating path 中的每个 step 增加 `verifyStep(..., { mode: "evidence" })`，并校验 place/eliminate 动作不违背已知 solution。
+48. 新增 `scripts/find-reference-rating-candidates.mjs` 和 `npm run find:reference-candidates`，用于从候选题面文件中筛选目标技巧真实 rating path，并输出可审阅的建议 corpus row；脚本支持文本题面、JSON `rows` / learning `samples` 字符串题面、JSON 81-cell numeric array 题面、`--hardest` 过滤和 `--exclude-corpus` 跳过已收录题面。
+49. `reference-rating-corpus.json` 增加 `avoidable-rectangle` 和 `w-wing` 真实题面路径，使 corpus 从 5 行扩展到 8 行。
+50. `bug-plus-two` 增加 bounded non-common parity-elimination subtype；reference smoke 固定 `bug-elimination-targets` 与 `bug-extra-group:*` nodes，并区分 common-extra 文案。
+50. `reference-rating-corpus.json` 增加 `aic-ur` 真实题面路径，使 corpus 从 8 行扩展到 9 行，并开始覆盖 UR-AIC 的正常 rating path。
+51. `reference-rating-corpus.json` 增加 `rectangle-elimination` 真实题面路径，使 corpus 从 9 行扩展到 10 行，并开始覆盖 Rectangle Elimination 的正常 rating path。
+52. `reference-rating-corpus.json` 增加 `xy-wing` 和 `sashimi-x-wing` 真实题面路径，使 corpus 从 10 行扩展到 12 行，并开始补 fish / wing 正常 rating path。
+53. `reference-rating-corpus.json` 增加 `als-xz`、`als-xy-wing` 和 `aic-als` 真实题面路径，使 corpus 从 12 行扩展到 15 行，并开始补 ALS family 正常 rating path。
+54. `reference-rating-corpus.json` 增加 `finned-x-wing`、`almost-locked-pair` 和 `finned-franken-jellyfish` 真实题面路径，使 corpus 从 15 行扩展到 18 行，并顺带覆盖 Big Wings / WXYZ-Wing 的正常 rating path。
+55. `reference-rating-corpus.json` 增加 `finned-swordfish`、`finned-franken-swordfish`、`xyz-wing` 和 `almost-locked-triple` 真实题面路径，使 corpus 从 18 行扩展到 22 行。
+56. `reference-rating-corpus.json` 增加 `sashimi-swordfish` 真实题面路径，使 corpus 从 22 行扩展到 23 行；当前 500 题源在 `classic-galaxy` 下仍未命中 `sashimi-jellyfish` 和若干特殊 ALS 技巧；`finned-jellyfish` 已用 `classic-stable` 真实题面覆盖。
+57. `reference-rating-corpus.json` 增加 `chute-remote-pairs` 真实题面路径，使 corpus 从 23 行扩展到 24 行；随后又补入 `swordfish` 和 `franken-swordfish` 真实题面路径，使 corpus 扩展到 26 行；随后补入 `jellyfish` 真实题面路径，使 corpus 扩展到 27 行；随后补入 `finned-jellyfish` 真实题面路径，使 corpus 扩展到 28 行；alternatives 源仍未命中 `remote-pairs`、`finned-jellyfish`、`sashimi-jellyfish`、`almost-locked-quad` 或特殊 ALS 目标。
+58. 新增 `bug-plus-n` experimental finder，保守覆盖 3 个以上三值格共享同一 extra digit、移除 extra 后形成 BUG base、且存在共同可见 target 的删除形态；reference smoke 增加 BUG+n positive 与 no-target negative guard，使 smoke 从 206 条扩展到 208 条。
+59. 新增 `larger-fish` experimental finder，保守覆盖 size 5/6/7 普通 fish；reference smoke 增加 Larger Fish size-5、size-6 positive 与 no-target negative guard，使 smoke 从 208 条扩展到 211 条。
+60. 新增 `mutant-fish` experimental finder，保守覆盖 size-3 disjoint mixed-cover fish；reference smoke 增加 Mutant Fish positive 与 no-target negative guard，使 smoke 从 211 条扩展到 213 条。
 
 ## 决策记录
 

@@ -159,6 +159,9 @@ const CLI_DEFAULT_FALLBACK_TECHNIQUES: readonly TechniqueId[] = [
   'digit-forcing-chains',
   'cell-forcing-chains',
   'unit-forcing-chains',
+  'region-forcing-chains',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
 ];
 
 export function runCli(argv: readonly string[]): CliResult {

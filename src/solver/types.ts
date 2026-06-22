@@ -17,21 +17,28 @@ export type TechniqueId =
   | 'hidden-quad'
   | 'x-wing'
   | 'franken-swordfish'
+  | 'finned-franken-swordfish'
+  | 'finned-franken-jellyfish'
   | 'swordfish'
   | 'jellyfish'
   | 'finned-x-wing'
+  | 'sashimi-x-wing'
   | 'finned-swordfish'
   | 'finned-jellyfish'
   | 'sashimi-swordfish'
   | 'sashimi-jellyfish'
+  | 'larger-fish'
+  | 'mutant-fish'
   | 'xy-wing'
   | 'xyz-wing'
   | 'wxyz-wing'
   | 'w-wing'
   | 'big-wings'
   | 'chute-remote-pairs'
+  | 'remote-pairs'
   | 'almost-locked-pair'
   | 'almost-locked-triple'
+  | 'almost-locked-quad'
   | 'als-xz'
   | 'als-xy-wing'
   | 'aic-als'
@@ -54,7 +61,11 @@ export type TechniqueId =
   | 'nishio-forcing-chains'
   | 'cell-forcing-chains'
   | 'unit-forcing-chains'
+  | 'region-forcing-chains'
   | 'table-chain'
+  | 'dynamic-forcing-chains'
+  | 'dynamic-forcing-chains-plus'
+  | 'nested-forcing-chains'
   | 'bowmans-bingo'
   | 'aic-exotic'
   | 'simple-coloring'
@@ -74,9 +85,12 @@ export type TechniqueId =
   | 'avoidable-rectangle'
   | 'rectangle-elimination'
   | 'extended-rectangle'
+  | 'unique-loop'
   | 'hidden-unique-rectangle'
   | 'aic-ur'
-  | 'bug-plus-one';
+  | 'bug-plus-one'
+  | 'bug-plus-two'
+  | 'bug-plus-n';
 
 export interface StepPlacement {
   cell: number;
@@ -106,6 +120,14 @@ export interface StepLinkEvidence {
   house?: HouseRef;
 }
 
+export interface StepNodeEvidence {
+  id: string;
+  cells: number[];
+  digit?: Digit;
+  role: 'reason' | 'target' | 'link' | 'pivot';
+  grouped?: boolean;
+}
+
 export interface StepBranchEvidence {
   assumption: {
     type: 'place' | 'eliminate';
@@ -114,6 +136,10 @@ export interface StepBranchEvidence {
   };
   contradiction: boolean;
   exhausted: boolean;
+  steps?: number;
+  maxSteps?: number;
+  truncated?: boolean;
+  stopReason?: 'contradiction' | 'no-step' | 'step-limit' | 'replay-error';
   contradictionAt?: {
     kind: 'cell-empty' | 'house-duplicate' | 'house-missing';
     cell?: number;
@@ -123,11 +149,18 @@ export interface StepBranchEvidence {
   actions?: StepAction[];
 }
 
+export interface StepPatternEvidence {
+  family: string;
+  subtype?: string;
+}
+
 export interface StepEvidence {
   houses?: HouseRef[];
   cells?: StepCellEvidence[];
   links?: StepLinkEvidence[];
+  nodes?: StepNodeEvidence[];
   branches?: StepBranchEvidence[];
+  pattern?: StepPatternEvidence;
   note?: string;
 }
 
@@ -252,6 +285,8 @@ export type StepVerificationIssueCode =
   | 'invalid-evidence-house'
   | 'invalid-evidence-cell'
   | 'invalid-evidence-link'
+  | 'invalid-evidence-node'
+  | 'invalid-evidence-pattern'
   | 'invalid-evidence-branch'
   | 'evidence-missing-target'
   | 'initial-state-contradiction';

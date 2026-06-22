@@ -89,13 +89,22 @@ const CLASSIC_GALAXY_FALLBACK_TECHNIQUES: readonly TechniqueId[] = [
   'digit-forcing-chains',
   'cell-forcing-chains',
   'unit-forcing-chains',
+  'region-forcing-chains',
   'table-chain',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
   'bowmans-bingo',
+];
+
+const CLASSIC_GALAXY_EXCLUDED_TECHNIQUES: readonly TechniqueId[] = [
+  'nested-forcing-chains',
 ];
 
 export const CLASSIC_GALAXY_TECHNIQUE_ORDER: readonly TechniqueId[] = Object.freeze(buildDefaultTechniques()
   .map((technique) => technique.id)
-  .filter((id) => !CLASSIC_GALAXY_FALLBACK_TECHNIQUES.includes(id)));
+  .filter((id) =>
+    !CLASSIC_GALAXY_FALLBACK_TECHNIQUES.includes(id)
+    && !CLASSIC_GALAXY_EXCLUDED_TECHNIQUES.includes(id)));
 
 const CLASSIC_STABLE_POLICY_SOURCE: RatingPolicy = {
   id: 'classic-stable',

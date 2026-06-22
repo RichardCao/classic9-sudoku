@@ -89,6 +89,15 @@ node dist/src/cli/index.js generator-analyze request.json
 
 当前生成器始终保证唯一解。`constraints.uniqueness` 只接受 `required`，暂不支持跳过唯一性检查。
 
+唯一解检查是生成吞吐的重要路径。源码仓库提供一个轻量 benchmark 入口，用固定样例记录 `checkUniqueness()` 的 `status`、`elapsedMs` 和 `nodesVisited`：
+
+```bash
+npm run benchmark:uniqueness
+npm run benchmark:uniqueness -- --iterations 20 --json
+```
+
+这个脚本是开发/发布前分析工具，不随 npm 包发布。它用于比较当前 MRV 搜索、未来 optimized MRV 或 exact-cover/DLX prototype 的效果；不要把单机 benchmark 数值写成公开性能承诺。
+
 当前完整终盘生成器是 lightweight / reproducible 取向：它从一个固定合法终盘出发，做数字置换、行列带内/栈内置换、带/栈置换和转置等价变换。它适合 smoke、稳定测试和可复现候选池任务，但不声称覆盖所有终盘等价类。需要更大终盘多样性时，应在后续版本增加真正随机终盘生成或外部终盘池。
 
 `score.target` 和 `score.tolerance` 表示硬约束：如果二者同时给出，生成器只接受分数落在 `[target - tolerance, target + tolerance]` 范围内的题目。`target` 也会用于失败时选择最接近的 `bestCandidate`。

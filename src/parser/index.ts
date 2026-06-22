@@ -45,7 +45,7 @@ function parsePuzzleString(input: string): ParsePuzzleResult {
   const board: Board = [];
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index]!;
-    if (char === '.' || char === '0') {
+    if (char === '.' || char === '0' || char === '-') {
       board.push(EMPTY_VALUE);
       continue;
     }
