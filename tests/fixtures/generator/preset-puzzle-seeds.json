@@ -1,0 +1,65 @@
+[
+  {
+    "id": "generated-easy-101",
+    "puzzle": "000001002003000450026475008000003265098050041602014030005130080700008520860502173",
+    "solution": "574381692183629457926475318417893265398256741652714839245137986731968524869542173",
+    "clueCount": 40,
+    "ratingProfile": "classic-stable",
+    "ratingPolicyVersion": "classic-stable.v1",
+    "score": 620,
+    "grade": "basic",
+    "hardestTechnique": "naked-single",
+    "techniqueCounts": {
+      "naked-single": 21,
+      "full-house": 20
+    },
+    "canonicalKey": "000001002003000450026475008000003265098050041602014030005130080700008520860502173",
+    "source": {
+      "kind": "generated",
+      "license": "MIT-project-local",
+      "note": "Generated locally by classic9 generateOne seed 101."
+    }
+  },
+  {
+    "id": "generated-easy-102",
+    "puzzle": "000000012003014056041657830050090007439000068712005004190070680300109075500000940",
+    "solution": "675938412983214756241657839856493127439721568712865394194572683368149275527386941",
+    "clueCount": 40,
+    "ratingProfile": "classic-stable",
+    "ratingPolicyVersion": "classic-stable.v1",
+    "score": 610,
+    "grade": "basic",
+    "hardestTechnique": "naked-single",
+    "techniqueCounts": {
+      "naked-single": 20,
+      "full-house": 21
+    },
+    "canonicalKey": "000000012003014056041657830050090007439000068712005004190070680300109075500000940",
+    "source": {
+      "kind": "generated",
+      "license": "MIT-project-local",
+      "note": "Generated locally by classic9 generateOne seed 102."
+    }
+  },
+  {
+    "id": "generated-easy-103",
+    "puzzle": "000000001002013004035046002000035006301400278906002050060028305287051040500690827",
+    "solution": "694287531872513964135946782728135496351469278946872153469728315287351649513694827",
+    "clueCount": 40,
+    "ratingProfile": "classic-stable",
+    "ratingPolicyVersion": "classic-stable.v1",
+    "score": 610,
+    "grade": "basic",
+    "hardestTechnique": "naked-single",
+    "techniqueCounts": {
+      "naked-single": 20,
+      "full-house": 21
+    },
+    "canonicalKey": "000000001002013004035046002000035006301400278906002050060028305287051040500690827",
+    "source": {
+      "kind": "generated",
+      "license": "MIT-project-local",
+      "note": "Generated locally by classic9 generateOne seed 103."
+    }
+  }
+]

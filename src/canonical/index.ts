@@ -22,6 +22,7 @@ export interface CanonicalResult {
 
 export interface CanonicalPairResult extends CanonicalResult {
   solution: Board;
+  warnings?: string[];
 }
 
 export function validateCanonicalTransform(transform: CanonicalTransform): void {
@@ -87,6 +88,8 @@ function buildHouseOrders(): number[][] {
 }
 
 const STRUCTURAL_ORDERS = buildHouseOrders();
+const IDENTITY_ORDER = Object.freeze(Array.from({ length: BOARD_SIZE }, (_, index) => index));
+const IDENTITY_DIGIT_MAP = Object.freeze(Array.from({ length: BOARD_SIZE + 1 }, (_, index) => index));
 
 function buildCanonicalCandidate(
   board: Board,
@@ -162,6 +165,39 @@ function fillMissingDigitMapEntries(digitMap: number[], nextDigit: number): void
 
 export function canonicalizeBoard(board: Board): CanonicalResult {
   assertBoardValues(board);
+  if (board.every((value) => value === 0)) {
+    return {
+      algorithm: 'canonical.classic9',
+      version: '1',
+      key: '0'.repeat(CELL_COUNT),
+      board: new Array<number>(CELL_COUNT).fill(0),
+      transform: identityTransform(),
+    };
+  }
+  const filledCells = board
+    .map((value, index) => ({ value, index }))
+    .filter((entry) => entry.value !== 0);
+  if (filledCells.length === 1) {
+    const clue = filledCells[0]!;
+    const sourceRow = Math.floor(clue.index / BOARD_SIZE);
+    const sourceCol = clue.index % BOARD_SIZE;
+    const rowOrder = findOrderPlacingSourceAtTarget(sourceRow, BOARD_SIZE - 1);
+    const colOrder = findOrderPlacingSourceAtTarget(sourceCol, BOARD_SIZE - 1);
+    const digitMap = buildSingleClueDigitMap(clue.value);
+    const key = `${'0'.repeat(CELL_COUNT - 1)}1`;
+    return {
+      algorithm: 'canonical.classic9',
+      version: '1',
+      key,
+      board: keyToBoard(key),
+      transform: {
+        transposed: false,
+        rowOrder,
+        colOrder,
+        digitMap,
+      },
+    };
+  }
 
   let bestKey = '';
   let bestDigitMap = new Array<number>(10).fill(0);
@@ -201,38 +237,84 @@ export function canonicalizeBoard(board: Board): CanonicalResult {
   };
 }
 
+function findOrderPlacingSourceAtTarget(source: number, target: number): number[] {
+  const order = STRUCTURAL_ORDERS.find((candidate) => candidate[target] === source);
+  if (!order) {
+    throw new Error(`No canonical structural order can place ${source} at ${target}`);
+  }
+  return [...order];
+}
+
+function buildSingleClueDigitMap(sourceDigit: number): number[] {
+  const digitMap = new Array<number>(10).fill(0);
+  digitMap[sourceDigit] = 1;
+  let next = 2;
+  for (let digit = 1; digit <= 9; digit += 1) {
+    if (digit === sourceDigit) {
+      continue;
+    }
+    digitMap[digit] = next;
+    next += 1;
+  }
+  return digitMap;
+}
+
 export function canonicalizePair(puzzle: Board, solution: Board): CanonicalPairResult {
-  assertSolutionMatchesPuzzle(puzzle, solution);
+  const warnings = collectSolutionWarnings(puzzle, solution);
   const canonical = canonicalizeBoard(puzzle);
   return {
     ...canonical,
     solution: applyTransformToBoard(solution, canonical.transform),
+    ...(warnings.length > 0 ? { warnings } : {}),
   };
 }
 
-function assertSolutionMatchesPuzzle(puzzle: Board, solution: Board): void {
+function identityTransform(): CanonicalTransform {
+  return {
+    transposed: false,
+    rowOrder: [...IDENTITY_ORDER],
+    colOrder: [...IDENTITY_ORDER],
+    digitMap: [...IDENTITY_DIGIT_MAP],
+  };
+}
+
+function collectSolutionWarnings(puzzle: Board, solution: Board): string[] {
   assertBoardValues(puzzle, 'Puzzle');
   assertBoardValues(solution, 'Solution');
+  const warnings: string[] = [];
   for (let cell = 0; cell < CELL_COUNT; cell += 1) {
     const value = solution[cell] ?? 0;
     if (value === 0) {
-      throw new Error('Solution must be complete and cannot contain empty cells');
+      warnings.push('Solution is incomplete; canonicalizePair applied the puzzle transform on a best-effort basis.');
+      break;
+    }
+  }
+  for (let cell = 0; cell < CELL_COUNT; cell += 1) {
+    const value = solution[cell] ?? 0;
+    if (value === 0) {
+      continue;
     }
     const clue = puzzle[cell] ?? 0;
     if (clue !== 0 && clue !== value) {
-      throw new Error(`Solution does not match puzzle clue at ${cell}`);
+      warnings.push(`Solution does not match puzzle clue at ${cell}; canonicalizePair result is best-effort.`);
+      break;
     }
   }
   for (const house of ALL_HOUSES) {
     const seen = new Set<number>();
     for (const cell of getHouseCells(house)) {
       const value = solution[cell] ?? 0;
+      if (value === 0) {
+        continue;
+      }
       if (seen.has(value)) {
-        throw new Error(`Solution has duplicate digit in ${house.type} ${house.index}`);
+        warnings.push(`Solution has duplicate digit in ${house.type} ${house.index}; canonicalizePair result is best-effort.`);
+        return warnings;
       }
       seen.add(value);
     }
   }
+  return warnings;
 }
 
 export function applyTransformToBoard(board: Board, transform: CanonicalTransform): Board {

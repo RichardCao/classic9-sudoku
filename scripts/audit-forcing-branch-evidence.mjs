@@ -23,6 +23,8 @@ let stepsWithBranches = 0;
 let branchCount = 0;
 let truncatedBranches = 0;
 let contradictionBranches = 0;
+let emptyActionSteps = 0;
+let nonForcingPatternSteps = 0;
 
 for (const record of fixture.rows) {
   const rating = rate(record.puzzle, getRatingPolicy(record.profile));
@@ -30,6 +32,7 @@ for (const record of fixture.rows) {
     if (!isForcingRelatedStep(step, definitions)) {
       continue;
     }
+    const definition = definitions.get(step.technique);
     forcingSteps += 1;
     const branchIssues = [];
     const branches = step.evidence.branches ?? [];
@@ -37,6 +40,14 @@ for (const record of fixture.rows) {
       branchIssues.push('missing-branches');
     } else {
       stepsWithBranches += 1;
+    }
+    if (step.actions.length === 0) {
+      emptyActionSteps += 1;
+      branchIssues.push('empty-actions');
+    }
+    if (definition?.family === 'forcing' && step.evidence.pattern?.family !== 'forcing') {
+      nonForcingPatternSteps += 1;
+      branchIssues.push(`pattern-family:${step.evidence.pattern?.family ?? 'missing'}<expected:forcing`);
     }
     for (const [branchIndex, branch] of branches.entries()) {
       branchCount += 1;
@@ -80,6 +91,8 @@ const payload = {
     branchCount,
     truncatedBranches,
     contradictionBranches,
+    emptyActionSteps,
+    nonForcingPatternSteps,
     stopReasonCounts,
     passed: rows.length - failed.length,
     failed: failed.length,
@@ -194,7 +207,7 @@ function requireValue(args, index, option) {
 function printHumanSummary(payload) {
   const summary = payload.summary;
   process.stdout.write(`Forcing branch evidence: ${summary.passed}/${summary.forcingSteps} forcing-related step(s) passed\n`);
-  process.stdout.write(`Branches: ${summary.branchCount}; truncated=${summary.truncatedBranches}; contradictions=${summary.contradictionBranches}\n`);
+  process.stdout.write(`Branches: ${summary.branchCount}; truncated=${summary.truncatedBranches}; contradictions=${summary.contradictionBranches}; emptyActions=${summary.emptyActionSteps}; nonForcingPatterns=${summary.nonForcingPatternSteps}\n`);
   process.stdout.write(`Stop reasons: ${Object.entries(summary.stopReasonCounts).map(([reason, count]) => `${reason}=${count}`).join(', ') || 'none'}\n`);
   for (const row of payload.rows.filter((item) => !item.ok)) {
     process.stdout.write(`- ${row.rowId} step ${row.stepIndex} ${row.technique}: ${row.issues.join(', ')}\n`);

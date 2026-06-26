@@ -5,7 +5,7 @@ import type { SolveAnalysis, TechniqueId } from '../solver/types.js';
 import type { Board } from '../core/types.js';
 import { ALL_HOUSES, assertBoardValues, getHouseCells } from '../core/grid.js';
 import { canonicalizeBoard, canonicalizePair } from '../canonical/index.js';
-import { SolutionGridFactory } from './solution-grid.js';
+import { isCompleteValidSolution, SolutionGridFactory, type SolutionSource } from './solution-grid.js';
 import { ClueRemover } from './clue-remover.js';
 import { PuzzleMinimizer } from './minimizer.js';
 import { MAX_SEED, defaultSeed } from './random.js';
@@ -67,6 +67,8 @@ export interface GenerationRequest {
   budget?: GenerationBudget;
   canonicalize?: boolean;
   minimality?: 'none' | 'strict';
+  solutionSource?: SolutionSource;
+  solutionPool?: Board[];
   relaxation?: GenerationRelaxation;
   /** Search-only field. generateOne accepts and validates it for request reuse, then ignores it. */
   maxResults?: number;
@@ -93,6 +95,12 @@ export interface GenerationDiagnostics {
   elapsedMs: number;
   rejectedByReason: Record<string, number>;
   warnings: string[];
+  solutionSource?: SolutionSource;
+  solutionGeneration?: {
+    nodesVisited: number;
+    elapsedMs: number;
+    poolSize?: number;
+  };
 }
 
 export interface GenerationResult {
@@ -151,6 +159,9 @@ export interface SearchSummary {
 export interface CandidateSelectionPlan {
   maxResults: number;
   scoreBuckets?: Array<{ min: number; max: number; limit?: number }>;
+  clueBuckets?: Array<{ min: number; max: number; limit?: number }>;
+  hardestTechniqueBuckets?: Array<{ techniques: TechniqueId[]; limit?: number }>;
+  requiredTechniqueBuckets?: Array<{ techniques: TechniqueId[]; minCount?: number; limit?: number }>;
   preferredTechniques?: TechniqueId[];
   dedupeCanonical?: boolean;
 }
@@ -168,9 +179,27 @@ export interface CandidateSelectionDiagnostics {
   selected: number;
   rejected: number;
   rejectedByReason: Record<string, number>;
+  canonicalKeyUsage: CanonicalKeyUsageDiagnostics;
   scoreBucketCounts: Array<{
     min: number;
     max: number;
+    limit?: number;
+    selected: number;
+  }>;
+  clueBucketCounts: Array<{
+    min: number;
+    max: number;
+    limit?: number;
+    selected: number;
+  }>;
+  hardestTechniqueBucketCounts: Array<{
+    techniques: TechniqueId[];
+    limit?: number;
+    selected: number;
+  }>;
+  requiredTechniqueBucketCounts: Array<{
+    techniques: TechniqueId[];
+    minCount: number;
     limit?: number;
     selected: number;
   }>;
@@ -180,6 +209,7 @@ export interface CandidateSelectionDiagnostics {
 export interface CandidatePoolStatsOptions {
   scoreBucketSize?: number;
   clueBucketSize?: number;
+  verifyCanonicalKey?: boolean;
 }
 
 export interface CandidatePoolStats {
@@ -199,6 +229,11 @@ export interface CandidatePoolStats {
   gradeCounts: Record<string, number>;
   hardestTechniqueCounts: Partial<Record<TechniqueId, number>>;
   techniqueHits: Partial<Record<TechniqueId, number>>;
+  solved: {
+    true: number;
+    false: number;
+  };
+  sourceCounts: Record<string, number>;
   canonical: {
     withKey: number;
     withoutKey: number;
@@ -214,6 +249,11 @@ export interface CandidatePoolStats {
 
 export interface CandidateDedupeOptions {
   key?: 'canonical' | 'puzzle';
+  verifyCanonicalKey?: boolean;
+}
+
+export interface CandidateSelectionOptions {
+  verifyCanonicalKey?: boolean;
 }
 
 export interface CandidateDedupeResult {
@@ -228,7 +268,14 @@ export interface CandidateDedupeResult {
     kept: number;
     removed: number;
     key: 'canonical' | 'puzzle';
+    canonicalKeyUsage: CanonicalKeyUsageDiagnostics;
   };
+}
+
+export interface CanonicalKeyUsageDiagnostics {
+  reused: number;
+  computed: number;
+  invalid: number;
 }
 
 export interface GenerationRequestIssue {
@@ -289,6 +336,8 @@ const GENERATION_REQUEST_FIELDS = new Set([
   'budget',
   'canonicalize',
   'minimality',
+  'solutionSource',
+  'solutionPool',
   'relaxation',
   'maxResults',
   'scoreBucketSize',
@@ -451,7 +500,44 @@ function generateOneStrict(request: GenerationRequest, relaxationsApplied?: Gene
     }
 
     const seed = baseSeed + attempt;
-    const solution = solutionFactory.create(seed);
+    const solutionOptions = {
+      source: request.solutionSource ?? 'transform-fixed',
+      maxElapsedMs: maxElapsedMs - (Date.now() - startedAt),
+      ...(request.solutionPool ? { solutionPool: request.solutionPool } : {}),
+    };
+    const solutionGeneration = solutionFactory.createWithOptions(seed, solutionOptions);
+    diagnostics.solutionSource = solutionGeneration.diagnostics.source;
+    diagnostics.solutionGeneration = {
+      nodesVisited: solutionGeneration.diagnostics.nodesVisited,
+      elapsedMs: solutionGeneration.diagnostics.elapsedMs,
+      ...(typeof solutionGeneration.diagnostics.poolSize === 'number' ? { poolSize: solutionGeneration.diagnostics.poolSize } : {}),
+    };
+    if (solutionGeneration.status === 'invalid-pool') {
+      diagnostics.elapsedMs = Date.now() - startedAt;
+      return {
+        status: 'invalid-request',
+        requestAnalysis: addGenerationRequestError(requestAnalysis, {
+          code: 'invalid-solution-pool',
+          message: solutionGeneration.diagnostics.message ?? 'solutionPool 无效。',
+          details: {
+            poolSize: solutionGeneration.diagnostics.poolSize,
+          },
+        }),
+        diagnostics,
+        ...(relaxationsApplied ? { relaxationsApplied } : {}),
+      };
+    }
+    if (solutionGeneration.status === 'timeout' || !solutionGeneration.solution) {
+      diagnostics.rejectedByReason['solution-generation-timeout'] = (diagnostics.rejectedByReason['solution-generation-timeout'] ?? 0) + 1;
+      diagnostics.elapsedMs = Date.now() - startedAt;
+      return withBestCandidate({
+        status: 'timeout',
+        requestAnalysis,
+        diagnostics,
+        ...(relaxationsApplied ? { relaxationsApplied } : {}),
+      }, bestCandidate);
+    }
+    const solution = solutionGeneration.solution;
     const remainingBeforeCarve = maxElapsedMs - (Date.now() - startedAt);
     if (remainingBeforeCarve <= 0) {
       diagnostics.elapsedMs = Date.now() - startedAt;
@@ -720,16 +806,21 @@ export function* search(request: SearchRequest): Iterable<GenerationEvent> {
 export function selectFromCandidates(
   candidates: readonly GeneratedPuzzle[],
   plan: CandidateSelectionPlan,
+  options: CandidateSelectionOptions = {},
 ): CandidateSelectionResult {
-  validateCandidatePool(candidates);
+  validateCandidatePool(candidates, { verifyCanonicalKey: options.verifyCanonicalKey === true });
   validateCandidateSelectionPlan(plan);
 
   const selected: GeneratedPuzzle[] = [];
   const rejected: CandidateSelectionResult['rejected'] = [];
   const rejectedByReason: Record<string, number> = {};
   const preferredTechniqueHits: Partial<Record<TechniqueId, number>> = {};
+  const canonicalKeyUsage = createCanonicalKeyUsageDiagnostics();
   const seenCanonical = new Set<string>();
-  const bucketCounts = new Map<number, number>();
+  const scoreBucketCounts = new Map<number, number>();
+  const clueBucketCounts = new Map<number, number>();
+  const hardestTechniqueBucketCounts = new Map<number, number>();
+  const requiredTechniqueBucketCounts = new Map<number, number>();
   const sorted = [...candidates].sort((left, right) => (
     countPreferredTechniqueHits(left, plan.preferredTechniques) - countPreferredTechniqueHits(right, plan.preferredTechniques)
   ) * -1 || right.score - left.score);
@@ -740,22 +831,69 @@ export function selectFromCandidates(
       continue;
     }
 
-    const bucketIndex = findScoreBucket(plan.scoreBuckets, puzzle.score);
-    if (plan.scoreBuckets && bucketIndex < 0) {
+    if (!puzzle.solved) {
+      rejectCandidate(rejected, rejectedByReason, puzzle, 'unsolved-candidate');
+      continue;
+    }
+
+    const scoreBucketIndex = findRangeBucket(plan.scoreBuckets, puzzle.score);
+    if (plan.scoreBuckets && scoreBucketIndex < 0) {
       rejectCandidate(rejected, rejectedByReason, puzzle, 'score-out-of-buckets');
       continue;
     }
-    if (bucketIndex >= 0) {
-      const bucket = plan.scoreBuckets![bucketIndex]!;
-      const currentCount = bucketCounts.get(bucketIndex) ?? 0;
+    if (scoreBucketIndex >= 0) {
+      const bucket = plan.scoreBuckets![scoreBucketIndex]!;
+      const currentCount = scoreBucketCounts.get(scoreBucketIndex) ?? 0;
       if (typeof bucket.limit === 'number' && currentCount >= bucket.limit) {
         rejectCandidate(rejected, rejectedByReason, puzzle, 'score-bucket-full');
         continue;
       }
     }
 
+    const clueBucketIndex = findRangeBucket(plan.clueBuckets, puzzle.clueCount);
+    if (plan.clueBuckets && clueBucketIndex < 0) {
+      rejectCandidate(rejected, rejectedByReason, puzzle, 'clue-out-of-buckets');
+      continue;
+    }
+    if (clueBucketIndex >= 0) {
+      const bucket = plan.clueBuckets![clueBucketIndex]!;
+      const currentCount = clueBucketCounts.get(clueBucketIndex) ?? 0;
+      if (typeof bucket.limit === 'number' && currentCount >= bucket.limit) {
+        rejectCandidate(rejected, rejectedByReason, puzzle, 'clue-bucket-full');
+        continue;
+      }
+    }
+
+    const hardestTechniqueBucketIndex = findHardestTechniqueBucket(plan.hardestTechniqueBuckets, puzzle);
+    if (plan.hardestTechniqueBuckets && hardestTechniqueBucketIndex < 0) {
+      rejectCandidate(rejected, rejectedByReason, puzzle, 'hardest-technique-out-of-buckets');
+      continue;
+    }
+    if (hardestTechniqueBucketIndex >= 0) {
+      const bucket = plan.hardestTechniqueBuckets![hardestTechniqueBucketIndex]!;
+      const currentCount = hardestTechniqueBucketCounts.get(hardestTechniqueBucketIndex) ?? 0;
+      if (typeof bucket.limit === 'number' && currentCount >= bucket.limit) {
+        rejectCandidate(rejected, rejectedByReason, puzzle, 'hardest-technique-bucket-full');
+        continue;
+      }
+    }
+
+    const requiredTechniqueBucketIndex = findRequiredTechniqueBucket(plan.requiredTechniqueBuckets, puzzle);
+    if (plan.requiredTechniqueBuckets && requiredTechniqueBucketIndex < 0) {
+      rejectCandidate(rejected, rejectedByReason, puzzle, 'required-technique-out-of-buckets');
+      continue;
+    }
+    if (requiredTechniqueBucketIndex >= 0) {
+      const bucket = plan.requiredTechniqueBuckets![requiredTechniqueBucketIndex]!;
+      const currentCount = requiredTechniqueBucketCounts.get(requiredTechniqueBucketIndex) ?? 0;
+      if (typeof bucket.limit === 'number' && currentCount >= bucket.limit) {
+        rejectCandidate(rejected, rejectedByReason, puzzle, 'required-technique-bucket-full');
+        continue;
+      }
+    }
+
     if (plan.dedupeCanonical) {
-      const dedupeKey = puzzle.canonicalKey ?? puzzleKey(puzzle);
+      const dedupeKey = canonicalDedupeKey(puzzle, canonicalKeyUsage);
       if (seenCanonical.has(dedupeKey)) {
         rejectCandidate(rejected, rejectedByReason, puzzle, 'canonical-duplicate');
         continue;
@@ -763,8 +901,17 @@ export function selectFromCandidates(
       seenCanonical.add(dedupeKey);
     }
 
-    if (bucketIndex >= 0) {
-      bucketCounts.set(bucketIndex, (bucketCounts.get(bucketIndex) ?? 0) + 1);
+    if (scoreBucketIndex >= 0) {
+      scoreBucketCounts.set(scoreBucketIndex, (scoreBucketCounts.get(scoreBucketIndex) ?? 0) + 1);
+    }
+    if (clueBucketIndex >= 0) {
+      clueBucketCounts.set(clueBucketIndex, (clueBucketCounts.get(clueBucketIndex) ?? 0) + 1);
+    }
+    if (hardestTechniqueBucketIndex >= 0) {
+      hardestTechniqueBucketCounts.set(hardestTechniqueBucketIndex, (hardestTechniqueBucketCounts.get(hardestTechniqueBucketIndex) ?? 0) + 1);
+    }
+    if (requiredTechniqueBucketIndex >= 0) {
+      requiredTechniqueBucketCounts.set(requiredTechniqueBucketIndex, (requiredTechniqueBucketCounts.get(requiredTechniqueBucketIndex) ?? 0) + 1);
     }
     selected.push(cloneGeneratedPuzzle(puzzle));
     recordPreferredTechniqueHits(preferredTechniqueHits, puzzle, plan.preferredTechniques);
@@ -777,7 +924,11 @@ export function selectFromCandidates(
       selected: selected.length,
       rejected: rejected.length,
       rejectedByReason,
-      scoreBucketCounts: buildScoreBucketCounts(plan, bucketCounts),
+      canonicalKeyUsage,
+      scoreBucketCounts: buildRangeBucketCounts(plan.scoreBuckets, scoreBucketCounts),
+      clueBucketCounts: buildRangeBucketCounts(plan.clueBuckets, clueBucketCounts),
+      hardestTechniqueBucketCounts: buildHardestTechniqueBucketCounts(plan, hardestTechniqueBucketCounts),
+      requiredTechniqueBucketCounts: buildRequiredTechniqueBucketCounts(plan, requiredTechniqueBucketCounts),
       preferredTechniqueHits,
     },
   };
@@ -787,7 +938,7 @@ export function analyzeCandidatePool(
   candidates: readonly GeneratedPuzzle[],
   options: CandidatePoolStatsOptions = {},
 ): CandidatePoolStats {
-  validateCandidatePool(candidates);
+  validateCandidatePool(candidates, { verifyCanonicalKey: options.verifyCanonicalKey === true });
   const scoreBucketSize = options.scoreBucketSize ?? 100;
   const clueBucketSize = options.clueBucketSize ?? 5;
   validatePositiveIntegerOption('scoreBucketSize', scoreBucketSize);
@@ -809,6 +960,11 @@ export function analyzeCandidatePool(
     gradeCounts: {},
     hardestTechniqueCounts: {},
     techniqueHits: {},
+    solved: {
+      true: 0,
+      false: 0,
+    },
+    sourceCounts: {},
     canonical: {
       withKey: 0,
       withoutKey: 0,
@@ -848,6 +1004,13 @@ export function analyzeCandidatePool(
       const id = technique as TechniqueId;
       stats.techniqueHits[id] = (stats.techniqueHits[id] ?? 0) + count;
     }
+    if (candidate.solved) {
+      stats.solved.true += 1;
+    } else {
+      stats.solved.false += 1;
+    }
+    const source = candidateSource(candidate);
+    stats.sourceCounts[source] = (stats.sourceCounts[source] ?? 0) + 1;
 
     if (candidate.canonicalKey) {
       stats.canonical.withKey += 1;
@@ -879,20 +1042,21 @@ export function dedupeCandidates(
   candidates: readonly GeneratedPuzzle[],
   options: CandidateDedupeOptions = {},
 ): CandidateDedupeResult {
-  validateCandidatePool(candidates);
+  validateCandidatePool(candidates, { verifyCanonicalKey: options.verifyCanonicalKey === true });
   const keyMode = options.key ?? 'canonical';
   const kept: GeneratedPuzzle[] = [];
   const rejected: CandidateDedupeResult['rejected'] = [];
   const seen = new Set<string>();
+  const canonicalKeyUsage = createCanonicalKeyUsageDiagnostics();
 
   for (const candidate of candidates) {
     const key = keyMode === 'canonical'
-      ? candidate.canonicalKey ?? puzzleKey(candidate)
+      ? canonicalDedupeKey(candidate, canonicalKeyUsage)
       : puzzleKey(candidate);
     if (seen.has(key)) {
       rejected.push({
         puzzle: cloneGeneratedPuzzle(candidate),
-        reason: keyMode === 'canonical' && candidate.canonicalKey ? 'canonical-duplicate' : 'puzzle-duplicate',
+        reason: keyMode === 'canonical' ? 'canonical-duplicate' : 'puzzle-duplicate',
         key,
       });
       continue;
@@ -909,20 +1073,28 @@ export function dedupeCandidates(
       kept: kept.length,
       removed: rejected.length,
       key: keyMode,
+      canonicalKeyUsage,
     },
   };
 }
 
-export function validateCandidatePool(candidates: readonly GeneratedPuzzle[]): void {
+export function validateCandidatePool(
+  candidates: readonly GeneratedPuzzle[],
+  options: { verifyCanonicalKey?: boolean } = {},
+): void {
   if (!Array.isArray(candidates)) {
     throw new Error('候选池必须是 GeneratedPuzzle JSON array。');
   }
   for (const [index, candidate] of candidates.entries()) {
-    validateGeneratedPuzzle(candidate, index);
+    validateGeneratedPuzzle(candidate, index, options);
   }
 }
 
-export function validateGeneratedPuzzle(candidate: GeneratedPuzzle, index?: number): void {
+export function validateGeneratedPuzzle(
+  candidate: GeneratedPuzzle,
+  index?: number,
+  options: { verifyCanonicalKey?: boolean } = {},
+): void {
   const label = typeof index === 'number' ? `候选题第 ${index + 1} 项` : '候选题';
   if (!isPlainObject(candidate)) {
     throw new Error(`${label} 必须是 object。`);
@@ -967,7 +1139,7 @@ export function validateGeneratedPuzzle(candidate: GeneratedPuzzle, index?: numb
   ) {
     throw new Error(`${label}.canonicalKey 必须是 81 位数字字符串。`);
   }
-  if (typeof candidate.canonicalKey === 'string') {
+  if (typeof candidate.canonicalKey === 'string' && options.verifyCanonicalKey) {
     const expectedKey = canonicalizeBoard(candidate.puzzle).key;
     if (candidate.canonicalKey !== expectedKey) {
       throw new Error(`${label}.canonicalKey 与 puzzle 的 canonical key 不一致。`);
@@ -1032,20 +1204,54 @@ function validateCandidateSelectionPlan(plan: CandidateSelectionPlan): void {
     }
   }
 
-  for (const [index, bucket] of (plan.scoreBuckets ?? []).entries()) {
+  validateRangeBuckets(plan.scoreBuckets, '分数桶');
+  validateRangeBuckets(plan.clueBuckets, '线索数桶');
+  validateTechniqueBuckets(plan.hardestTechniqueBuckets, 'hardestTechniqueBuckets', knownTechniques);
+  validateTechniqueBuckets(plan.requiredTechniqueBuckets, 'requiredTechniqueBuckets', knownTechniques);
+}
+
+function validateRangeBuckets(
+  buckets: CandidateSelectionPlan['scoreBuckets'] | CandidateSelectionPlan['clueBuckets'] | undefined,
+  label: string,
+): void {
+  for (const [index, bucket] of (buckets ?? []).entries()) {
     if (typeof bucket.min !== 'number' || !Number.isFinite(bucket.min) || typeof bucket.max !== 'number' || !Number.isFinite(bucket.max)) {
-      throw new Error(`选择计划第 ${index + 1} 个分数桶必须包含有限数字 min 和 max。`);
+      throw new Error(`选择计划第 ${index + 1} 个${label}必须包含有限数字 min 和 max。`);
     }
     if (bucket.min > bucket.max) {
-      throw new Error(`选择计划第 ${index + 1} 个分数桶的 min 不能大于 max。`);
+      throw new Error(`选择计划第 ${index + 1} 个${label}的 min 不能大于 max。`);
     }
     if (bucket.limit !== undefined && (!Number.isInteger(bucket.limit) || bucket.limit <= 0)) {
-      throw new Error(`选择计划第 ${index + 1} 个分数桶的 limit 必须是大于 0 的整数。`);
+      throw new Error(`选择计划第 ${index + 1} 个${label}的 limit 必须是大于 0 的整数。`);
     }
-    for (const [previousIndex, previous] of (plan.scoreBuckets ?? []).slice(0, index).entries()) {
+    for (const [previousIndex, previous] of (buckets ?? []).slice(0, index).entries()) {
       if (rangesOverlap(previous.min, previous.max, bucket.min, bucket.max)) {
-        throw new Error(`选择计划第 ${previousIndex + 1} 个和第 ${index + 1} 个分数桶不能重叠。`);
+        throw new Error(`选择计划第 ${previousIndex + 1} 个和第 ${index + 1} 个${label}不能重叠。`);
       }
+    }
+  }
+}
+
+function validateTechniqueBuckets(
+  buckets: CandidateSelectionPlan['hardestTechniqueBuckets'] | CandidateSelectionPlan['requiredTechniqueBuckets'] | undefined,
+  field: string,
+  knownTechniques: Set<TechniqueId>,
+): void {
+  for (const [index, bucket] of (buckets ?? []).entries()) {
+    if (!Array.isArray(bucket.techniques) || bucket.techniques.length === 0) {
+      throw new Error(`选择计划第 ${index + 1} 个 ${field}.techniques 必须是非空数组。`);
+    }
+    for (const technique of bucket.techniques) {
+      if (!knownTechniques.has(technique)) {
+        throw new Error(`选择计划第 ${index + 1} 个 ${field} 包含未知技巧：${technique}`);
+      }
+    }
+    if (bucket.limit !== undefined && (!Number.isInteger(bucket.limit) || bucket.limit <= 0)) {
+      throw new Error(`选择计划第 ${index + 1} 个 ${field}.limit 必须是大于 0 的整数。`);
+    }
+    const minCount = (bucket as { minCount?: unknown }).minCount;
+    if (minCount !== undefined && (!Number.isInteger(minCount) || (minCount as number) <= 0)) {
+      throw new Error(`选择计划第 ${index + 1} 个 ${field}.minCount 必须是大于 0 的整数。`);
     }
   }
 }
@@ -1100,8 +1306,37 @@ function recordNumberBucket(output: Record<string, number>, value: number, bucke
   output[key] = (output[key] ?? 0) + 1;
 }
 
+function candidateSource(candidate: GeneratedPuzzle): string {
+  const value = (candidate as GeneratedPuzzle & { source?: unknown; solutionSource?: unknown }).source
+    ?? (candidate as GeneratedPuzzle & { source?: unknown; solutionSource?: unknown }).solutionSource;
+  return typeof value === 'string' && value.length > 0 ? value : 'unknown';
+}
+
 function puzzleKey(candidate: GeneratedPuzzle): string {
   return candidate.puzzle.join('');
+}
+
+function createCanonicalKeyUsageDiagnostics(): CanonicalKeyUsageDiagnostics {
+  return {
+    reused: 0,
+    computed: 0,
+    invalid: 0,
+  };
+}
+
+function canonicalDedupeKey(
+  candidate: GeneratedPuzzle,
+  diagnostics: CanonicalKeyUsageDiagnostics,
+): string {
+  if (typeof candidate.canonicalKey === 'string' && /^[0-9]{81}$/.test(candidate.canonicalKey)) {
+    diagnostics.reused += 1;
+    return candidate.canonicalKey;
+  }
+  if (typeof candidate.canonicalKey !== 'undefined') {
+    diagnostics.invalid += 1;
+  }
+  diagnostics.computed += 1;
+  return canonicalizeBoard(candidate.puzzle).key;
 }
 
 function rejectCandidate(
@@ -1127,13 +1362,36 @@ function rangesOverlap(leftMin: number, leftMax: number, rightMin: number, right
   return leftMin <= rightMax && rightMin <= leftMax;
 }
 
-function buildScoreBucketCounts(
-  plan: CandidateSelectionPlan,
+function buildRangeBucketCounts(
+  buckets: CandidateSelectionPlan['scoreBuckets'] | CandidateSelectionPlan['clueBuckets'],
   bucketCounts: Map<number, number>,
-): CandidateSelectionDiagnostics['scoreBucketCounts'] {
-  return (plan.scoreBuckets ?? []).map((bucket, index) => ({
+): CandidateSelectionDiagnostics['scoreBucketCounts'] | CandidateSelectionDiagnostics['clueBucketCounts'] {
+  return (buckets ?? []).map((bucket, index) => ({
     min: bucket.min,
     max: bucket.max,
+    ...(bucket.limit !== undefined ? { limit: bucket.limit } : {}),
+    selected: bucketCounts.get(index) ?? 0,
+  }));
+}
+
+function buildHardestTechniqueBucketCounts(
+  plan: CandidateSelectionPlan,
+  bucketCounts: Map<number, number>,
+): CandidateSelectionDiagnostics['hardestTechniqueBucketCounts'] {
+  return (plan.hardestTechniqueBuckets ?? []).map((bucket, index) => ({
+    techniques: [...bucket.techniques],
+    ...(bucket.limit !== undefined ? { limit: bucket.limit } : {}),
+    selected: bucketCounts.get(index) ?? 0,
+  }));
+}
+
+function buildRequiredTechniqueBucketCounts(
+  plan: CandidateSelectionPlan,
+  bucketCounts: Map<number, number>,
+): CandidateSelectionDiagnostics['requiredTechniqueBucketCounts'] {
+  return (plan.requiredTechniqueBuckets ?? []).map((bucket, index) => ({
+    techniques: [...bucket.techniques],
+    minCount: bucket.minCount ?? 1,
     ...(bucket.limit !== undefined ? { limit: bucket.limit } : {}),
     selected: bucketCounts.get(index) ?? 0,
   }));
@@ -1314,12 +1572,56 @@ function validateGenerationRequestShape(request: GenerationRequest, errors: Gene
       details: { minimality: rawRequest.minimality },
     });
   }
+  if (
+    typeof rawRequest.solutionSource !== 'undefined'
+    && rawRequest.solutionSource !== 'transform-fixed'
+    && rawRequest.solutionSource !== 'random-backtracking'
+    && rawRequest.solutionSource !== 'pool'
+  ) {
+    errors.push({
+      code: 'invalid-solution-source',
+      message: 'solutionSource 只能是 transform-fixed、random-backtracking 或 pool。',
+      details: { solutionSource: rawRequest.solutionSource },
+    });
+  }
+  if (rawRequest.solutionSource === 'pool' && typeof rawRequest.solutionPool === 'undefined') {
+    errors.push({
+      code: 'invalid-solution-pool',
+      message: 'solutionSource 为 pool 时必须提供 solutionPool，或在 CLI 使用 --solution-pool。',
+      details: { solutionSource: rawRequest.solutionSource },
+    });
+  }
+  validateSolutionPool(rawRequest.solutionPool, errors);
 
   validateBudget(rawRequest.budget as GenerationBudget | undefined, errors);
   validateRelaxation(rawRequest.relaxation as GenerationRelaxation | undefined, errors);
   validateRatingPolicyForGeneration(rawRequest.ratingPolicy as RatingPolicy | undefined, errors);
   validateSearchOnlyRequestFields(request, errors);
   validateGenerationConstraintShape(rawRequest.constraints as GenerationConstraint | undefined, errors);
+}
+
+function validateSolutionPool(value: unknown, errors: GenerationRequestIssue[]): void {
+  if (typeof value === 'undefined') {
+    return;
+  }
+  if (!Array.isArray(value)) {
+    errors.push({
+      code: 'invalid-solution-pool',
+      message: 'solutionPool 必须是完整终盘数组。',
+      details: { solutionPool: value },
+    });
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    if (!Array.isArray(item) || !isCompleteValidSolution(item as Board)) {
+      errors.push({
+        code: 'invalid-solution-pool',
+        message: `solutionPool 第 ${index + 1} 项必须是完整合法终盘。`,
+        details: { index },
+      });
+      return;
+    }
+  }
 }
 
 function validateSearchOnlyRequestFields(request: GenerationRequest, errors: GenerationRequestIssue[]): void {
@@ -2165,14 +2467,37 @@ function firstRejectReason(result: GenerationResult): string {
   return result.status;
 }
 
-function findScoreBucket(
-  buckets: CandidateSelectionPlan['scoreBuckets'],
-  score: number,
+function findRangeBucket(
+  buckets: CandidateSelectionPlan['scoreBuckets'] | CandidateSelectionPlan['clueBuckets'],
+  value: number,
 ): number {
   if (!buckets) {
     return -1;
   }
-  return buckets.findIndex((bucket) => score >= bucket.min && score <= bucket.max);
+  return buckets.findIndex((bucket) => value >= bucket.min && value <= bucket.max);
+}
+
+function findHardestTechniqueBucket(
+  buckets: CandidateSelectionPlan['hardestTechniqueBuckets'],
+  puzzle: GeneratedPuzzle,
+): number {
+  if (!buckets) {
+    return -1;
+  }
+  return buckets.findIndex((bucket) => puzzle.hardestTechnique !== null && bucket.techniques.includes(puzzle.hardestTechnique));
+}
+
+function findRequiredTechniqueBucket(
+  buckets: CandidateSelectionPlan['requiredTechniqueBuckets'],
+  puzzle: GeneratedPuzzle,
+): number {
+  if (!buckets) {
+    return -1;
+  }
+  return buckets.findIndex((bucket) => {
+    const minCount = bucket.minCount ?? 1;
+    return bucket.techniques.some((technique) => (puzzle.techniqueCounts[technique] ?? 0) >= minCount);
+  });
 }
 
 function recordAccepted(summary: SearchSummary, puzzle: GeneratedPuzzle, bucketSize: number): void {

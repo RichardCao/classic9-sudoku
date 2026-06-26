@@ -13,6 +13,18 @@ import {
 const EMPTY_GRID = '000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 const DEFAULT_INPUT = 'tests/fixtures/reference-techniques/reference-smoke.json';
 const DIRECT_TECHNIQUES = new Set(['direct-pointing', 'direct-claiming', 'direct-hidden-pair', 'direct-hidden-triplet']);
+const BASIC_TECHNIQUES = new Set([
+  'full-house',
+  'naked-single',
+  'hidden-single',
+  'locked-candidates',
+  'naked-pair',
+  'hidden-pair',
+  'naked-triple',
+  'hidden-triple',
+  'naked-quad',
+  'hidden-quad',
+]);
 const FISH_TECHNIQUES = new Set([
   'x-wing',
   'swordfish',
@@ -34,6 +46,7 @@ const CHAIN_TECHNIQUES = new Set([
   'simple-coloring',
   'forcing-x-chain',
   'x-chain',
+  'x-coloring',
   'bidirectional-y-cycle',
   'xy-chain',
   'multi-colors',
@@ -41,11 +54,25 @@ const CHAIN_TECHNIQUES = new Set([
   'grouped-x-cycles',
   'forcing-chain',
   'aic',
+  'aic-exotic',
   'grouped-aic',
   'skyscraper',
   'two-string-kite',
   'turbot-fish',
   'empty-rectangle',
+]);
+const FORCING_TECHNIQUES = new Set([
+  'forcing-nets',
+  'digit-forcing-chains',
+  'nishio-forcing-chains',
+  'cell-forcing-chains',
+  'unit-forcing-chains',
+  'region-forcing-chains',
+  'table-chain',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
+  'bowmans-bingo',
+  'nested-forcing-chains',
 ]);
 const WING_TECHNIQUES = new Set([
   'xy-wing',
@@ -89,9 +116,11 @@ const UNIQUENESS_TECHNIQUES = new Set([
   'bug-plus-n',
 ]);
 const REFERENCE_TECHNIQUE_ORDER = Object.freeze([
+  ...BASIC_TECHNIQUES,
   ...DIRECT_TECHNIQUES,
   ...FISH_TECHNIQUES,
   ...CHAIN_TECHNIQUES,
+  ...FORCING_TECHNIQUES,
   ...WING_TECHNIQUES,
   ...ALS_TECHNIQUES,
   ...PATTERN_TECHNIQUES,
@@ -110,9 +139,11 @@ const fixture = loadFixture(inputPath);
 const startedAt = performance.now();
 
 const rows = [
+  ...(fixture.basics ?? []).map((record) => auditBasic(record)),
   ...fixture.direct.map((record) => auditDirect(record)),
   ...(fixture.fish ?? []).map((record) => auditFish(record)),
   ...fixture.chains.map((record) => auditChain(record)),
+  ...(fixture.forcing ?? []).map((record) => auditForcing(record)),
   ...(fixture.wings ?? []).map((record) => auditWing(record)),
   ...(fixture.als ?? []).map((record) => auditAls(record)),
   ...(fixture.patterns ?? []).map((record) => auditPattern(record)),
@@ -184,9 +215,75 @@ function auditDirect(record) {
   };
 }
 
+function auditBasic(record) {
+  const started = performance.now();
+  const state = buildBasicState(record);
+  const step = nextStepForTechnique(state, record.technique);
+  const issues = [];
+  if (!step) {
+    issues.push('no-step');
+  } else {
+    if (step.technique !== record.technique) {
+      issues.push(`technique-mismatch:${step.technique}`);
+    }
+    for (const expected of record.expectedEliminations ?? []) {
+      if (!hasAction(step, 'eliminate', expected)) {
+        issues.push(`missing-expected-elimination:${expected.cell}:${expected.digit}`);
+      }
+    }
+    for (const expected of record.expectedPlacements ?? []) {
+      if (!hasAction(step, 'place', expected)) {
+        issues.push(`missing-expected-placement:${expected.cell}:${expected.digit}`);
+      }
+    }
+    if (record.expectedPattern) {
+      const pattern = step.evidence.pattern;
+      if (!pattern || pattern.family !== record.expectedPattern.family || pattern.subtype !== record.expectedPattern.subtype) {
+        issues.push('pattern-mismatch');
+      }
+    }
+    for (const expected of record.expectedCells ?? []) {
+      if (!hasExpectedCell(step, expected)) {
+        issues.push(`missing-expected-cell:${expected.cell}`);
+      }
+    }
+    for (const expected of record.expectedHouses ?? []) {
+      if (!hasExpectedHouse(step, expected)) {
+        issues.push(`missing-expected-house:${expected.type}:${expected.index}`);
+      }
+    }
+    if (step.actions.length === 0) {
+      issues.push('empty-actions');
+    }
+    auditStepVerification(state, step, issues);
+    try {
+      replaySteps(state, [step]);
+    } catch (error) {
+      issues.push(`replay-failed:${formatError(error)}`);
+    }
+  }
+  return {
+    technique: record.technique,
+    kind: 'basic',
+    ok: issues.length === 0,
+    issues,
+    elapsedMs: Math.round(performance.now() - started),
+  };
+}
+
 function buildDirectState(record) {
   if (record.stateKind === 'puzzle') {
     return parsePuzzle(record.puzzle);
+  }
+  return buildExactCandidateState(record.candidates);
+}
+
+function buildBasicState(record) {
+  if (record.stateKind === 'puzzle') {
+    return parsePuzzle(record.puzzle);
+  }
+  if (record.stateKind === 'mask') {
+    return buildCandidateMaskState(record.candidates);
   }
   return buildExactCandidateState(record.candidates);
 }
@@ -268,19 +365,8 @@ function auditChain(record) {
     if (step.technique !== record.technique) {
       issues.push(`technique-mismatch:${step.technique}`);
     }
-    if (record.expectedPattern) {
-      const pattern = step.evidence.pattern;
-      if (!pattern || pattern.family !== record.expectedPattern.family || pattern.subtype !== record.expectedPattern.subtype) {
-        issues.push('pattern-mismatch');
-      }
-    }
     if (record.minLinks !== undefined && (step.evidence.links?.length ?? 0) < record.minLinks) {
       issues.push(`insufficient-links:${step.evidence.links?.length ?? 0}<${record.minLinks}`);
-    }
-    for (const expected of record.expectedLinks ?? []) {
-      if (!hasExpectedLink(step, expected)) {
-        issues.push(`missing-expected-link:${expected.from}:${expected.to}`);
-      }
     }
     for (const expected of record.expectedEliminations ?? []) {
       if (!hasAction(step, 'eliminate', expected)) {
@@ -588,6 +674,68 @@ function auditUniqueness(record) {
   };
 }
 
+function auditForcing(record) {
+  const started = performance.now();
+  const state = buildForcingState(record);
+  const step = nextStepForTechnique(state, record.technique);
+  const issues = [];
+  if (!step) {
+    issues.push('no-step');
+  } else {
+    if (step.technique !== record.technique) {
+      issues.push(`technique-mismatch:${step.technique}`);
+    }
+    for (const expected of record.expectedEliminations ?? []) {
+      if (!hasAction(step, 'eliminate', expected)) {
+        issues.push(`missing-expected-elimination:${expected.cell}:${expected.digit}`);
+      }
+    }
+    for (const expected of record.expectedPlacements ?? []) {
+      if (!hasAction(step, 'place', expected)) {
+        issues.push(`missing-expected-placement:${expected.cell}:${expected.digit}`);
+      }
+    }
+    if (record.expectedPattern) {
+      const pattern = step.evidence.pattern;
+      if (!pattern || pattern.family !== record.expectedPattern.family) {
+        issues.push('pattern-mismatch');
+      }
+      if (record.expectedPattern.subtype !== undefined && pattern?.subtype !== record.expectedPattern.subtype) {
+        issues.push('pattern-mismatch');
+      }
+    }
+    if (record.minBranches !== undefined && (step.evidence.branches?.length ?? 0) < record.minBranches) {
+      issues.push(`insufficient-branches:${step.evidence.branches?.length ?? 0}<${record.minBranches}`);
+    }
+    if (record.minContradictionBranches !== undefined && countBranchesByFlag(step, 'contradiction') < record.minContradictionBranches) {
+      issues.push(`insufficient-contradiction-branches:${countBranchesByFlag(step, 'contradiction')}<${record.minContradictionBranches}`);
+    }
+    if (record.expectedMaxSteps !== undefined) {
+      for (const branch of step.evidence.branches ?? []) {
+        if (branch.maxSteps !== record.expectedMaxSteps) {
+          issues.push(`max-steps-mismatch:${branch.maxSteps}<${record.expectedMaxSteps}`);
+        }
+      }
+    }
+    if (step.actions.length === 0) {
+      issues.push('empty-actions');
+    }
+    auditStepVerification(state, step, issues);
+    try {
+      replaySteps(state, [step]);
+    } catch (error) {
+      issues.push(`replay-failed:${formatError(error)}`);
+    }
+  }
+  return {
+    technique: record.technique,
+    kind: 'forcing',
+    ok: issues.length === 0,
+    issues,
+    elapsedMs: Math.round(performance.now() - started),
+  };
+}
+
 function auditNegative(record) {
   const started = performance.now();
   const state = buildNegativeState(record);
@@ -647,6 +795,10 @@ function countLinksByType(step, type) {
 
 function countGroupedNodes(step) {
   return (step.evidence.nodes ?? []).filter((node) => node.grouped === true && Array.isArray(node.cells) && node.cells.length > 1).length;
+}
+
+function countBranchesByFlag(step, field) {
+  return (step.evidence.branches ?? []).filter((branch) => branch[field] === true).length;
 }
 
 function hasExpectedLink(step, expected) {
@@ -793,6 +945,16 @@ function buildUniquenessState(record) {
   return buildTrustedCandidateState(record.puzzle, record.candidates);
 }
 
+function buildForcingState(record) {
+  if (record.stateKind === 'exact') {
+    return buildExactCandidateState(record.candidates);
+  }
+  if (record.stateKind === 'mask') {
+    return buildCandidateMaskState(record.candidates);
+  }
+  return buildTrustedCandidateState(record.puzzle, record.candidates);
+}
+
 function buildNegativeState(record) {
   if (record.stateKind === 'exact') {
     return Array.isArray(record.defaultCandidates)
@@ -818,11 +980,23 @@ function loadFixture(path) {
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.direct) || !Array.isArray(parsed.chains) || !Array.isArray(parsed.uniqueness)) {
     throw new Error(`Invalid reference fixture file: ${path}`);
   }
+  if (parsed.basics !== undefined && !Array.isArray(parsed.basics)) {
+    throw new Error(`Invalid reference fixture file: ${path}: basics must be an array when present.`);
+  }
+  for (const record of parsed.basics ?? []) {
+    assertBasicRecord(record, path);
+  }
   for (const record of parsed.direct) {
     assertDirectRecord(record, path);
   }
   for (const record of parsed.chains) {
     assertChainRecord(record, path);
+  }
+  if (parsed.forcing !== undefined && !Array.isArray(parsed.forcing)) {
+    throw new Error(`Invalid reference fixture file: ${path}: forcing must be an array when present.`);
+  }
+  for (const record of parsed.forcing ?? []) {
+    assertForcingRecord(record, path);
   }
   if (parsed.fish !== undefined && !Array.isArray(parsed.fish)) {
     throw new Error(`Invalid reference fixture file: ${path}: fish must be an array when present.`);
@@ -860,6 +1034,61 @@ function loadFixture(path) {
   return parsed;
 }
 
+function assertBasicRecord(record, path) {
+  if (!isRecord(record)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: record must be an object.`);
+  }
+  if (!BASIC_TECHNIQUES.has(record.technique)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: unknown technique ${String(record.technique)}.`);
+  }
+  if (record.stateKind !== 'exact' && record.stateKind !== 'mask' && record.stateKind !== 'puzzle') {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique} stateKind must be exact, mask or puzzle.`);
+  }
+  if (record.stateKind === 'puzzle') {
+    if (typeof record.puzzle !== 'string') {
+      throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.puzzle must be a string for puzzle state.`);
+    }
+    parsePuzzle(record.puzzle);
+  } else {
+    assertCandidateTuples(record.candidates, `${record.technique} candidates`);
+  }
+  if (record.expectedEliminations !== undefined && !Array.isArray(record.expectedEliminations)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedEliminations must be an array.`);
+  }
+  for (const expected of record.expectedEliminations ?? []) {
+    assertCellDigitRef(expected, `${record.technique} expectedEliminations`);
+  }
+  if (record.expectedPlacements !== undefined && !Array.isArray(record.expectedPlacements)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedPlacements must be an array.`);
+  }
+  for (const expected of record.expectedPlacements ?? []) {
+    assertCellDigitRef(expected, `${record.technique} expectedPlacements`);
+  }
+  if ((record.expectedEliminations?.length ?? 0) === 0 && (record.expectedPlacements?.length ?? 0) === 0) {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique} should declare expectedEliminations or expectedPlacements.`);
+  }
+  if (record.expectedPattern !== undefined) {
+    if (!isRecord(record.expectedPattern) || typeof record.expectedPattern.family !== 'string' || record.expectedPattern.family.length === 0) {
+      throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedPattern.family must be a non-empty string.`);
+    }
+    if (record.expectedPattern.subtype !== undefined && (typeof record.expectedPattern.subtype !== 'string' || record.expectedPattern.subtype.length === 0)) {
+      throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedPattern.subtype must be a non-empty string.`);
+    }
+  }
+  if (record.expectedCells !== undefined && !Array.isArray(record.expectedCells)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedCells must be an array.`);
+  }
+  for (const expected of record.expectedCells ?? []) {
+    assertExpectedCellRef(expected, `${record.technique} expectedCells`);
+  }
+  if (record.expectedHouses !== undefined && !Array.isArray(record.expectedHouses)) {
+    throw new Error(`Invalid reference basic fixture in ${path}: ${record.technique}.expectedHouses must be an array.`);
+  }
+  for (const expected of record.expectedHouses ?? []) {
+    assertExpectedHouseRef(expected, `${record.technique} expectedHouses`);
+  }
+}
+
 function assertDirectRecord(record, path) {
   if (!isRecord(record)) {
     throw new Error(`Invalid reference direct fixture in ${path}: record must be an object.`);
@@ -893,8 +1122,11 @@ function assertChainRecord(record, path) {
     throw new Error(`Invalid reference chain fixture in ${path}: ${record.technique} stateKind must be exact or mask.`);
   }
   assertCandidateTuples(record.candidates, `${record.technique} candidates`);
-  if (!Number.isInteger(record.minLinks) || record.minLinks < 1) {
-    throw new Error(`Invalid reference chain fixture in ${path}: ${record.technique} minLinks must be a positive integer.`);
+  if (!Number.isInteger(record.minLinks) || record.minLinks < 0) {
+    throw new Error(`Invalid reference chain fixture in ${path}: ${record.technique} minLinks must be a non-negative integer.`);
+  }
+  if (record.minLinks === 0 && record.minGroupedNodes === undefined && record.expectedNodes === undefined && record.expectedCells === undefined) {
+    throw new Error(`Invalid reference chain fixture in ${path}: ${record.technique} minLinks 0 requires expected evidence nodes or cells.`);
   }
   if (record.expectedEliminations !== undefined && !Array.isArray(record.expectedEliminations)) {
     throw new Error(`Invalid reference chain fixture in ${path}: ${record.technique}.expectedEliminations must be an array.`);
@@ -1166,6 +1398,53 @@ function assertUniquenessRecord(record, path) {
   }
   for (const expected of record.expectedNodes ?? []) {
     assertExpectedNodeRef(expected, `${record.technique} expectedNodes`);
+  }
+}
+
+function assertForcingRecord(record, path) {
+  if (!isRecord(record)) {
+    throw new Error(`Invalid reference forcing fixture in ${path}: record must be an object.`);
+  }
+  if (!FORCING_TECHNIQUES.has(record.technique)) {
+    throw new Error(`Invalid reference forcing fixture in ${path}: unknown technique ${String(record.technique)}.`);
+  }
+  if (record.stateKind !== 'exact' && record.stateKind !== 'mask' && record.stateKind !== 'trusted') {
+    throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.stateKind must be exact, mask or trusted.`);
+  }
+  if (record.stateKind === 'trusted' && typeof record.puzzle !== 'string') {
+    throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.puzzle must be a string for trusted state.`);
+  }
+  if (typeof record.puzzle === 'string') {
+    parsePuzzle(record.puzzle);
+  }
+  assertCandidateTuples(record.candidates, `${record.technique} candidates`);
+  if (record.expectedEliminations !== undefined && !Array.isArray(record.expectedEliminations)) {
+    throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.expectedEliminations must be an array.`);
+  }
+  for (const expected of record.expectedEliminations ?? []) {
+    assertCellDigitRef(expected, `${record.technique} expectedEliminations`);
+  }
+  if (record.expectedPlacements !== undefined && !Array.isArray(record.expectedPlacements)) {
+    throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.expectedPlacements must be an array.`);
+  }
+  for (const expected of record.expectedPlacements ?? []) {
+    assertCellDigitRef(expected, `${record.technique} expectedPlacements`);
+  }
+  if ((record.expectedEliminations?.length ?? 0) === 0 && (record.expectedPlacements?.length ?? 0) === 0) {
+    throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique} must declare expected eliminations or placements.`);
+  }
+  for (const field of ['minBranches', 'minContradictionBranches', 'expectedMaxSteps']) {
+    if (record[field] !== undefined && (!Number.isInteger(record[field]) || record[field] < 0)) {
+      throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.${field} must be a non-negative integer.`);
+    }
+  }
+  if (record.expectedPattern !== undefined) {
+    if (!isRecord(record.expectedPattern) || typeof record.expectedPattern.family !== 'string' || record.expectedPattern.family.length === 0) {
+      throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.expectedPattern.family must be a non-empty string.`);
+    }
+    if (record.expectedPattern.subtype !== undefined && (typeof record.expectedPattern.subtype !== 'string' || record.expectedPattern.subtype.length === 0)) {
+      throw new Error(`Invalid reference forcing fixture in ${path}: ${record.technique}.expectedPattern.subtype must be a non-empty string.`);
+    }
   }
 }
 

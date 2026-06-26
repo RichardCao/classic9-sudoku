@@ -31,6 +31,7 @@ import {
 } from '../index.js';
 import type { GenerationEvent, GenerationRequest, SearchRequest } from '../generator/index.js';
 import type { CandidateSelectionPlan, GeneratedPuzzle, SearchSummary } from '../generator/index.js';
+import type { Board } from '../core/types.js';
 import type { RatingPolicy } from '../rating/index.js';
 import { buildDefaultTechniques } from '../solver/techniques.js';
 import { MAX_SEED, defaultSeed } from '../generator/random.js';
@@ -295,10 +296,10 @@ export function runCli(argv: readonly string[]): CliResult {
       if (!source) {
         return errorResult('缺少生成请求 JSON 或文件路径。');
       }
-      const request = parseJsonArgument(source);
+      const request = withSolutionPool(asGenerationRequest(parseJsonArgument(source)), args);
       return {
         exitCode: 0,
-        output: analyzeGenerationRequest(asGenerationRequest(request)),
+        output: analyzeGenerationRequest(request),
       };
     }
 
@@ -307,7 +308,7 @@ export function runCli(argv: readonly string[]): CliResult {
       if (!source) {
         return errorResult('缺少生成请求 JSON 或文件路径。');
       }
-      const request = asGenerationRequest(parseJsonArgument(source));
+      const request = withSolutionPool(asGenerationRequest(parseJsonArgument(source)), args);
       return {
         exitCode: 0,
         output: generateOne(request),
@@ -319,7 +320,7 @@ export function runCli(argv: readonly string[]): CliResult {
       if (!source) {
         return errorResult('缺少搜索请求 JSON 或文件路径。');
       }
-      let request = asGenerationRequest(parseJsonArgument(source));
+      let request = withSolutionPool(asGenerationRequest(parseJsonArgument(source)), args);
       const resumeManifestPath = getOption(args, '--resume-manifest');
       const writeManifestPath = getOption(args, '--write-manifest') ?? resumeManifestPath;
       const writeCandidatesPath = getOption(args, '--write-candidates');
@@ -426,7 +427,9 @@ export function runCli(argv: readonly string[]): CliResult {
       if (typeof plan !== 'object' || plan === null || Array.isArray(plan)) {
         return errorResult('选择计划必须是 JSON object。');
       }
-      const selection = selectFromCandidates(candidates as GeneratedPuzzle[], plan as CandidateSelectionPlan);
+      const selection = selectFromCandidates(candidates as GeneratedPuzzle[], plan as CandidateSelectionPlan, {
+        verifyCanonicalKey: args.includes('--verify-canonical-key'),
+      });
       const selectedPath = getOption(args, '--write-selected');
       const rejectedPath = getOption(args, '--write-rejected');
       assertUniqueOutputPaths([selectedPath, rejectedPath]);
@@ -471,7 +474,11 @@ export function runCli(argv: readonly string[]): CliResult {
       if (inputPaths.length === 0) {
         return errorResult('缺少待合并候选池 JSON 文件。');
       }
-      const merged = mergeCandidateFiles(inputPaths, args.includes('--dedupe-canonical'));
+      const merged = mergeCandidateFiles(
+        inputPaths,
+        args.includes('--dedupe-canonical'),
+        args.includes('--verify-canonical-key'),
+      );
       mkdirSync(dirname(outputPath), { recursive: true });
       writeJsonAtomic(outputPath, merged.candidates);
       return {
@@ -499,6 +506,7 @@ export function runCli(argv: readonly string[]): CliResult {
         output: analyzeCandidatePool(candidates as GeneratedPuzzle[], {
           scoreBucketSize: parsePositiveIntegerOption(args, '--score-bucket-size', 100),
           clueBucketSize: parsePositiveIntegerOption(args, '--clue-bucket-size', 5),
+          verifyCanonicalKey: args.includes('--verify-canonical-key'),
         }),
       };
     }
@@ -521,6 +529,7 @@ export function runCli(argv: readonly string[]): CliResult {
       assertUniqueOutputPaths([outputPath, rejectedPath]);
       const result = dedupeCandidates(candidates as GeneratedPuzzle[], {
         key: key === 'puzzle' ? 'puzzle' : 'canonical',
+        verifyCanonicalKey: args.includes('--verify-canonical-key'),
       });
       mkdirSync(dirname(outputPath), { recursive: true });
       writeJsonAtomic(outputPath, result.candidates);
@@ -602,35 +611,35 @@ function buildHelp(): Record<string, unknown> {
       },
       {
         command: 'generator-analyze <json-or-file>',
-        description: '分析生成请求是否存在分数范围和技巧范围冲突。',
+        description: '分析生成请求是否存在分数范围和技巧范围冲突。支持 --solution-pool。',
       },
       {
         command: 'generate <json-or-file>',
-        description: '按生成请求尝试生成一道题，并返回 diagnostics。',
+        description: '按生成请求尝试生成一道题，并返回 diagnostics。支持 --solution-pool。',
       },
       {
         command: 'search <json-or-file>',
-        description: '按搜索请求批量尝试生成。支持 --summary-only、--events、--write-candidates、--append-candidates、--write-summary、--write-manifest 和 --resume-manifest。',
+        description: '按搜索请求批量尝试生成。支持 --summary-only、--events、--write-candidates、--append-candidates、--write-summary、--write-manifest、--resume-manifest 和 --solution-pool。',
       },
       {
-        command: 'select <candidates-json-file> <plan-json-or-file>',
-        description: '从候选题列表中按计划筛选结果。支持 --write-selected 和 --write-rejected。',
+        command: 'select <candidates-json-file> <plan-json-or-file> [--verify-canonical-key]',
+        description: '从候选题列表中按计划筛选结果。支持 --write-selected 和 --write-rejected；默认只校验 canonicalKey 格式。',
       },
       {
         command: 'parallel-search-plan <json-or-file> --out-dir <dir> --workers <n> --attempts-per-worker <n>',
         description: '生成互不重叠 seed 段的 search shard 命令，供外部 shell 并行运行。',
       },
       {
-        command: 'merge-candidates <file...> --out <file> [--dedupe-canonical]',
-        description: '合并多个 shard 候选池文件，可按 canonicalKey 去重。',
+        command: 'merge-candidates <file...> --out <file> [--dedupe-canonical] [--verify-canonical-key]',
+        description: '合并多个 shard 候选池文件，可按 canonicalKey 去重；默认只校验 canonicalKey 格式。',
       },
       {
-        command: 'candidate-stats <candidates-json-file>',
-        description: '统计候选池的分数、线索数、技巧、canonical key 和 seed 分布。',
+        command: 'candidate-stats <candidates-json-file> [--verify-canonical-key]',
+        description: '统计候选池的分数、线索数、技巧、canonical key 和 seed 分布；默认只校验 canonicalKey 格式。',
       },
       {
-        command: 'dedupe-candidates <candidates-json-file> --out <file> [--key canonical|puzzle]',
-        description: '对候选池做独立去重，支持 canonicalKey 或题面字符串作为去重键。',
+        command: 'dedupe-candidates <candidates-json-file> --out <file> [--key canonical|puzzle] [--verify-canonical-key]',
+        description: '对候选池做独立去重，支持 canonicalKey 或题面字符串；默认复用合法格式的 canonicalKey。',
       },
       {
         command: 'manifest-summary <manifest...>',
@@ -1586,7 +1595,11 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-function mergeCandidateFiles(paths: readonly string[], dedupeCanonical: boolean): {
+function mergeCandidateFiles(
+  paths: readonly string[],
+  dedupeCanonical: boolean,
+  verifyCanonicalKey: boolean,
+): {
   candidates: GeneratedPuzzle[];
   duplicatesSkipped: number;
 } {
@@ -1598,11 +1611,11 @@ function mergeCandidateFiles(paths: readonly string[], dedupeCanonical: boolean)
     }
     rawCandidates.push(...parsed as GeneratedPuzzle[]);
   }
-  validateCandidatePool(rawCandidates);
+  validateCandidatePool(rawCandidates, { verifyCanonicalKey });
   if (!dedupeCanonical) {
     return { candidates: rawCandidates, duplicatesSkipped: 0 };
   }
-  const deduped = dedupeCandidates(rawCandidates, { key: 'canonical' });
+  const deduped = dedupeCandidates(rawCandidates, { key: 'canonical', verifyCanonicalKey });
   return {
     candidates: deduped.candidates,
     duplicatesSkipped: deduped.diagnostics.removed,
@@ -1614,6 +1627,23 @@ function asGenerationRequest(value: unknown): GenerationRequest {
     throw new Error('生成请求必须是 JSON object。');
   }
   return value as GenerationRequest;
+}
+
+function withSolutionPool(request: GenerationRequest, args: readonly string[]): GenerationRequest {
+  const solutionPoolPath = getOption(args, '--solution-pool');
+  if (!solutionPoolPath) {
+    return request;
+  }
+  const parsed = JSON.parse(readFileSync(solutionPoolPath, 'utf8')) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new Error('--solution-pool 文件必须是 JSON array。');
+  }
+  const output: GenerationRequest = {
+    ...request,
+    solutionSource: request.solutionSource ?? 'pool',
+  };
+  output.solutionPool = parsed as Board[];
+  return output;
 }
 
 if (isMainModule()) {

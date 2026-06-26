@@ -28,7 +28,15 @@ const payload = {
     placementRows: rows.filter((row) => row.actionTypes.includes('place')).length,
     eliminationRows: rows.filter((row) => row.actionTypes.includes('eliminate')).length,
     rowsWithBaseLinks: rows.filter((row) => row.baseStrongLinks > 0).length,
+    rowsWithTargetNodes: rows.filter((row) =>
+      row.nodeIds.includes('bug-common-extra-targets') || row.nodeIds.includes('bug-elimination-targets')).length,
+    rowsWithParityNodes: rows.filter((row) =>
+      row.nodeIds.includes('bug-parity-row')
+      && row.nodeIds.includes('bug-parity-col')
+      && row.nodeIds.includes('bug-parity-box')).length,
+    boundedCompletionRows: rows.filter((row) => row.hasBoundedCompletionNote).length,
     totalBaseStrongLinks: rows.reduce((sum, row) => sum + row.baseStrongLinks, 0),
+    subtypeCounts: countBy(rows.map((row) => row.subtype ?? 'missing')),
     passed: rows.length - failed.length,
     failed: failed.length,
     elapsedMs: Math.round(performance.now() - startedAt),
@@ -86,9 +94,16 @@ function auditBugRecord(record, index) {
 
   const hasPlacement = step.actions.some((action) => action.type === 'place');
   const hasElimination = step.actions.some((action) => action.type === 'eliminate');
+  const subtype = step.evidence.pattern?.subtype;
+  if (step.actions.length === 0) {
+    issues.push('empty-actions');
+  }
   if (record.technique === 'bug-plus-one') {
     if (!hasPlacement) {
       issues.push('bug-plus-one-missing-placement');
+    }
+    if (hasElimination) {
+      issues.push('bug-plus-one-unexpected-elimination');
     }
     for (const id of ['bug-parity-row', 'bug-parity-col', 'bug-parity-box']) {
       if (!hasNode(step, id)) {
@@ -99,6 +114,9 @@ function auditBugRecord(record, index) {
     if (!hasElimination) {
       issues.push(`${record.technique}-missing-elimination`);
     }
+    if (hasPlacement) {
+      issues.push(`${record.technique}-unexpected-placement`);
+    }
     if (!hasNode(step, 'bug-common-extra-targets') && !hasNode(step, 'bug-elimination-targets')) {
       issues.push('missing-bug-target-node');
     }
@@ -107,6 +125,30 @@ function auditBugRecord(record, index) {
     }
     if (record.minLinks !== undefined && countBaseStrongLinks(step) < record.minLinks) {
       issues.push(`insufficient-bug-base-strong-links:${countBaseStrongLinks(step)}<${record.minLinks}`);
+    }
+  }
+  if (subtype === 'bug-plus-two-common-extra' || subtype === 'bug-plus-n-common-extra') {
+    if (!hasNode(step, 'bug-common-extra-targets')) {
+      issues.push(`${subtype}-missing-common-extra-targets`);
+    }
+  }
+  if (subtype === 'bug-plus-two-parity-elimination') {
+    if (!hasNode(step, 'bug-elimination-targets')) {
+      issues.push('bug-plus-two-parity-missing-elimination-targets');
+    }
+    if (!hasNodeWithPrefix(step, 'bug-extra-group:')) {
+      issues.push('bug-plus-two-parity-missing-extra-group');
+    }
+    for (const id of ['bug-parity-row', 'bug-parity-col', 'bug-parity-box']) {
+      if (!hasNode(step, id)) {
+        issues.push(`bug-plus-two-parity-missing-${id}`);
+      }
+    }
+    const note = step.evidence.note ?? '';
+    for (const expected of ['bounded completion proof', 'maxCells=', 'maxStates=', 'maxCompletions=']) {
+      if (!note.includes(expected)) {
+        issues.push(`bug-plus-two-parity-note-missing:${expected}`);
+      }
     }
   }
 
@@ -134,6 +176,7 @@ function buildRow(record, rowId, step, issues) {
     actionTypes: Array.from(new Set((step?.actions ?? []).map((action) => action.type))),
     baseStrongLinks: step ? countBaseStrongLinks(step) : 0,
     nodeIds: Array.from(new Set((step?.evidence.nodes ?? []).map((node) => node.id))).sort(),
+    hasBoundedCompletionNote: step?.evidence.note?.includes('bounded completion proof') ?? false,
   };
 }
 
@@ -150,6 +193,18 @@ function countBaseStrongLinks(step) {
 
 function hasNode(step, id) {
   return (step.evidence.nodes ?? []).some((node) => node.id === id);
+}
+
+function hasNodeWithPrefix(step, prefix) {
+  return (step.evidence.nodes ?? []).some((node) => node.id.startsWith(prefix));
+}
+
+function countBy(values) {
+  const counts = {};
+  for (const value of values) {
+    counts[value] = (counts[value] ?? 0) + 1;
+  }
+  return counts;
 }
 
 function buildState(record) {
@@ -230,7 +285,7 @@ function requireValue(args, index, option) {
 function printHumanSummary(payload) {
   const summary = payload.summary;
   process.stdout.write(`BUG graph evidence: ${summary.passed}/${summary.bugRows} BUG smoke row(s) passed\n`);
-  process.stdout.write(`Rows: placement=${summary.placementRows}; elimination=${summary.eliminationRows}; withBaseLinks=${summary.rowsWithBaseLinks}; baseStrongLinks=${summary.totalBaseStrongLinks}\n`);
+  process.stdout.write(`Rows: placement=${summary.placementRows}; elimination=${summary.eliminationRows}; withBaseLinks=${summary.rowsWithBaseLinks}; targetNodes=${summary.rowsWithTargetNodes}; parityNodes=${summary.rowsWithParityNodes}; boundedCompletion=${summary.boundedCompletionRows}; baseStrongLinks=${summary.totalBaseStrongLinks}\n`);
   for (const row of payload.rows.filter((item) => !item.ok)) {
     process.stdout.write(`- ${row.rowId} ${row.technique}: ${row.issues.join(', ')}\n`);
   }

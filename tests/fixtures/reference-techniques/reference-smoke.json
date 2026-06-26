@@ -1,4 +1,154 @@
 {
+  "basics": [
+    {
+      "technique": "full-house",
+      "stateKind": "puzzle",
+      "puzzle": "123456780000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expectedPlacements": [{ "cell": 8, "digit": 9 }],
+      "expectedPattern": { "family": "full-house", "subtype": "row" },
+      "expectedHouses": [{ "type": "row", "index": 0 }]
+    },
+    {
+      "technique": "naked-single",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [5]]
+      ],
+      "expectedPlacements": [{ "cell": 0, "digit": 5 }]
+    },
+    {
+      "technique": "hidden-single",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [2, 3]],
+        [2, [2, 3]],
+        [3, [2, 3]],
+        [4, [2, 3]],
+        [5, [2, 3]],
+        [6, [2, 3]],
+        [7, [2, 3]],
+        [8, [2, 3]]
+      ],
+      "expectedPlacements": [{ "cell": 0, "digit": 1 }],
+      "expectedPattern": { "family": "hidden-single", "subtype": "row" }
+    },
+    {
+      "technique": "locked-candidates",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [3, [1, 4]]
+      ],
+      "expectedEliminations": [{ "cell": 3, "digit": 1 }]
+    },
+    {
+      "technique": "naked-pair",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 2]],
+        [2, [1, 2, 3]]
+      ],
+      "expectedEliminations": [
+        { "cell": 2, "digit": 1 },
+        { "cell": 2, "digit": 2 }
+      ]
+    },
+    {
+      "technique": "hidden-pair",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2, 3]],
+        [1, [1, 2, 4]],
+        [2, [3, 4, 5]],
+        [3, [3, 4, 5]],
+        [4, [3, 4, 5]],
+        [5, [3, 4, 5]],
+        [6, [3, 4, 5]],
+        [7, [3, 4, 5]],
+        [8, [3, 4, 5]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 3 },
+        { "cell": 1, "digit": 4 }
+      ]
+    },
+    {
+      "technique": "naked-triple",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [2, [2, 3]],
+        [3, [1, 2, 3, 4]]
+      ],
+      "expectedEliminations": [
+        { "cell": 3, "digit": 1 },
+        { "cell": 3, "digit": 2 },
+        { "cell": 3, "digit": 3 }
+      ]
+    },
+    {
+      "technique": "hidden-triple",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 4]],
+        [1, [2, 5]],
+        [2, [1, 2, 3, 6]],
+        [3, [4, 5, 6]],
+        [4, [4, 5, 6]],
+        [5, [4, 5, 6]],
+        [6, [4, 5, 6]],
+        [7, [4, 5, 6]],
+        [8, [4, 5, 6]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 4 },
+        { "cell": 1, "digit": 5 },
+        { "cell": 2, "digit": 6 }
+      ]
+    },
+    {
+      "technique": "naked-quad",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 2]],
+        [1, [1, 3]],
+        [2, [2, 4]],
+        [3, [3, 4]],
+        [4, [1, 2, 3, 4, 5]]
+      ],
+      "expectedEliminations": [
+        { "cell": 4, "digit": 1 },
+        { "cell": 4, "digit": 2 },
+        { "cell": 4, "digit": 3 },
+        { "cell": 4, "digit": 4 }
+      ]
+    },
+    {
+      "technique": "hidden-quad",
+      "stateKind": "exact",
+      "candidates": [
+        [0, [1, 5]],
+        [1, [2, 6]],
+        [2, [3, 7]],
+        [3, [1, 2, 3, 4, 8]],
+        [4, [5, 6, 7, 8, 9]],
+        [5, [5, 6, 7, 8, 9]],
+        [6, [5, 6, 7, 8, 9]],
+        [7, [5, 6, 7, 8, 9]],
+        [8, [5, 6, 7, 8, 9]]
+      ],
+      "expectedEliminations": [
+        { "cell": 0, "digit": 5 },
+        { "cell": 1, "digit": 6 },
+        { "cell": 2, "digit": 7 },
+        { "cell": 3, "digit": 8 }
+      ]
+    }
+  ],
   "direct": [
     {
       "technique": "direct-pointing",
@@ -1765,6 +1915,213 @@
         { "cell": 11, "digit": 1, "role": "reason" },
         { "cell": 20, "digit": 1, "role": "target" }
       ]
+    },
+    {
+      "technique": "x-chain",
+      "stateKind": "mask",
+      "candidates": [[0,[3,9]],[1,[3]],[3,[4,9]],[4,[4,6]],[9,[7,8,9]],[11,[8,9]],[12,[9]],[16,[6]],[17,[5,6]],[45,[3,8]],[47,[3,8]],[72,[3,9]],[73,[3,8]],[74,[3,8,9]],[75,[4,5]],[76,[4]],[79,[6,7]],[80,[6]]],
+      "minLinks": 5,
+      "minStrongLinks": 5,
+      "minWeakLinks": 0,
+      "expectedPattern": {"family":"x-chain","subtype":"even-strong-link-chain"},
+      "expectedEliminations": [{"cell":74,"digit":8}],
+      "expectedCells": [{"cell":11,"digit":8,"role":"reason"},{"cell":9,"digit":8,"role":"reason"},{"cell":45,"digit":8,"role":"reason"},{"cell":47,"digit":8,"role":"reason"},{"cell":74,"digit":8,"role":"target"}]
+    },
+    {
+      "technique": "xy-chain",
+      "stateKind": "mask",
+      "candidates": [[1,[4,8]],[4,[6]],[7,[6,8]],[9,[7]],[10,[8]],[13,[5,6]],[16,[6,8]],[18,[7,9]],[21,[8]],[23,[7,8]],[27,[3,4]],[31,[3]],[32,[9]],[38,[7,9]],[41,[4]],[44,[4,9]],[46,[3]],[47,[9]],[48,[1,8]],[49,[4,7,8]],[50,[7,8]],[53,[4,9]],[54,[1,3]],[58,[3,8]],[59,[1,8]],[63,[1]],[64,[2,7]],[66,[2]],[67,[4,5]],[68,[4,5]],[73,[2,3]],[75,[2,3]]],
+      "minLinks": 9,
+      "minStrongLinks": 5,
+      "minWeakLinks": 4,
+      "expectedPattern": {"family":"xy-chain","subtype":"open-chain"},
+      "expectedEliminations": [{"cell":59,"digit":8}],
+      "expectedCells": [{"cell":23,"role":"reason"},{"cell":50,"role":"reason"},{"cell":59,"role":"reason"},{"cell":54,"role":"reason"},{"cell":58,"role":"reason"},{"cell":59,"digit":8,"role":"target"}]
+    },
+    {
+      "technique": "aic-exotic",
+      "stateKind": "mask",
+      "candidates": [[0,[3,5]],[1,[3,6]],[3,[5,6]],[4,[8]],[5,[4]],[6,[1]],[7,[7,9]],[8,[7,9]],[9,[5,8]],[10,[9]],[11,[6,8]],[12,[5,6]],[13,[7]],[15,[4]],[18,[1,7]],[19,[1,7]],[25,[8]],[27,[4,8]],[28,[1]],[29,[1,8]],[31,[6]],[32,[2,5]],[33,[2]],[34,[3,7]],[35,[5,7]],[36,[3,4]],[40,[3,4,6]],[42,[6]],[43,[3,9]],[44,[5,9]],[46,[5]],[49,[3]],[50,[2]],[51,[8]],[52,[1,8]],[54,[1,7]],[55,[6,7]],[56,[1,6]],[58,[5]],[60,[8,9]],[61,[4,5]],[62,[8]],[63,[9]],[65,[3]],[67,[1,5,6]],[68,[6]],[70,[5]],[73,[4]],[77,[7]],[78,[3,4]]],
+      "minLinks": 3,
+      "minStrongLinks": 1,
+      "minWeakLinks": 2,
+      "expectedPattern": {"family":"aic-exotic","subtype":"discontinuous-loop-weak-weak"},
+      "expectedEliminations": [{"cell":67,"digit":6}],
+      "expectedCells": [{"cell":67,"digit":6,"role":"reason"},{"cell":31,"digit":6,"role":"reason"},{"cell":40,"digit":6,"role":"reason"},{"cell":67,"digit":6,"role":"target"}]
+    },
+    {
+      "technique": "simple-coloring",
+      "stateKind": "mask",
+      "candidates": [[1,[4,8]],[4,[6]],[7,[6,8]],[9,[7]],[10,[8]],[13,[5,6]],[16,[6,8]],[18,[7,9]],[21,[8]],[23,[7,8]],[27,[3,4]],[31,[3]],[32,[9]],[38,[7,9]],[41,[4]],[44,[4,9]],[46,[3]],[47,[9]],[48,[1,8]],[49,[4,7,8]],[50,[7,8]],[53,[4,9]],[54,[1,3]],[58,[3,8]],[59,[1]],[63,[1]],[64,[2,7]],[66,[2]],[67,[4,5]],[68,[4,5]],[73,[2,3]],[75,[2,3]]],
+      "minLinks": 4,
+      "minStrongLinks": 4,
+      "minWeakLinks": 0,
+      "expectedPattern": {"family":"simple-coloring","subtype":"two-color-trap"},
+      "expectedEliminations": [{"cell":49,"digit":8}],
+      "expectedCells": [{"cell":21,"digit":8,"role":"reason"},{"cell":23,"digit":8,"role":"reason"},{"cell":48,"digit":8,"role":"reason"},{"cell":50,"digit":8,"role":"reason"},{"cell":49,"digit":8,"role":"target"}]
+    },
+    {
+      "technique": "x-coloring",
+      "stateKind": "mask",
+      "candidates": [[0,[8,9]],[1,[6,8]],[3,[7,8,9]],[6,[6,7,8,9]],[10,[3,6,8]],[11,[3,7,9]],[12,[7,8,9]],[16,[6,9]],[17,[3,6,8]],[18,[3,4,8,9]],[20,[3,4,7,9]],[22,[1,7,8,9]],[23,[1,7,9]],[24,[7,8,9]],[25,[3,9]],[27,[3,4,8,9]],[28,[3,7,8]],[30,[3,4,7,8,9]],[31,[6,7,8,9]],[33,[4,6,8,9]],[34,[1,6,9]],[35,[1,4,6,8]],[38,[3,4,9]],[39,[3,4,8,9]],[40,[4,8,9]],[41,[2,9]],[42,[2,4,8,9]],[46,[4,7,8]],[47,[4,9]],[49,[4,6,7,8,9]],[50,[2,7,9]],[52,[2,9]],[53,[4,6,8]],[55,[2,3,4]],[57,[4,9]],[58,[1,4,9]],[60,[2,4]],[62,[1,3,4]],[63,[1,3,4]],[64,[2,3,4]],[67,[1,4,7]],[68,[1,7]],[69,[4,6]],[70,[1,2,3,6]],[72,[1,4]],[80,[1,4]]],
+      "minLinks": 1,
+      "minStrongLinks": 1,
+      "minWeakLinks": 0,
+      "expectedEliminations": [{"cell":53,"digit":4}],
+      "expectedCells": [{"cell":72,"digit":4,"role":"reason"},{"cell":20,"digit":4,"role":"reason"},{"cell":46,"digit":4,"role":"reason"},{"cell":80,"digit":4,"role":"reason"},{"cell":53,"digit":4,"role":"target"}]
+    },
+    {
+      "technique": "multi-colors",
+      "stateKind": "mask",
+      "candidates": [[0,[2,4,7,8,9]],[1,[2,4,6,7,8,9]],[2,[4,5,7,9]],[3,[3,4,8,9]],[4,[3,4,5,6,7,8]],[5,[3,4,5,7,8,9]],[6,[2,7,9]],[7,[6,7,8]],[9,[1,4,7,8,9]],[10,[4,6,7,8,9]],[11,[1,4,5,7,9]],[12,[3,4,8,9]],[13,[3,4,5,6,7,8]],[15,[7,9]],[16,[6,7,8]],[17,[3,9]],[18,[2,7,8,9]],[19,[2,6,7,8,9]],[21,[8,9]],[23,[7,8,9]],[26,[2,9]],[27,[3,4,8,9]],[28,[3,4,5,8,9]],[31,[3,4,8]],[32,[3,4,8,9]],[33,[8,9]],[36,[4,7,8,9]],[38,[4,7,9]],[40,[2,4,7,8]],[41,[4,7,8,9]],[42,[6,8,9]],[44,[4,9]],[46,[3,4,7,8,9]],[47,[4,7,9]],[48,[1,3,4,8,9]],[49,[3,4,7,8]],[50,[1,3,4,7,8,9]],[53,[4,9]],[54,[1,2,3,4,9]],[55,[2,3,4,9]],[58,[3,4,8]],[59,[1,3,4,8]],[60,[1,2]],[61,[4]],[62,[2,5]],[63,[1,2,4,7]],[64,[2,4,7]],[66,[1,2,4]],[67,[4,5]],[68,[1,4,5]],[73,[2,3,4]],[74,[1,4]],[75,[1,2,3,4]],[77,[1,3,4,6]],[78,[1,2,7]],[79,[4,7]]],
+      "minLinks": 5,
+      "minStrongLinks": 4,
+      "minWeakLinks": 1,
+      "expectedEliminations": [{"cell":10,"digit":6}],
+      "expectedCells": [{"cell":4,"digit":6,"role":"reason"},{"cell":13,"digit":6,"role":"reason"},{"cell":7,"digit":6,"role":"reason"},{"cell":16,"digit":6,"role":"reason"},{"cell":10,"digit":6,"role":"target"}]
+    },
+    {
+      "technique": "three-d-medusa",
+      "stateKind": "mask",
+      "candidates": [[1,[4,8]],[3,[9]],[4,[3,6,7]],[5,[3,7]],[6,[7,9]],[7,[6,8]],[9,[7,9]],[10,[8]],[13,[5,6]],[15,[7,9]],[16,[6,8]],[18,[7,9]],[21,[8,9]],[23,[7,8]],[27,[3,4]],[31,[3]],[32,[3,9]],[38,[7,9]],[41,[4,7]],[44,[4,9]],[46,[3]],[47,[7,9]],[48,[1,8]],[49,[4,7,8]],[50,[3,7,8]],[53,[4,9]],[54,[1,3]],[58,[3,8]],[59,[1,8]],[63,[1]],[64,[2,7]],[66,[2]],[67,[4,5]],[68,[1,4,5]],[73,[2,3]],[75,[2,3]]],
+      "minLinks": 44,
+      "minStrongLinks": 44,
+      "minWeakLinks": 0,
+      "expectedEliminations": [{"cell":68,"digit":1}],
+      "expectedCells": [{"cell":1,"digit":4,"role":"reason"},{"cell":1,"digit":8,"role":"reason"},{"cell":7,"digit":8,"role":"reason"},{"cell":10,"digit":8,"role":"reason"},{"cell":7,"digit":6,"role":"reason"},{"cell":16,"digit":8,"role":"reason"},{"cell":4,"digit":6,"role":"reason"},{"cell":16,"digit":6,"role":"reason"},{"cell":13,"digit":6,"role":"reason"},{"cell":13,"digit":5,"role":"reason"}]
+    },
+    {
+      "technique": "grouped-x-cycles",
+      "stateKind": "mask",
+      "candidates": [[3,[4,9]],[4,[4,7]],[5,[4,6,9]],[6,[6,9]],[8,[1,7]],[10,[6]],[13,[5,8]],[14,[5,8]],[17,[7]],[18,[7]],[21,[1,9]],[23,[1,6,9]],[24,[6,9]],[26,[2,7]],[27,[4,9]],[28,[8]],[29,[3]],[34,[1,9]],[35,[4]],[36,[2,4,5]],[38,[7]],[39,[3,4,9]],[40,[4,5,9]],[41,[3,4,5,9]],[42,[2,4,7]],[45,[2,4,5]],[46,[5]],[47,[6,7]],[48,[1,4,8]],[49,[1,4,5]],[50,[1,4,5,9]],[51,[2,7]],[52,[7,9]],[53,[3]],[54,[5,7]],[55,[5,7]],[57,[3,4]],[58,[6]],[59,[3,4]],[63,[6]],[67,[1,8]],[68,[2,8]],[69,[1]],[72,[3]],[73,[2,6]],[76,[1,9]],[77,[1,2,9]],[78,[4,7]],[79,[1,7]],[80,[4,6]]],
+      "minLinks": 0,
+      "minStrongLinks": 0,
+      "minWeakLinks": 0,
+      "expectedEliminations": [{"cell":50,"digit":9}],
+      "expectedCells": [{"cell":40,"digit":9,"role":"reason"},{"cell":41,"digit":9,"role":"reason"},{"cell":39,"digit":9,"role":"reason"},{"cell":3,"digit":9,"role":"reason"},{"cell":21,"digit":9,"role":"reason"},{"cell":5,"digit":9,"role":"reason"},{"cell":23,"digit":9,"role":"reason"},{"cell":50,"digit":9,"role":"target"}]
+    }
+  ],
+  "forcing": [
+    {
+      "technique": "forcing-nets",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedPlacements": [{"cell":80,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"forcing-nets-shared-placement"},
+      "minBranches": 2,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 12
+    },
+    {
+      "technique": "digit-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedPlacements": [{"cell":80,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"digit-forcing-chains-shared-placement"},
+      "minBranches": 2,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 12
+    },
+    {
+      "technique": "nishio-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"nishio-forcing-chains-exact-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 0
+    },
+    {
+      "technique": "cell-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedPlacements": [{"cell":80,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"cell-forcing-chains-shared-placement"},
+      "minBranches": 2,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 12
+    },
+    {
+      "technique": "unit-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedPlacements": [{"cell":79,"digit":7}],
+      "expectedPattern": {"family":"forcing","subtype":"unit-forcing-chains-shared-placement"},
+      "minBranches": 2,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 12
+    },
+    {
+      "technique": "region-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedPlacements": [{"cell":79,"digit":7}],
+      "expectedPattern": {"family":"forcing","subtype":"region-forcing-chains-shared-placement"},
+      "minBranches": 2,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 12
+    },
+    {
+      "technique": "table-chain",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"table-chain-candidate-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 20
+    },
+    {
+      "technique": "dynamic-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"dynamic-forcing-chains-candidate-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 28
+    },
+    {
+      "technique": "dynamic-forcing-chains-plus",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"dynamic-forcing-chains-plus-candidate-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 40
+    },
+    {
+      "technique": "bowmans-bingo",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"bowmans-bingo-candidate-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 16
+    },
+    {
+      "technique": "nested-forcing-chains",
+      "stateKind": "trusted",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7,9]],[80,[8,9]]],
+      "expectedEliminations": [{"cell":79,"digit":9}],
+      "expectedPattern": {"family":"forcing","subtype":"nested-forcing-chains-candidate-contradiction"},
+      "minBranches": 1,
+      "minContradictionBranches": 1,
+      "expectedMaxSteps": 18
     }
   ],
   "wings": [
@@ -3058,6 +3415,172 @@
   ],
   "negative": [
     {
+      "technique": "forcing-nets",
+      "stateKind": "trusted",
+      "reason": "forcing nets with already resolved singleton tail candidates should not create a branch proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "digit-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "digit forcing chains with already resolved singleton tail candidates should not create a branch proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "nishio-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "Nishio forcing chains with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "cell-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "cell forcing chains with already resolved singleton tail candidates should not create a branch proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "unit-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "unit forcing chains with already resolved singleton tail candidates should not create a branch proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "region-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "region forcing chains with already resolved singleton tail candidates should not create a branch proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "table-chain",
+      "stateKind": "trusted",
+      "reason": "table chain with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "dynamic-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "dynamic forcing chains with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "dynamic-forcing-chains-plus",
+      "stateKind": "trusted",
+      "reason": "dynamic forcing chains plus with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "bowmans-bingo",
+      "stateKind": "trusted",
+      "reason": "Bowman's Bingo with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "nested-forcing-chains",
+      "stateKind": "trusted",
+      "reason": "nested forcing chains with already resolved singleton tail candidates should not create a contradiction proof",
+      "puzzle": "534678912672195348198342567859761423426853791713924856961537284287419600345286100",
+      "candidates": [[79,[7]],[80,[9]]]
+    },
+    {
+      "technique": "full-house",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "full house should not fire on an empty all-candidates grid",
+      "candidates": []
+    },
+    {
+      "technique": "naked-single",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "naked single should not fire when every unsolved cell has all candidates",
+      "candidates": []
+    },
+    {
+      "technique": "hidden-single",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "hidden single should not fire when every house has every digit in every cell",
+      "candidates": []
+    },
+    {
+      "technique": "locked-candidates",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "locked candidates should not fire when no digit is confined to a line or box",
+      "candidates": []
+    },
+    {
+      "technique": "naked-pair",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "naked pair should not fire when two cells do not share the same bivalue set",
+      "candidates": [[0,[1,2]],[1,[1,3]]]
+    },
+    {
+      "technique": "hidden-pair",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "hidden pair should not fire when pair digits are not restricted to two cells",
+      "candidates": []
+    },
+    {
+      "technique": "naked-triple",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "naked triple should not fire when the candidate union spans four digits",
+      "candidates": [[0,[1,2]],[1,[2,3]],[2,[3,4]]]
+    },
+    {
+      "technique": "hidden-triple",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "hidden triple should not fire when triple digits are not restricted to three cells",
+      "candidates": []
+    },
+    {
+      "technique": "naked-quad",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "naked quad should not fire when the candidate union spans five digits",
+      "candidates": [[0,[1,2]],[1,[2,3]],[2,[3,4]],[3,[4,5]]]
+    },
+    {
+      "technique": "hidden-quad",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "hidden quad should not fire when quad digits are not restricted to four cells",
+      "candidates": []
+    },
+    {
+      "technique": "x-coloring",
+      "stateKind": "exact",
+      "defaultCandidates": [1,2,3,4,5,6,7,8,9],
+      "reason": "X-Coloring should not fire when no digit has single-digit strong links",
+      "candidates": []
+    },
+    {
+      "technique": "forcing-chain",
+      "stateKind": "mask",
+      "reason": "forcing chain should not fire on a short XY loop without a common endpoint target",
+      "candidates": [[0,[1,2]],[1,[2,3]],[2,[1,3]]]
+    },
+    {
+      "technique": "aic-exotic",
+      "stateKind": "mask",
+      "reason": "AIC exotic should not fire on an ordinary short XY loop without exotic links or targets",
+      "candidates": [[0,[1,2]],[1,[2,3]],[2,[1,3]]]
+    },
+    {
       "technique": "direct-pointing",
       "stateKind": "mask",
       "reason": "direct pointing without a line target should not produce a step",
@@ -3695,6 +4218,23 @@
         [10, [1, 8]],
         [60, [1, 8]],
         [61, [1, 8]]
+      ]
+    },
+    {
+      "technique": "mutant-fish",
+      "stateKind": "exact",
+      "reason": "Mutant Fish must reject overlapping mixed cover sectors even when an apparent cover target exists",
+      "candidates": [
+        [0, [1, 8]],
+        [1, [1, 8]],
+        [9, [1, 8]],
+        [10, [1, 8]],
+        [18, [1, 8]],
+        [19, [1, 8]],
+        [27, [1, 8]]
+      ],
+      "forbiddenEliminations": [
+        { "cell": 27, "digit": 1 }
       ]
     },
     {

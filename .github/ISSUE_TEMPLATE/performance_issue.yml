@@ -1,0 +1,38 @@
+name: 性能问题
+description: 报告 canonical、求解、评分、生成、候选池或 CLI 的性能退化
+title: "[Performance] "
+labels:
+  - performance
+body:
+  - type: textarea
+    id: command
+    attributes:
+      label: 命令或代码
+      description: 提供可以复现性能问题的命令、脚本或测试名。
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: 输入规模
+      description: 题面数量、候选池大小、profile、预算、是否带 canonicalKey 等。
+    validations:
+      required: true
+  - type: input
+    id: elapsed
+    attributes:
+      label: 耗时
+      placeholder: "例如 12.3s"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js 版本
+      placeholder: "node -v"
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望预算
+      description: 说明你认为合理的耗时、吞吐或超时行为。

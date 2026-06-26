@@ -27,7 +27,31 @@ try {
       throw new Error(`发布包缺少必要文件：${required}`);
     }
   }
-  for (const forbidden of ['src/', 'tests/', 'scripts/', 'dist/tests/', 'dist/tmp/', '.npm-cache/']) {
+  for (const forbidden of [
+    'src/',
+    'tests/',
+    'scripts/',
+    'dist/tests/',
+    'dist/tmp/',
+    '.npm-cache/',
+    'docs/ADR_',
+    'docs/CLASSIC9_',
+    'docs/EXTERNAL_',
+    'docs/GENERATOR_CANONICAL_REVIEW_PLAN.md',
+    'docs/GENERATOR_OPTIMIZATION_PLAN.md',
+    'docs/GENERATOR_RANDOM_SOLUTION_PLAN.md',
+    'docs/GENERATOR_STRATEGY_UPDATE_STEPS.md',
+    'docs/GITHUB_ISSUE_BACKLOG.md',
+    'docs/MARKET_METRICS.md',
+    'docs/MILESTONES.md',
+    'docs/PACKAGE_STATUS_',
+    'docs/REFERENCE_CORPUS.md',
+    'docs/RELEASE_',
+    'docs/SUBPATH_EXPORTS_PLAN.md',
+    'docs/TECHNIQUE_AUDIT_MATRIX.md',
+    'docs/TESTING.md',
+    'docs/TEST_AUDIT.md',
+  ]) {
     if (Array.from(files).some((file) => file === forbidden.slice(0, -1) || file.startsWith(forbidden))) {
       throw new Error(`发布包包含禁止内容：${forbidden}`);
     }

@@ -1,0 +1,36 @@
+name: 功能请求
+description: 提议新的 API、CLI、文档、生成器或集成能力
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: 使用场景
+      description: 说明你为什么需要这个能力，以及现在如何绕过。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 可以包含 API 草案、CLI 参数或文档结构。
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      options:
+        - parser / validate
+        - solver / hint
+        - rating
+        - generator / candidate pool
+        - canonical
+        - CLI
+        - docs
+        - other
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: 兼容性考虑
+      description: 是否可能影响现有 API、输出 schema、性能或包体。

@@ -51,8 +51,10 @@ const payload = {
     negativeSmokeTechniques: rows.filter((row) => row.hasNegativeSmoke).length,
     ratingCorpusTechniques: rows.filter((row) => row.hasRatingCorpus).length,
     stableMissingPositiveSmoke: stableRows.filter((row) => !row.hasPositiveSmoke).map((row) => row.id),
+    stableMissingNegativeSmoke: stableRows.filter((row) => !row.hasNegativeSmoke).map((row) => row.id),
     stableMissingRatingCorpus: stableRows.filter((row) => !row.hasRatingCorpus).map((row) => row.id),
     experimentalMissingPositiveSmoke: experimentalRows.filter((row) => !row.hasPositiveSmoke).map((row) => row.id),
+    experimentalMissingNegativeSmoke: experimentalRows.filter((row) => !row.hasNegativeSmoke).map((row) => row.id),
     experimentalMissingRatingCorpus: experimentalRows.filter((row) => !row.hasRatingCorpus).map((row) => row.id),
     elapsedMs: Math.round(performance.now() - startedAt),
   },
@@ -61,6 +63,10 @@ const payload = {
 
 if (options.outputPath) {
   writeFileSync(resolve(process.cwd(), options.outputPath), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+}
+
+if (options.markdownOutputPath) {
+  writeFileSync(resolve(process.cwd(), options.markdownOutputPath), renderMarkdownMatrix(payload), 'utf8');
 }
 
 if (options.json) {
@@ -134,6 +140,7 @@ function parseArgs(args) {
     smokePath: DEFAULT_SMOKE,
     ratingPath: DEFAULT_RATING,
     outputPath: null,
+    markdownOutputPath: null,
     json: false,
   };
   for (let index = 0; index < args.length; index += 1) {
@@ -157,6 +164,11 @@ function parseArgs(args) {
       index += 1;
       continue;
     }
+    if (item === '--markdown-output') {
+      parsed.markdownOutputPath = requireValue(args, index, item);
+      index += 1;
+      continue;
+    }
     throw new Error(`Unknown option: ${item}`);
   }
   return parsed;
@@ -174,8 +186,120 @@ function printHumanSummary(payload) {
   const summary = payload.summary;
   process.stdout.write(`Reference coverage: ${summary.definitions} definitions (${summary.stable} stable, ${summary.experimental} experimental)\n`);
   process.stdout.write(`Positive smoke: ${summary.positiveSmokeTechniques}; negative smoke: ${summary.negativeSmokeTechniques}; rating corpus: ${summary.ratingCorpusTechniques}\n`);
+  process.stdout.write(`Stable missing positive smoke (${summary.stableMissingPositiveSmoke.length}): ${summary.stableMissingPositiveSmoke.join(', ') || 'none'}\n`);
+  process.stdout.write(`Stable missing negative smoke (${summary.stableMissingNegativeSmoke.length}): ${summary.stableMissingNegativeSmoke.join(', ') || 'none'}\n`);
   process.stdout.write(`Stable missing rating corpus (${summary.stableMissingRatingCorpus.length}): ${summary.stableMissingRatingCorpus.join(', ') || 'none'}\n`);
+  process.stdout.write(`Experimental missing positive smoke (${summary.experimentalMissingPositiveSmoke.length}): ${summary.experimentalMissingPositiveSmoke.join(', ') || 'none'}\n`);
+  process.stdout.write(`Experimental missing negative smoke (${summary.experimentalMissingNegativeSmoke.length}): ${summary.experimentalMissingNegativeSmoke.join(', ') || 'none'}\n`);
   process.stdout.write(`Experimental missing rating corpus (${summary.experimentalMissingRatingCorpus.length}): ${summary.experimentalMissingRatingCorpus.join(', ') || 'none'}\n`);
+}
+
+function renderMarkdownMatrix(payload) {
+  const lines = [
+    '# Technique Audit Matrix',
+    '',
+    'This file is generated from `scripts/audit-reference-coverage.mjs --markdown-output`.',
+    'It tracks audit readiness for each public `TechniqueId`; it does not change solver policy or technique stability.',
+    '',
+    '## Summary',
+    '',
+    '| Metric | Value |',
+    '| --- | --- |',
+    `| Definitions | ${payload.summary.definitions} |`,
+    `| Stable | ${payload.summary.stable} |`,
+    `| Experimental | ${payload.summary.experimental} |`,
+    `| Positive smoke techniques | ${payload.summary.positiveSmokeTechniques} |`,
+    `| Negative smoke techniques | ${payload.summary.negativeSmokeTechniques} |`,
+    `| Rating corpus techniques | ${payload.summary.ratingCorpusTechniques} |`,
+    `| Stable missing positive smoke | ${payload.summary.stableMissingPositiveSmoke.length} |`,
+    `| Stable missing negative smoke | ${payload.summary.stableMissingNegativeSmoke.length} |`,
+    `| Stable missing rating corpus | ${payload.summary.stableMissingRatingCorpus.length} |`,
+    `| Experimental missing positive smoke | ${payload.summary.experimentalMissingPositiveSmoke.length} |`,
+    `| Experimental missing negative smoke | ${payload.summary.experimentalMissingNegativeSmoke.length} |`,
+    `| Experimental missing rating corpus | ${payload.summary.experimentalMissingRatingCorpus.length} |`,
+    '',
+    '## Status Meaning',
+    '',
+    '| Status | Meaning |',
+    '| --- | --- |',
+    '| `audited` | Has real-board rating coverage, positive smoke, and negative smoke. |',
+    '| `covered` | Has real-board rating coverage or positive smoke, but still lacks at least one audit layer. |',
+    '| `implemented` | Has a public definition but lacks coverage evidence in the current fixtures. |',
+    '',
+    '## Matrix',
+    '',
+    '| Technique | Family | Stability | SE status | +Smoke | -Smoke | Rating | Hardest | Audit | Risk | Next action |',
+    '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |',
+  ];
+
+  for (const row of payload.rows) {
+    const auditStatus = getAuditStatus(row);
+    const risk = getRiskLevel(row);
+    lines.push([
+      markdownCell(`\`${row.id}\``),
+      markdownCell(row.family),
+      markdownCell(row.stability),
+      markdownCell(row.seStatus ?? 'n/a'),
+      row.positiveSmoke,
+      row.negativeSmoke,
+      row.ratingRows,
+      row.ratingHardestRows,
+      markdownCell(auditStatus),
+      markdownCell(risk),
+      markdownCell(getNextAction(row, auditStatus, risk)),
+    ].join(' | ').replace(/^/, '| ').replace(/$/, ' |'));
+  }
+
+  lines.push('');
+  return `${lines.join('\n')}\n`;
+}
+
+function getAuditStatus(row) {
+  if (row.hasRatingCorpus && row.hasPositiveSmoke && row.hasNegativeSmoke) {
+    return 'audited';
+  }
+  if (row.hasRatingCorpus || row.hasPositiveSmoke) {
+    return 'covered';
+  }
+  return 'implemented';
+}
+
+function getRiskLevel(row) {
+  if (row.family === 'forcing' || row.family === 'uniqueness' || row.family === 'pattern') {
+    return 'high';
+  }
+  if (row.family === 'fish'
+    || row.family === 'als'
+    || row.family === 'chain'
+    || row.family === 'coloring'
+    || row.family === 'single-digit-chain'
+    || row.family === 'wing') {
+    return 'medium';
+  }
+  return 'low';
+}
+
+function getNextAction(row, auditStatus, risk) {
+  if (!row.hasRatingCorpus) {
+    return 'Add real-board rating corpus row.';
+  }
+  if (!row.hasPositiveSmoke) {
+    return 'Add positive reference smoke.';
+  }
+  if ((risk === 'high' || row.stability === 'stable') && !row.hasNegativeSmoke) {
+    return 'Add negative / no-hit guard.';
+  }
+  if (auditStatus !== 'audited') {
+    return 'Add missing audit layer.';
+  }
+  if (risk === 'high') {
+    return 'Expand subtype and solution-safety guards.';
+  }
+  return 'Monitor for priority or evidence drift.';
+}
+
+function markdownCell(value) {
+  return String(value).replaceAll('|', '\\|');
 }
 
 function isRecord(value) {

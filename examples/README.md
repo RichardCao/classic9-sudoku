@@ -4,6 +4,38 @@
 
 ## API 示例
 
+`validate.ts` 展示：
+
+1. 解析 81 位题面。
+2. 校验合法题面。
+3. 读取非法题面的冲突信息。
+
+`solve.ts` 展示：
+
+1. 使用 `walkthrough()` 运行完整求解。
+2. 使用 `summarizeAnalysis()` 压缩求解结果。
+
+`hint.ts` 展示：
+
+1. 获取一个提示。
+2. 输出中文教学文案和英文短文案。
+3. 读取提示动作。
+
+`rate.ts` 展示：
+
+1. 使用内置评分策略。
+2. 对比 stable 和 extended 的评分摘要。
+
+`generate.ts` 展示：
+
+1. 生成一道固定 seed 的题。
+2. 区分 `success` 题目和诊断用 `bestCandidate`。
+
+`canonical-dedupe.ts` 展示：
+
+1. 对等价题面计算 canonical key。
+2. 使用 canonical key 判断重复。
+
 `basic-api.ts` 展示：
 
 1. 解析题面。

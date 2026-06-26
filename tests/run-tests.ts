@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 
 import {
   canonicalizeBoard,
@@ -160,6 +161,90 @@ const EXPERIMENTAL_TECHNIQUE_GOLDEN_IDS = [
   'unique-loop',
 ] as const;
 
+const TEST_PROFILE = process.env.CLASSIC9_TEST_PROFILE === 'full'
+  ? 'full'
+  : process.env.CLASSIC9_TEST_PROFILE === 'slow'
+    ? 'slow'
+    : 'fast';
+const TEST_TIMING = process.env.CLASSIC9_TEST_TIMING === '1' || process.env.CLASSIC9_TEST_TIMING === 'true';
+const TEST_TIMING_FAIL_ON_BUDGET = process.env.CLASSIC9_TEST_TIMING_FAIL_ON_BUDGET === '1'
+  || process.env.CLASSIC9_TEST_TIMING_FAIL_ON_BUDGET === 'true';
+const FAST_TEST_SOFT_BUDGET_MS = 500;
+const FAST_TOTAL_SOFT_BUDGET_MS = 60_000;
+const SLOW_TEST_SOFT_BUDGET_MS = 5 * 60_000;
+const SLOW_TOTAL_SOFT_BUDGET_MS = 20 * 60_000;
+let skippedFastTests = 0;
+let skippedSlowTests = 0;
+const timingRows: Array<{ name: string; profile: 'fast' | 'slow'; elapsedMs: number }> = [];
+
+function runFastTest(name: string, testFn: () => void): void {
+  if (TEST_PROFILE === 'slow') {
+    skippedFastTests += 1;
+    return;
+  }
+  runMeasuredTest(name, 'fast', testFn);
+}
+
+function runSlowTest(name: string, testFn: () => void): void {
+  if (TEST_PROFILE === 'full' || TEST_PROFILE === 'slow') {
+    runMeasuredTest(name, 'slow', testFn);
+    return;
+  }
+  skippedSlowTests += 1;
+}
+
+function runMeasuredTest(name: string, profile: 'fast' | 'slow', testFn: () => void): void {
+  const startedAt = performance.now();
+  testFn();
+  if (TEST_TIMING) {
+    timingRows.push({
+      name,
+      profile,
+      elapsedMs: performance.now() - startedAt,
+    });
+  }
+}
+
+function printTimingSummary(): void {
+  if (!TEST_TIMING) {
+    return;
+  }
+  const totalMs = timingRows.reduce((sum, row) => sum + row.elapsedMs, 0);
+  const rows = [...timingRows].sort((left, right) => right.elapsedMs - left.elapsedMs);
+  const activeProfiles = new Set(timingRows.map((row) => row.profile));
+  const warnings: string[] = [];
+  for (const row of rows) {
+    const budget = row.profile === 'fast' ? FAST_TEST_SOFT_BUDGET_MS : SLOW_TEST_SOFT_BUDGET_MS;
+    if (row.elapsedMs > budget) {
+      warnings.push(`${row.profile} test ${row.name} exceeded soft budget: ${formatElapsed(row.elapsedMs)} > ${formatElapsed(budget)}`);
+    }
+  }
+  if (activeProfiles.has('fast') && totalMs > FAST_TOTAL_SOFT_BUDGET_MS) {
+    warnings.push(`fast/full total exceeded fast soft budget: ${formatElapsed(totalMs)} > ${formatElapsed(FAST_TOTAL_SOFT_BUDGET_MS)}`);
+  }
+  if (activeProfiles.has('slow') && totalMs > SLOW_TOTAL_SOFT_BUDGET_MS) {
+    warnings.push(`slow/full total exceeded slow soft budget: ${formatElapsed(totalMs)} > ${formatElapsed(SLOW_TOTAL_SOFT_BUDGET_MS)}`);
+  }
+
+  process.stdout.write(`Test timing: profile=${TEST_PROFILE}, ran=${timingRows.length}, total=${formatElapsed(totalMs)}\n`);
+  for (const row of rows.slice(0, 20)) {
+    process.stdout.write(`- ${row.profile} ${row.name}: ${formatElapsed(row.elapsedMs)}\n`);
+  }
+  for (const warning of warnings) {
+    process.stdout.write(`Timing warning: ${warning}\n`);
+  }
+  if (warnings.length > 0 && TEST_TIMING_FAIL_ON_BUDGET) {
+    throw new Error(`Test timing budget exceeded: ${warnings[0]}`);
+  }
+}
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`;
+  }
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 type TestHouse = { type: 'row' | 'col' | 'box'; index: number };
 
 function testParseAndSerialize(): void {
@@ -195,15 +280,24 @@ function testBoardAdapters(): void {
 function testPublicSourceImportGuard(): void {
   const sourceRoot = join(process.cwd(), 'src');
   const examplesRoot = join(process.cwd(), 'examples');
-  const bannedPatterns = [
+  const sourceBannedPatterns = [
     /assets\//,
     /from\s+['"]cc['"]/,
     /from\s+['"](?:\/|[A-Za-z]:\\)/,
+  ];
+  const exampleBannedPatterns = [
+    ...sourceBannedPatterns,
     /from\s+['"].*\.\.\/\.\./,
   ];
-  for (const filePath of [...listSourceFiles(sourceRoot), ...listSourceFiles(examplesRoot)]) {
+  for (const filePath of listSourceFiles(sourceRoot)) {
     const content = readFileSync(filePath, 'utf8');
-    for (const pattern of bannedPatterns) {
+    for (const pattern of sourceBannedPatterns) {
+      assert.equal(pattern.test(content), false, `${filePath} 不应引用外部应用框架相关路径。`);
+    }
+  }
+  for (const filePath of listSourceFiles(examplesRoot)) {
+    const content = readFileSync(filePath, 'utf8');
+    for (const pattern of exampleBannedPatterns) {
       assert.equal(pattern.test(content), false, `${filePath} 不应引用外部应用框架相关路径。`);
     }
   }
@@ -245,7 +339,7 @@ function testPackageExportsDist(): void {
   assert.equal(packageJson.private, false);
   assert.equal(packageJson.license, 'MIT');
   assert.equal(packageJson.author, 'Cao Ruichuang');
-  assert.equal(packageJson.version, '0.4.0');
+  assert.equal(packageJson.version, '0.5.0');
   assert.equal(packageJson.publishConfig?.access, 'public');
   assert.equal(packageJson.main, './dist/src/index.js');
   assert.equal(packageJson.types, './dist/src/index.d.ts');
@@ -258,6 +352,18 @@ function testPackageExportsDist(): void {
   assert.ok(packageJson.files?.includes('SECURITY.md'));
   assert.equal(packageJson.files?.includes('tests/fixtures/release-smoke-corpus.json'), false);
   assert.equal(packageJson.files?.includes('scripts'), false);
+  for (const githubOnlyDoc of [
+    'docs/ADR_MODULE_COMPATIBILITY.md',
+    'docs/GITHUB_ISSUE_BACKLOG.md',
+    'docs/MARKET_METRICS.md',
+    'docs/MILESTONES.md',
+    'docs/PACKAGE_STATUS_0.4.0_COMPARISON.md',
+    'docs/RELEASE_0.5.0_STATUS.md',
+    'docs/GENERATOR_STRATEGY_UPDATE_STEPS.md',
+    'docs/TEST_AUDIT.md',
+  ]) {
+    assert.equal(packageJson.files?.includes(githubOnlyDoc), false);
+  }
   assert.ok(packageJson.keywords?.includes('sudoku'));
   assert.equal(packageJson.engines?.node, '>=20');
   assert.equal(typeof packageJson.devDependencies?.typescript, 'string');
@@ -272,12 +378,16 @@ function testPackageExportsDist(): void {
   assert.ok(packageJson.scripts?.verify?.includes('npm run typecheck'));
   assert.ok(packageJson.scripts?.verify?.includes('npm run audit:reference'));
   assert.ok(packageJson.scripts?.verify?.includes('npm run smoke:pack'));
+  assert.ok(packageJson.scripts?.test?.includes('dist/tests/run-tests.js'));
+  assert.ok(packageJson.scripts?.['test:slow']?.includes("CLASSIC9_TEST_PROFILE='slow'"));
+  assert.ok(packageJson.scripts?.['test:full']?.includes("CLASSIC9_TEST_PROFILE='full'"));
   assert.ok(packageJson.scripts?.['verify:coverage']?.includes('npm run audit:coverage'));
   assert.ok(packageJson.scripts?.['verify:coverage']?.includes('npm run audit:bug-evidence'));
+  assert.ok(packageJson.scripts?.['verify:coverage']?.includes('npm run audit:fish-evidence'));
   assert.ok(packageJson.scripts?.['audit:reference']?.includes('scripts/audit-reference-techniques.mjs'));
   assert.ok(packageJson.scripts?.['audit:technique-priority']?.includes('scripts/audit-technique-priority.mjs'));
   assert.ok(packageJson.scripts?.['audit:stable']?.includes('scripts/audit-stable-puzzles.mjs'));
-  assert.ok(packageJson.scripts?.['verify:release']?.includes('npm run verify:coverage'));
+  assert.ok(packageJson.scripts?.['verify:release']?.includes('npm run test:slow'));
   assert.ok(packageJson.scripts?.['verify:release']?.includes('scripts/verify-release.mjs'));
   for (const scriptName of Object.keys(packageJson.scripts ?? {})) {
     assert.equal(scriptName.startsWith('internal:'), false);
@@ -302,8 +412,13 @@ function testPublicRepoMaintenanceFiles(): void {
   const contributing = readFileSync(join(process.cwd(), 'CONTRIBUTING.md'), 'utf8');
   assert.doesNotMatch(contributing, /ADVANCED_TECHNIQUE_MIGRATION/);
   const ci = readFileSync(join(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
-  assert.match(ci, /Reference Technique Smoke Audit/);
-  assert.match(ci, /npm run audit:reference/);
+  assert.match(ci, /fast:/);
+  assert.match(ci, /smoke:/);
+  assert.match(ci, /slow-audit:/);
+  assert.match(ci, /release-audit:/);
+  assert.match(ci, /npm test/);
+  assert.match(ci, /npm run test:slow/);
+  assert.match(ci, /Release Smoke Audit/);
 }
 
 function testForbiddenCandidates(): void {
@@ -502,23 +617,37 @@ function testCanonicalize(): void {
   const sparsePuzzle = parsePuzzle('100000000000000000000000000000000000000000000000000000000000000000000000000000000');
   const emptyPair = canonicalizePair(emptyPuzzle, solution);
   assert.equal(emptyPair.solution.length, 81);
-  assert.throws(() => canonicalizePair(puzzle, parsePuzzle('034678912672195348198342567859761423426853791713924856961537284287419635345286179')), /complete/);
-  assert.throws(() => canonicalizePair(puzzle, parsePuzzle('634678912672195348198342567859761423426853791713924856961537284287419635345286179')), /clue/);
-  assert.throws(() => canonicalizePair(emptyPuzzle, parsePuzzle('554678912672195348198342567859761423426853791713924856961537284287419635345286179')), /duplicate/);
-  assert.doesNotThrow(() => validateCanonicalTransform(canonicalizeBoard(emptyPuzzle).transform));
-  assert.doesNotThrow(() => validateCanonicalTransform(canonicalizeBoard(sparsePuzzle).transform));
+  const emptyCanonical = canonicalizeBoard(emptyPuzzle);
+  assert.deepEqual(emptyCanonical.transform, {
+    transposed: false,
+    rowOrder: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    colOrder: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    digitMap: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  });
+  assert.match(canonicalizePair(puzzle, parsePuzzle('034678912672195348198342567859761423426853791713924856961537284287419635345286179')).warnings?.join('\n') ?? '', /incomplete/);
+  assert.match(canonicalizePair(puzzle, parsePuzzle('634678912672195348198342567859761423426853791713924856961537284287419635345286179')).warnings?.join('\n') ?? '', /clue/);
+  assert.match(canonicalizePair(emptyPuzzle, parsePuzzle('554678912672195348198342567859761423426853791713924856961537284287419635345286179')).warnings?.join('\n') ?? '', /duplicate/);
+  assert.doesNotThrow(() => validateCanonicalTransform(emptyCanonical.transform));
+  const sparseCanonical = canonicalizeBoard(sparsePuzzle);
+  assert.equal(sparseCanonical.key, `${'0'.repeat(80)}1`);
+  assert.doesNotThrow(() => validateCanonicalTransform(sparseCanonical.transform));
   assert.doesNotThrow(() => validateCanonicalTransform(emptyPair.transform));
 }
 
 function testPublicBoardValueValidation(): void {
   const invalidValues = [-1, 10, 12, NaN, 1.5];
-  const emptyTransform = canonicalizeBoard(new Array<number>(81).fill(0)).transform;
+  const identityTransform = {
+    transposed: false,
+    rowOrder: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    colOrder: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    digitMap: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  };
   for (const value of invalidValues) {
     const board = new Array<number>(81).fill(0);
     board[0] = value;
     assert.throws(() => serializeBoard(board), /invalid value/i);
     assert.throws(() => canonicalizeBoard(board), /invalid value/i);
-    assert.throws(() => applyTransformToBoard(board, emptyTransform), /invalid value/i);
+    assert.throws(() => applyTransformToBoard(board, identityTransform), /invalid value/i);
   }
 }
 
@@ -640,13 +769,13 @@ function testCli(): void {
   const helpResult = runCli(['help']);
   assert.equal(helpResult.exitCode, 0);
   assert.equal((helpResult.output as { package?: string }).package, '@sudoku-tools/classic9');
-  assert.equal((helpResult.output as { version?: string }).version, '0.4.0');
+  assert.equal((helpResult.output as { version?: string }).version, '0.5.0');
 
   const versionResult = runCli(['version']);
   assert.equal(versionResult.exitCode, 0);
   assert.deepEqual(versionResult.output, {
     name: '@sudoku-tools/classic9',
-    version: '0.4.0',
+    version: '0.5.0',
   });
 }
 
@@ -1624,8 +1753,9 @@ function testSchemas(): void {
   assert.equal(canonicalTransformSchema.properties?.colOrder?.uniqueItems, true);
   assert.equal(canonicalTransformSchema.properties?.digitMap?.uniqueItems, true);
   assert.equal(canonicalTransformSchema.properties?.digitMap?.prefixItems?.[0]?.const, 0);
-  const canonicalPairResultSchema = schemas.canonicalPairResult as { properties?: { solution?: { items?: { minimum?: number } } } };
-  assert.equal(canonicalPairResultSchema.properties?.solution?.items?.minimum, 1);
+  const canonicalPairResultSchema = schemas.canonicalPairResult as { properties?: { solution?: { items?: { minimum?: number } }; warnings?: unknown } };
+  assert.equal(canonicalPairResultSchema.properties?.solution?.items?.minimum, 0);
+  assert.ok(canonicalPairResultSchema.properties?.warnings);
   const generatedPuzzleSchema = schemas.generatedPuzzle as { properties?: { canonicalKey?: Record<string, unknown>; solution?: { items?: { minimum?: number } } } };
   assert.equal(generatedPuzzleSchema.properties?.solution?.items?.minimum, 1);
   assert.equal(generatedPuzzleSchema.properties?.canonicalKey?.minLength, 81);
@@ -2057,6 +2187,78 @@ function testSeededRandomNeverShufflesOutOfBounds(): void {
   assert.notEqual(result.status, 'invalid-request');
 }
 
+function testSolutionGridSources(): void {
+  const factory = new SolutionGridFactory();
+  const randomA = factory.createWithOptions(101, { source: 'random-backtracking', maxElapsedMs: 1000 });
+  const randomB = factory.createWithOptions(101, { source: 'random-backtracking', maxElapsedMs: 1000 });
+  const randomC = factory.createWithOptions(102, { source: 'random-backtracking', maxElapsedMs: 1000 });
+  assert.equal(randomA.status, 'success');
+  assert.equal(randomB.status, 'success');
+  assert.equal(randomC.status, 'success');
+  assert.ok(randomA.solution);
+  assert.ok(randomB.solution);
+  assert.ok(randomC.solution);
+  assert.equal(validate(randomA.solution).legal, true);
+  assert.equal(serializeBoard(randomA.solution), serializeBoard(randomB.solution));
+  assert.notEqual(serializeBoard(randomA.solution), serializeBoard(randomC.solution));
+
+  const uniqueSolutions = new Set<string>();
+  for (let seed = 1; seed <= 20; seed += 1) {
+    const generated = factory.createWithOptions(seed, { source: 'random-backtracking', maxElapsedMs: 1000 });
+    assert.equal(generated.status, 'success');
+    assert.ok(generated.solution);
+    uniqueSolutions.add(serializeBoard(generated.solution));
+  }
+  assert.ok(uniqueSolutions.size >= 18);
+
+  const poolResult = factory.createWithOptions(1, {
+    source: 'pool',
+    solutionPool: [randomA.solution],
+  });
+  assert.equal(poolResult.status, 'success');
+  assert.deepEqual(poolResult.solution, randomA.solution);
+  assert.equal(factory.createWithOptions(1, { source: 'pool', solutionPool: [] }).status, 'invalid-pool');
+  assert.equal(factory.createWithOptions(1, { source: 'random-backtracking', maxNodes: 1 }).status, 'timeout');
+
+  const generatedRandom = generateOne({
+    seed: 101,
+    solutionSource: 'random-backtracking',
+    minimality: 'none',
+    constraints: {
+      clues: { target: 81 },
+    },
+    budget: {
+      maxAttempts: 1,
+      maxElapsedMs: 2000,
+    },
+  });
+  assert.equal(generatedRandom.status, 'success');
+  assert.equal(generatedRandom.diagnostics.solutionSource, 'random-backtracking');
+
+  const generatedFromPool = generateOne({
+    seed: 1,
+    solutionSource: 'pool',
+    solutionPool: [randomA.solution],
+    minimality: 'none',
+    constraints: {
+      clues: { target: 81 },
+    },
+    budget: {
+      maxAttempts: 1,
+      maxElapsedMs: 2000,
+    },
+  });
+  assert.equal(generatedFromPool.status, 'success');
+  assert.equal(generatedFromPool.diagnostics.solutionSource, 'pool');
+
+  const invalidPool = analyzeGenerationRequest({
+    solutionSource: 'pool',
+    solutionPool: [new Array<number>(81).fill(0)],
+  });
+  assert.equal(invalidPool.status, 'invalid');
+  assert.ok(invalidPool.errors.some((error) => error.code === 'invalid-solution-pool'));
+}
+
 function testDefaultTechniqueOrderPolicy(): void {
   assert.ok(Object.isFrozen(CLASSIC_STABLE_POLICY));
   assert.ok(Object.isFrozen(CLASSIC_STABLE_POLICY.techniqueOrder));
@@ -2249,6 +2451,22 @@ function testGenerateCli(): void {
   ]);
   assert.equal(result.exitCode, 0);
   assert.equal(typeof result.output, 'object');
+
+  const tmpDir = join(process.cwd(), 'dist', 'tmp');
+  mkdirSync(tmpDir, { recursive: true });
+  const solutionPoolPath = join(tmpDir, 'solution-pool.json');
+  const solution = new SolutionGridFactory().createWithOptions(101, { source: 'random-backtracking', maxElapsedMs: 1000 }).solution;
+  assert.ok(solution);
+  writeFileSync(solutionPoolPath, JSON.stringify([solution]), 'utf8');
+  const poolResult = runCli([
+    'generate',
+    '{"seed":1,"solutionSource":"pool","minimality":"none","constraints":{"clues":{"target":81}},"budget":{"maxAttempts":1,"maxElapsedMs":2000}}',
+    '--solution-pool',
+    solutionPoolPath,
+  ]);
+  assert.equal(poolResult.exitCode, 0);
+  assert.equal((poolResult.output as { status?: string; diagnostics?: { solutionSource?: string } }).status, 'success');
+  assert.equal((poolResult.output as { diagnostics?: { solutionSource?: string } }).diagnostics?.solutionSource, 'pool');
 }
 
 function testGenerateTechniqueConstraints(): void {
@@ -2697,7 +2915,29 @@ function testSelectFromCandidates(): void {
   assert.equal(result.selected.length, 1);
   assert.equal(result.diagnostics.selected, 1);
   assert.equal(result.diagnostics.rejected, 1);
+  assert.equal(result.diagnostics.canonicalKeyUsage.reused, 1);
+  assert.equal(result.diagnostics.canonicalKeyUsage.computed, 0);
   assert.equal(result.diagnostics.scoreBucketCounts[0]?.selected, 1);
+  assert.equal(result.diagnostics.clueBucketCounts.length, 0);
+  assert.equal(result.diagnostics.hardestTechniqueBucketCounts.length, 0);
+  assert.equal(result.diagnostics.requiredTechniqueBucketCounts.length, 0);
+
+  const bucketedResult = selectFromCandidates([first, second], {
+    maxResults: 2,
+    clueBuckets: [{ min: 40, max: 40, limit: 2 }],
+    hardestTechniqueBuckets: [{ techniques: ['naked-single'], limit: 2 }],
+    requiredTechniqueBuckets: [{ techniques: ['full-house'], minCount: 1, limit: 2 }],
+  });
+  assert.equal(bucketedResult.selected.length, 2);
+  assert.equal(bucketedResult.diagnostics.clueBucketCounts[0]?.selected, 2);
+  assert.equal(bucketedResult.diagnostics.hardestTechniqueBucketCounts[0]?.selected, 2);
+  assert.equal(bucketedResult.diagnostics.requiredTechniqueBucketCounts[0]?.selected, 2);
+
+  const unsolvedResult = selectFromCandidates([{ ...first, solved: false }], {
+    maxResults: 1,
+  });
+  assert.equal(unsolvedResult.selected.length, 0);
+  assert.equal(unsolvedResult.diagnostics.rejectedByReason['unsolved-candidate'], 1);
 
   assert.throws(() => selectFromCandidates([{ ...first, score: Number.NaN } as never], {
     maxResults: 1,
@@ -2729,6 +2969,21 @@ function testSelectFromCandidates(): void {
       { min: 100, max: 200 },
     ],
   }), /不能重叠/);
+  assert.throws(() => selectFromCandidates([first], {
+    maxResults: 1,
+    clueBuckets: [
+      { min: 20, max: 40 },
+      { min: 40, max: 50 },
+    ],
+  }), /不能重叠/);
+  assert.throws(() => selectFromCandidates([first], {
+    maxResults: 1,
+    hardestTechniqueBuckets: [{ techniques: ['missing-technique' as never] }],
+  }), /未知技巧/);
+  assert.throws(() => selectFromCandidates([first], {
+    maxResults: 1,
+    requiredTechniqueBuckets: [{ techniques: ['full-house'], minCount: 0 }],
+  }), /minCount/);
 
   const outOfBucket = {
     ...first,
@@ -2770,6 +3025,7 @@ function testSelectFromCandidates(): void {
   });
   assert.equal(dedupeWithoutCanonicalKeyResult.selected.length, 1);
   assert.equal(dedupeWithoutCanonicalKeyResult.diagnostics.rejectedByReason['canonical-duplicate'], 1);
+  assert.equal(dedupeWithoutCanonicalKeyResult.diagnostics.canonicalKeyUsage.computed, 2);
 
   const duplicateDoesNotConsumeBucketResult = selectFromCandidates([first, { ...first, seed: first.seed + 300 }, second], {
     maxResults: 2,
@@ -3071,6 +3327,9 @@ function testCandidatePoolStatsAndDedupeApi(): void {
   assert.equal(stats.canonical.uniqueKeys, 2);
   assert.equal(stats.canonical.duplicateKeys, 1);
   assert.equal(stats.seeds.duplicates, 1);
+  assert.equal(stats.solved.true, 3);
+  assert.equal(stats.solved.false, 0);
+  assert.equal(stats.sourceCounts.unknown, 3);
   assert.ok(Object.keys(stats.score.buckets).length >= 1);
   assert.throws(() => analyzeCandidatePool([first], { scoreBucketSize: 0 }), /scoreBucketSize/);
   assert.throws(() => analyzeCandidatePool([first], { scoreBucketSize: -1 }), /scoreBucketSize/);
@@ -3086,13 +3345,15 @@ function testCandidatePoolStatsAndDedupeApi(): void {
   const mismatchedSolution = [...first.solution];
   mismatchedSolution[clueIndex] = (first.puzzle[clueIndex]! % 9) + 1;
   assert.throws(() => analyzeCandidatePool([{ ...first, solution: mismatchedSolution } as never]), /solution/);
-  assert.throws(() => analyzeCandidatePool([{ ...first, canonicalKey: '0'.repeat(81) } as never]), /canonicalKey/);
+  assert.doesNotThrow(() => analyzeCandidatePool([{ ...first, canonicalKey: '0'.repeat(81) } as never]));
+  assert.throws(() => analyzeCandidatePool([{ ...first, canonicalKey: '0'.repeat(81) } as never], { verifyCanonicalKey: true }), /canonicalKey/);
   assert.throws(() => dedupeCandidates([{ ...first, techniqueCounts: { 'not-a-technique': 1 } } as never]), /未知技巧/);
 
   const deduped = dedupeCandidates([first, first, second], { key: 'canonical' });
   assert.equal(deduped.candidates.length, 2);
   assert.equal(deduped.rejected.length, 1);
   assert.equal(deduped.diagnostics.removed, 1);
+  assert.equal(deduped.diagnostics.canonicalKeyUsage.reused, 3);
   deduped.candidates[0]!.puzzle[0] = 9;
   assert.notEqual(first.puzzle[0], 9);
 }
@@ -3144,6 +3405,7 @@ function testCandidatePoolStatsAndDedupeCli(): void {
   ]);
   assert.equal(statsResult.exitCode, 0);
   assert.equal((statsResult.output as { total?: number }).total, 3);
+  assert.equal((statsResult.output as { solved?: { true?: number } }).solved?.true, 3);
   const invalidStatsResult = runCli(['candidate-stats', invalidCandidatesPath]);
   assert.equal(invalidStatsResult.exitCode, 1);
   assert.match(JSON.stringify(invalidStatsResult.output), /score/);
@@ -3479,8 +3741,16 @@ interface ReferenceChainFixture {
     | 'bidirectional-x-cycle'
     | 'bidirectional-y-cycle'
     | 'forcing-x-chain'
+    | 'x-chain'
+    | 'x-coloring'
+    | 'xy-chain'
+    | 'simple-coloring'
+    | 'multi-colors'
+    | 'three-d-medusa'
+    | 'grouped-x-cycles'
     | 'forcing-chain'
     | 'aic'
+    | 'aic-exotic'
     | 'grouped-aic'
     | 'skyscraper'
     | 'two-string-kite'
@@ -3497,6 +3767,28 @@ interface ReferenceChainFixture {
   expectedLinks?: ReferenceExpectedLink[];
   expectedNodes?: ReferenceExpectedNode[];
   expectedCells?: ReferenceExpectedCell[];
+}
+
+interface ReferenceForcingFixture {
+  technique: Extract<TechniqueId,
+    | 'forcing-nets'
+    | 'digit-forcing-chains'
+    | 'nishio-forcing-chains'
+    | 'cell-forcing-chains'
+    | 'unit-forcing-chains'
+    | 'region-forcing-chains'
+    | 'table-chain'
+    | 'dynamic-forcing-chains'
+    | 'dynamic-forcing-chains-plus'
+    | 'bowmans-bingo'
+    | 'nested-forcing-chains'>;
+  state: StateInput;
+  expectedEliminations?: Array<{ cell: number; digit: number }>;
+  expectedPlacements?: Array<{ cell: number; digit: number }>;
+  expectedPattern?: { family: string; subtype?: string };
+  minBranches?: number;
+  minContradictionBranches?: number;
+  expectedMaxSteps?: number;
 }
 
 interface ReferenceWingFixture {
@@ -3578,9 +3870,11 @@ interface ReferencePatternFixture {
 }
 
 interface ReferenceTechniqueFixtureFile {
+  basics?: ReferenceBasicFixtureRecord[];
   direct: ReferenceDirectFixtureRecord[];
   fish?: ReferenceFishFixtureRecord[];
   chains: ReferenceChainFixtureRecord[];
+  forcing?: ReferenceForcingFixtureRecord[];
   wings?: ReferenceWingFixtureRecord[];
   als?: ReferenceAlsFixtureRecord[];
   patterns?: ReferencePatternFixtureRecord[];
@@ -3623,6 +3917,28 @@ interface ReferenceDirectFixtureRecord {
   expectedPlacement: { cell: number; digit: number };
 }
 
+interface ReferenceBasicFixtureRecord {
+  technique: Extract<TechniqueId,
+    | 'full-house'
+    | 'naked-single'
+    | 'hidden-single'
+    | 'locked-candidates'
+    | 'naked-pair'
+    | 'hidden-pair'
+    | 'naked-triple'
+    | 'hidden-triple'
+    | 'naked-quad'
+    | 'hidden-quad'>;
+  stateKind: 'exact' | 'mask' | 'puzzle';
+  puzzle?: string;
+  candidates?: Array<[number, number[]]>;
+  expectedEliminations?: Array<{ cell: number; digit: number }>;
+  expectedPlacements?: Array<{ cell: number; digit: number }>;
+  expectedPattern?: { family: string; subtype?: string };
+  expectedCells?: ReferenceExpectedCell[];
+  expectedHouses?: HouseRef[];
+}
+
 interface ReferenceChainFixtureRecord {
   technique: ReferenceChainFixture['technique'];
   stateKind: 'exact' | 'mask';
@@ -3637,6 +3953,19 @@ interface ReferenceChainFixtureRecord {
   expectedLinks?: ReferenceExpectedLink[];
   expectedNodes?: ReferenceExpectedNode[];
   expectedCells?: ReferenceExpectedCell[];
+}
+
+interface ReferenceForcingFixtureRecord {
+  technique: ReferenceForcingFixture['technique'];
+  stateKind: 'exact' | 'mask' | 'trusted';
+  puzzle?: string;
+  candidates: Array<[number, number[]]>;
+  expectedEliminations?: Array<{ cell: number; digit: number }>;
+  expectedPlacements?: Array<{ cell: number; digit: number }>;
+  expectedPattern?: { family: string; subtype?: string };
+  minBranches?: number;
+  minContradictionBranches?: number;
+  expectedMaxSteps?: number;
 }
 
 interface ReferenceFishFixtureRecord {
@@ -3728,6 +4057,19 @@ const EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES: ReferenceDirectFixture['techni
   'direct-hidden-triplet',
 ];
 
+const EXPECTED_REFERENCE_BASIC_SMOKE_TECHNIQUES: ReferenceBasicFixtureRecord['technique'][] = [
+  'full-house',
+  'naked-single',
+  'hidden-single',
+  'locked-candidates',
+  'naked-pair',
+  'hidden-pair',
+  'naked-triple',
+  'hidden-triple',
+  'naked-quad',
+  'hidden-quad',
+];
+
 const EXPECTED_REFERENCE_FISH_SMOKE_TECHNIQUES: ReferenceFishFixture['technique'][] = [
   'x-wing',
   'swordfish',
@@ -3788,6 +4130,28 @@ const EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES: ReferenceChainFixture['techniqu
   'grouped-aic',
   'grouped-aic',
   'grouped-aic',
+  'x-chain',
+  'xy-chain',
+  'aic-exotic',
+  'simple-coloring',
+  'x-coloring',
+  'multi-colors',
+  'three-d-medusa',
+  'grouped-x-cycles',
+];
+
+const EXPECTED_REFERENCE_FORCING_SMOKE_TECHNIQUES: ReferenceForcingFixture['technique'][] = [
+  'forcing-nets',
+  'digit-forcing-chains',
+  'nishio-forcing-chains',
+  'cell-forcing-chains',
+  'unit-forcing-chains',
+  'region-forcing-chains',
+  'table-chain',
+  'dynamic-forcing-chains',
+  'dynamic-forcing-chains-plus',
+  'bowmans-bingo',
+  'nested-forcing-chains',
 ];
 
 const EXPECTED_REFERENCE_WING_SMOKE_TECHNIQUES: ReferenceWingFixture['technique'][] = [
@@ -3858,6 +4222,15 @@ function toReferenceDirectFixture(record: ReferenceDirectFixtureRecord): Referen
   };
 }
 
+function buildReferenceBasicState(record: ReferenceBasicFixtureRecord): StateInput {
+  if (record.stateKind === 'puzzle') {
+    return parsePuzzle(record.puzzle!);
+  }
+  return record.stateKind === 'exact'
+    ? buildExactCandidateState(record.candidates!)
+    : buildCandidateMaskState(record.candidates!);
+}
+
 function toReferenceChainFixture(record: ReferenceChainFixtureRecord): ReferenceChainFixture {
   return {
     technique: record.technique,
@@ -3874,6 +4247,23 @@ function toReferenceChainFixture(record: ReferenceChainFixtureRecord): Reference
     ...(record.expectedLinks ? { expectedLinks: record.expectedLinks } : {}),
     ...(record.expectedNodes ? { expectedNodes: record.expectedNodes } : {}),
     ...(record.expectedCells ? { expectedCells: record.expectedCells } : {}),
+  };
+}
+
+function toReferenceForcingFixture(record: ReferenceForcingFixtureRecord): ReferenceForcingFixture {
+  return {
+    technique: record.technique,
+    state: record.stateKind === 'exact'
+      ? buildExactCandidateState(record.candidates)
+      : record.stateKind === 'mask'
+        ? buildCandidateMaskState(record.candidates)
+        : buildTrustedState(record.puzzle!, record.candidates),
+    ...(record.expectedEliminations ? { expectedEliminations: record.expectedEliminations } : {}),
+    ...(record.expectedPlacements ? { expectedPlacements: record.expectedPlacements } : {}),
+    ...(record.expectedPattern ? { expectedPattern: record.expectedPattern } : {}),
+    ...(record.minBranches !== undefined ? { minBranches: record.minBranches } : {}),
+    ...(record.minContradictionBranches !== undefined ? { minContradictionBranches: record.minContradictionBranches } : {}),
+    ...(record.expectedMaxSteps !== undefined ? { expectedMaxSteps: record.expectedMaxSteps } : {}),
   };
 }
 
@@ -3919,10 +4309,14 @@ function toReferencePatternFixture(record: ReferencePatternFixtureRecord): Refer
 
 function assertReferenceTechniqueFixtureFile(value: unknown): asserts value is ReferenceTechniqueFixtureFile {
   assert.ok(isRecord(value), 'Reference fixture file should be an object');
+  const basics = 'basics' in value ? value.basics : [];
+  assert.ok(Array.isArray(basics), 'Reference fixture basics should be an array');
   assert.ok(Array.isArray(value.direct), 'Reference fixture direct should be an array');
   const fish = 'fish' in value ? value.fish : [];
   assert.ok(Array.isArray(fish), 'Reference fixture fish should be an array');
   assert.ok(Array.isArray(value.chains), 'Reference fixture chains should be an array');
+  const forcing = 'forcing' in value ? value.forcing : [];
+  assert.ok(Array.isArray(forcing), 'Reference fixture forcing should be an array');
   const wings = 'wings' in value ? value.wings : [];
   assert.ok(Array.isArray(wings), 'Reference fixture wings should be an array');
   const als = 'als' in value ? value.als : [];
@@ -3932,9 +4326,11 @@ function assertReferenceTechniqueFixtureFile(value: unknown): asserts value is R
   assert.ok(Array.isArray(value.uniqueness), 'Reference fixture uniqueness should be an array');
   const negative = 'negative' in value ? value.negative : [];
   assert.ok(Array.isArray(negative), 'Reference fixture negative should be an array');
+  const basicTechniques = basics.map((record) => assertReferenceBasicFixtureRecord(record));
   const directTechniques = value.direct.map((record) => assertReferenceDirectFixtureRecord(record));
   const fishTechniques = fish.map((record) => assertReferenceFishFixtureRecord(record));
   assert.deepEqual(value.chains.map((record) => assertReferenceChainFixtureRecord(record)), EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES);
+  assert.deepEqual(forcing.map((record) => assertReferenceForcingFixtureRecord(record)), EXPECTED_REFERENCE_FORCING_SMOKE_TECHNIQUES);
   const wingTechniques = wings.map((record) => assertReferenceWingFixtureRecord(record));
   const alsTechniques = als.map((record) => assertReferenceAlsFixtureRecord(record));
   const patternTechniques = patterns.map((record) => assertReferencePatternFixtureRecord(record));
@@ -3946,6 +4342,7 @@ function assertReferenceTechniqueFixtureFile(value: unknown): asserts value is R
   assert.deepEqual(alsTechniques, EXPECTED_REFERENCE_ALS_SMOKE_TECHNIQUES);
   assert.deepEqual(patternTechniques, EXPECTED_REFERENCE_PATTERN_SMOKE_TECHNIQUES);
   assert.deepEqual(fishTechniques, EXPECTED_REFERENCE_FISH_SMOKE_TECHNIQUES);
+  assert.deepEqual(basicTechniques, EXPECTED_REFERENCE_BASIC_SMOKE_TECHNIQUES);
   for (const technique of EXPECTED_REFERENCE_UNIQUENESS_SMOKE_TECHNIQUES) {
     assert.ok(uniquenessTechniques.includes(technique), `Reference uniqueness fixtures should include ${technique}`);
   }
@@ -4014,6 +4411,55 @@ function assertReferenceRatingCorpusRecord(value: unknown): asserts value is Ref
   }
 }
 
+function assertReferenceBasicFixtureRecord(value: unknown): ReferenceBasicFixtureRecord['technique'] {
+  assert.ok(isRecord(value), 'Reference basic fixture should be an object');
+  assert.ok(EXPECTED_REFERENCE_BASIC_SMOKE_TECHNIQUES.includes(value.technique as ReferenceBasicFixtureRecord['technique']), `Unknown reference basic technique: ${String(value.technique)}`);
+  assert.ok(value.stateKind === 'exact' || value.stateKind === 'mask' || value.stateKind === 'puzzle', `${String(value.technique)} stateKind should be exact, mask or puzzle`);
+  if (value.stateKind === 'puzzle') {
+    assert.equal(typeof value.puzzle, 'string', `${String(value.technique)} puzzle should be a string`);
+    assert.equal(parsePuzzle(value.puzzle as string).length, 81);
+  } else {
+    assertCandidateTuples(value.candidates, `${String(value.technique)} candidates`);
+  }
+  if ('expectedEliminations' in value) {
+    assert.ok(Array.isArray(value.expectedEliminations), `${String(value.technique)} expectedEliminations should be an array`);
+    for (const expected of value.expectedEliminations) {
+      assertCellDigitRef(expected, `${String(value.technique)} expectedEliminations`);
+    }
+  }
+  if ('expectedPlacements' in value) {
+    assert.ok(Array.isArray(value.expectedPlacements), `${String(value.technique)} expectedPlacements should be an array`);
+    for (const expected of value.expectedPlacements) {
+      assertCellDigitRef(expected, `${String(value.technique)} expectedPlacements`);
+    }
+  }
+  assert.ok(
+    ((value.expectedEliminations as unknown[] | undefined)?.length ?? 0) > 0
+    || ((value.expectedPlacements as unknown[] | undefined)?.length ?? 0) > 0,
+    `${String(value.technique)} should declare expectedEliminations or expectedPlacements`,
+  );
+  if ('expectedPattern' in value) {
+    assert.ok(isRecord(value.expectedPattern), `${String(value.technique)} expectedPattern should be an object`);
+    assert.equal(typeof value.expectedPattern.family, 'string', `${String(value.technique)} expectedPattern.family should be a string`);
+    if ('subtype' in value.expectedPattern) {
+      assert.equal(typeof value.expectedPattern.subtype, 'string', `${String(value.technique)} expectedPattern.subtype should be a string`);
+    }
+  }
+  if ('expectedCells' in value) {
+    assert.ok(Array.isArray(value.expectedCells), `${String(value.technique)} expectedCells should be an array`);
+    for (const expected of value.expectedCells) {
+      assertExpectedCellRef(expected, `${String(value.technique)} expectedCells`);
+    }
+  }
+  if ('expectedHouses' in value) {
+    assert.ok(Array.isArray(value.expectedHouses), `${String(value.technique)} expectedHouses should be an array`);
+    for (const expected of value.expectedHouses) {
+      assertExpectedHouseRef(expected, `${String(value.technique)} expectedHouses`);
+    }
+  }
+  return value.technique as ReferenceBasicFixtureRecord['technique'];
+}
+
 function assertReferenceDirectFixtureRecord(value: unknown): ReferenceDirectFixture['technique'] {
   assert.ok(isRecord(value), 'Reference direct fixture should be an object');
   assert.ok(EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES.includes(value.technique as ReferenceDirectFixture['technique']), `Unknown reference direct technique: ${String(value.technique)}`);
@@ -4036,7 +4482,13 @@ function assertReferenceChainFixtureRecord(value: unknown): ReferenceChainFixtur
   assertCandidateTuples(value.candidates, `${String(value.technique)} candidates`);
   assert.equal(typeof value.minLinks, 'number', `${String(value.technique)} minLinks should be a number`);
   const minLinks = value.minLinks as number;
-  assert.ok(Number.isInteger(minLinks) && minLinks >= 1, `${String(value.technique)} minLinks should be a positive integer`);
+  assert.ok(Number.isInteger(minLinks) && minLinks >= 0, `${String(value.technique)} minLinks should be a non-negative integer`);
+  if (minLinks === 0) {
+    assert.ok(
+      'minGroupedNodes' in value || 'expectedNodes' in value || 'expectedCells' in value,
+      `${String(value.technique)} minLinks 0 should be backed by expected evidence nodes or cells`,
+    );
+  }
   if ('expectedEliminations' in value) {
     assert.ok(Array.isArray(value.expectedEliminations), `${String(value.technique)} expectedEliminations should be an array`);
     for (const expected of value.expectedEliminations) {
@@ -4083,6 +4535,50 @@ function assertReferenceChainFixtureRecord(value: unknown): ReferenceChainFixtur
     }
   }
   return value.technique as ReferenceChainFixture['technique'];
+}
+
+function assertReferenceForcingFixtureRecord(value: unknown): ReferenceForcingFixture['technique'] {
+  assert.ok(isRecord(value), 'Reference forcing fixture should be an object');
+  assert.ok(EXPECTED_REFERENCE_FORCING_SMOKE_TECHNIQUES.includes(value.technique as ReferenceForcingFixture['technique']), `Unknown reference forcing technique: ${String(value.technique)}`);
+  assert.ok(value.stateKind === 'exact' || value.stateKind === 'mask' || value.stateKind === 'trusted', `${String(value.technique)} stateKind should be exact, mask or trusted`);
+  if (value.stateKind === 'trusted') {
+    assert.equal(typeof value.puzzle, 'string', `${String(value.technique)} puzzle should be a string`);
+    assert.equal(parsePuzzle(value.puzzle as string).length, 81);
+  }
+  assertCandidateTuples(value.candidates, `${String(value.technique)} candidates`);
+  if ('expectedEliminations' in value) {
+    assert.ok(Array.isArray(value.expectedEliminations), `${String(value.technique)} expectedEliminations should be an array`);
+    for (const expected of value.expectedEliminations) {
+      assertCellDigitRef(expected, `${String(value.technique)} expectedEliminations`);
+    }
+  }
+  if ('expectedPlacements' in value) {
+    assert.ok(Array.isArray(value.expectedPlacements), `${String(value.technique)} expectedPlacements should be an array`);
+    for (const expected of value.expectedPlacements) {
+      assertCellDigitRef(expected, `${String(value.technique)} expectedPlacements`);
+    }
+  }
+  assert.ok(
+    ((value.expectedEliminations as unknown[] | undefined)?.length ?? 0) > 0
+    || ((value.expectedPlacements as unknown[] | undefined)?.length ?? 0) > 0,
+    `${String(value.technique)} should declare expectedEliminations or expectedPlacements`,
+  );
+  for (const field of ['minBranches', 'minContradictionBranches', 'expectedMaxSteps'] as const) {
+    if (field in value) {
+      const countValue: unknown = value[field];
+      assert.equal(typeof countValue, 'number', `${String(value.technique)} ${field} should be a number`);
+      const count = countValue as number;
+      assert.ok(Number.isInteger(count) && count >= 0, `${String(value.technique)} ${field} should be a non-negative integer`);
+    }
+  }
+  if ('expectedPattern' in value) {
+    assert.ok(isRecord(value.expectedPattern), `${String(value.technique)} expectedPattern should be an object`);
+    assert.equal(typeof value.expectedPattern.family, 'string', `${String(value.technique)} expectedPattern.family should be a string`);
+    if ('subtype' in value.expectedPattern) {
+      assert.equal(typeof value.expectedPattern.subtype, 'string', `${String(value.technique)} expectedPattern.subtype should be a string`);
+    }
+  }
+  return value.technique as ReferenceForcingFixture['technique'];
 }
 
 function assertReferenceFishFixtureRecord(value: unknown): ReferenceFishFixture['technique'] {
@@ -4566,6 +5062,53 @@ function assertReferenceChainFixture(fixture: ReferenceChainFixture): void {
   assertReferenceChainStepReplayable(fixture.state, step!, fixture.technique, fixture.minLinks ?? 0);
 }
 
+function assertReferenceForcingFixture(fixture: ReferenceForcingFixture): void {
+  const step = nextStep(fixture.state, {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: [fixture.technique],
+  });
+  assert.equal(step?.technique, fixture.technique);
+  for (const expected of fixture.expectedEliminations ?? []) {
+    assert.ok(
+      step?.actions.some((action) =>
+        action.type === 'eliminate'
+        && action.cell === expected.cell
+        && action.digit === expected.digit,
+      ),
+      `${fixture.technique} should include expected elimination ${expected.cell}:${expected.digit}`,
+    );
+  }
+  for (const expected of fixture.expectedPlacements ?? []) {
+    assert.ok(
+      step?.actions.some((action) =>
+        action.type === 'place'
+        && action.cell === expected.cell
+        && action.digit === expected.digit,
+      ),
+      `${fixture.technique} should include expected placement ${expected.cell}:${expected.digit}`,
+    );
+  }
+  if (fixture.expectedPattern) {
+    assert.equal(step?.evidence.pattern?.family, fixture.expectedPattern.family);
+    if (fixture.expectedPattern.subtype !== undefined) {
+      assert.equal(step?.evidence.pattern?.subtype, fixture.expectedPattern.subtype);
+    }
+  }
+  if (fixture.minBranches !== undefined) {
+    assert.ok((step?.evidence.branches?.length ?? 0) >= fixture.minBranches, `${fixture.technique} should expose at least ${fixture.minBranches} branches`);
+  }
+  if (fixture.minContradictionBranches !== undefined) {
+    const contradictionBranches = (step?.evidence.branches ?? []).filter((branch) => branch.contradiction === true).length;
+    assert.ok(contradictionBranches >= fixture.minContradictionBranches, `${fixture.technique} should expose at least ${fixture.minContradictionBranches} contradiction branches`);
+  }
+  if (fixture.expectedMaxSteps !== undefined) {
+    for (const branch of step?.evidence.branches ?? []) {
+      assert.equal(branch.maxSteps, fixture.expectedMaxSteps);
+    }
+  }
+  replaySteps(fixture.state, [step!]);
+}
+
 function matchesReferenceExpectedLink(
   link: NonNullable<NonNullable<ReturnType<typeof nextStep>>['evidence']['links']>[number],
   expected: ReferenceExpectedLink,
@@ -4858,9 +5401,11 @@ function assertReferenceChainStepReplayable(
 function testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy(): void {
   const fixtures = loadReferenceTechniqueFixtures();
   const expectedTechniques = [
+    ...(fixtures.basics ?? []).map((fixture) => fixture.technique),
     ...fixtures.direct.map((fixture) => fixture.technique),
     ...(fixtures.fish ?? []).map((fixture) => fixture.technique),
     ...fixtures.chains.map((fixture) => fixture.technique),
+    ...(fixtures.forcing ?? []).map((fixture) => fixture.technique),
     ...(fixtures.wings ?? []).map((fixture) => fixture.technique),
     ...(fixtures.als ?? []).map((fixture) => fixture.technique),
     ...(fixtures.patterns ?? []).map((fixture) => fixture.technique),
@@ -4884,8 +5429,17 @@ function testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy(): void {
       'hidden-unique-rectangle',
       'aic-ur',
       'bug-plus-one',
+      'nishio-forcing-chains',
       'aic',
+      'aic-exotic',
       'grouped-aic',
+      'x-chain',
+      'xy-chain',
+      'simple-coloring',
+      'x-coloring',
+      'multi-colors',
+      'three-d-medusa',
+      'grouped-x-cycles',
       'skyscraper',
       'two-string-kite',
       'turbot-fish',
@@ -4917,21 +5471,35 @@ function testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy(): void {
       'pattern-overlay',
       'tridagons',
       'sk-loops',
-      'franken-swordfish',
-    ].includes(technique)) {
+	      'franken-swordfish',
+	      'full-house',
+	      'naked-single',
+	      'hidden-single',
+	      'locked-candidates',
+	      'naked-pair',
+	      'hidden-pair',
+	      'naked-triple',
+	      'hidden-triple',
+	      'naked-quad',
+	      'hidden-quad',
+	    ].includes(technique)) {
       assert.equal(definition?.stability, 'stable', `${technique} should remain stable`);
     } else {
       assert.equal(definition?.stability, 'experimental', `${technique} should remain an experimental reference technique`);
     }
-    assert.ok(enabledGalaxyTechniques.has(technique), `${technique} should remain in classic-galaxy enabled techniques`);
+    if (technique !== 'nested-forcing-chains') {
+      assert.ok(enabledGalaxyTechniques.has(technique), `${technique} should remain in classic-galaxy enabled techniques`);
+    }
   }
 
   assert.deepEqual(
     uniqueStrings(expectedTechniques),
-    uniqueStrings([
-      ...EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES,
+	    uniqueStrings([
+	      ...EXPECTED_REFERENCE_BASIC_SMOKE_TECHNIQUES,
+	      ...EXPECTED_REFERENCE_DIRECT_SMOKE_TECHNIQUES,
       ...EXPECTED_REFERENCE_FISH_SMOKE_TECHNIQUES,
       ...EXPECTED_REFERENCE_CHAIN_SMOKE_TECHNIQUES,
+      ...EXPECTED_REFERENCE_FORCING_SMOKE_TECHNIQUES,
       ...EXPECTED_REFERENCE_WING_SMOKE_TECHNIQUES,
       ...EXPECTED_REFERENCE_ALS_SMOKE_TECHNIQUES,
       ...EXPECTED_REFERENCE_PATTERN_SMOKE_TECHNIQUES,
@@ -4947,6 +5515,10 @@ function testReferenceSmokeFixturesReachableViaExplicitOptions(): void {
     technique: TechniqueId;
     state: StateInput;
   }> = [
+    ...(fixtures.basics ?? []).map((fixture) => ({
+      technique: fixture.technique,
+      state: buildReferenceBasicState(fixture),
+    })),
     ...fixtures.direct.map((fixture) => ({
       technique: fixture.technique,
       state: toReferenceDirectFixture(fixture).state,
@@ -4958,6 +5530,10 @@ function testReferenceSmokeFixturesReachableViaExplicitOptions(): void {
     ...fixtures.chains.map((fixture) => ({
       technique: fixture.technique,
       state: toReferenceChainFixture(fixture).state,
+    })),
+    ...(fixtures.forcing ?? []).map((fixture) => ({
+      technique: fixture.technique,
+      state: toReferenceForcingFixture(fixture).state,
     })),
     ...(fixtures.wings ?? []).map((fixture) => ({
       technique: fixture.technique,
@@ -5049,6 +5625,7 @@ function testReferenceSmokeFixturesListedByTechniquesCli(): void {
     ...fixtures.direct.map((fixture) => fixture.technique),
     ...(fixtures.fish ?? []).map((fixture) => fixture.technique),
     ...fixtures.chains.map((fixture) => fixture.technique),
+    ...(fixtures.forcing ?? []).map((fixture) => fixture.technique),
     ...(fixtures.wings ?? []).map((fixture) => fixture.technique),
     ...(fixtures.als ?? []).map((fixture) => fixture.technique),
     ...(fixtures.patterns ?? []).map((fixture) => fixture.technique),
@@ -5073,8 +5650,8 @@ function testReferenceAuditScript(): void {
   assert.equal(payload.summary?.auditId, 'reference-techniques.v1');
   assert.equal(payload.summary?.corpusKind, 'reference-smoke');
   assert.match(payload.summary?.note ?? '', /not a full external rating corpus/);
-  assert.equal(payload.summary?.total, 213);
-  assert.equal(payload.summary?.passed, 213);
+  assert.equal(payload.summary?.total, 267);
+  assert.equal(payload.summary?.passed, 267);
   assert.equal(payload.summary?.failed, 0);
 
   const tmpDir = join(process.cwd(), 'dist', 'tmp');
@@ -6131,7 +6708,11 @@ function testReferenceCoverageAuditScript(): void {
       positiveSmokeTechniques?: number;
       negativeSmokeTechniques?: number;
       ratingCorpusTechniques?: number;
+      stableMissingPositiveSmoke?: string[];
+      stableMissingNegativeSmoke?: string[];
       stableMissingRatingCorpus?: string[];
+      experimentalMissingPositiveSmoke?: string[];
+      experimentalMissingNegativeSmoke?: string[];
       experimentalMissingRatingCorpus?: string[];
     };
     rows?: Array<{
@@ -6141,6 +6722,8 @@ function testReferenceCoverageAuditScript(): void {
       negativeSmoke?: number;
       ratingRows?: number;
       ratingHardestRows?: number;
+      hasPositiveSmoke?: boolean;
+      hasNegativeSmoke?: boolean;
       hasRatingCorpus?: boolean;
     }>;
   };
@@ -6148,30 +6731,15 @@ function testReferenceCoverageAuditScript(): void {
   assert.equal(payload.summary?.definitions, 90);
   assert.equal(payload.summary?.stable, 60);
   assert.equal(payload.summary?.experimental, 30);
-  assert.equal(payload.summary?.positiveSmokeTechniques, 61);
-  assert.equal(payload.summary?.negativeSmokeTechniques, 66);
+  assert.equal(payload.summary?.positiveSmokeTechniques, 90);
+  assert.equal(payload.summary?.negativeSmokeTechniques, 90);
   assert.equal(payload.summary?.ratingCorpusTechniques, 90);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('bug-plus-one'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('hidden-single'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('locked-candidates'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('x-wing'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('naked-pair'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('hidden-pair'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('naked-triple'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('hidden-triple'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('naked-quad'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('hidden-quad'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('x-coloring'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('unique-rectangle'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('hidden-unique-rectangle'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('aligned-pair-exclusion'), false);
-  assert.equal(payload.summary?.stableMissingRatingCorpus?.includes('sashimi-jellyfish'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('almost-locked-quad'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('remote-pairs'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('direct-pointing'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('direct-hidden-triplet'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('bidirectional-x-cycle'), false);
-  assert.equal(payload.summary?.experimentalMissingRatingCorpus?.includes('mutant-fish'), false);
+  assert.deepEqual(payload.summary?.stableMissingPositiveSmoke, []);
+  assert.deepEqual(payload.summary?.stableMissingNegativeSmoke, []);
+  assert.deepEqual(payload.summary?.stableMissingRatingCorpus, []);
+  assert.deepEqual(payload.summary?.experimentalMissingPositiveSmoke, []);
+  assert.deepEqual(payload.summary?.experimentalMissingNegativeSmoke, []);
+  assert.deepEqual(payload.summary?.experimentalMissingRatingCorpus, []);
 
   const fullHouse = payload.rows?.find((row) => row.id === 'full-house');
   assert.equal(fullHouse?.hasRatingCorpus, true);
@@ -6184,6 +6752,11 @@ function testReferenceCoverageAuditScript(): void {
   assert.equal(bugPlusTwo?.stability, 'experimental');
   assert.ok((bugPlusTwo?.positiveSmoke ?? 0) > 0);
   assert.equal(bugPlusTwo?.hasRatingCorpus, true);
+  for (const row of payload.rows ?? []) {
+    assert.equal(row.hasPositiveSmoke, true, `${row.id} should have positive smoke coverage`);
+    assert.equal(row.hasNegativeSmoke, true, `${row.id} should have negative smoke coverage`);
+    assert.equal(row.hasRatingCorpus, true, `${row.id} should have rating corpus coverage`);
+  }
 
   const humanOutput = execFileSync(process.execPath, [
     'scripts/audit-reference-coverage.mjs',
@@ -6194,10 +6767,32 @@ function testReferenceCoverageAuditScript(): void {
   assert.match(humanOutput, /Reference coverage: 90 definitions/);
   assert.match(humanOutput, /Stable missing rating corpus/);
 
+  const tmpDir = join(process.cwd(), 'dist', 'tmp');
+  mkdirSync(tmpDir, { recursive: true });
+  const matrixPath = join(tmpDir, 'technique-audit-matrix.md');
+  execFileSync(process.execPath, [
+    'scripts/audit-reference-coverage.mjs',
+    '--markdown-output',
+    matrixPath,
+  ], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const matrix = readFileSync(matrixPath, 'utf8');
+  assert.match(matrix, /# Technique Audit Matrix/);
+  assert.match(matrix, /\| Definitions \| 90 \|/);
+  assert.match(matrix, /\| `bug-plus-two` \| uniqueness \| experimental \|/);
+  assert.match(matrix, /\| `bug-plus-two` \| uniqueness \| experimental \| partial \| 2 \| 6 \| 1 \| 1 \| audited \| high \|/);
+  assert.doesNotMatch(matrix, /Add positive reference smoke\./);
+
   const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
     scripts?: Record<string, string>;
   };
   assert.equal(packageJson.scripts?.['audit:coverage'], 'npm run build && node scripts/audit-reference-coverage.mjs');
+  assert.equal(
+    packageJson.scripts?.['audit:technique-matrix'],
+    'npm run build && node scripts/audit-reference-coverage.mjs --markdown-output docs/TECHNIQUE_AUDIT_MATRIX.md',
+  );
 }
 
 function testForcingBranchEvidenceAuditScript(): void {
@@ -6215,7 +6810,10 @@ function testForcingBranchEvidenceAuditScript(): void {
       forcingSteps?: number;
       stepsWithBranches?: number;
       branchCount?: number;
+      truncatedBranches?: number;
       contradictionBranches?: number;
+      emptyActionSteps?: number;
+      nonForcingPatternSteps?: number;
       failed?: number;
       stopReasonCounts?: Record<string, number>;
     };
@@ -6224,6 +6822,8 @@ function testForcingBranchEvidenceAuditScript(): void {
       technique?: string;
       ok?: boolean;
       branchCount?: number;
+      actionCount?: number;
+      pattern?: { family?: string; subtype?: string } | null;
       contradictionAtKinds?: Array<string | null>;
       maxSteps?: number[];
     }>;
@@ -6233,11 +6833,16 @@ function testForcingBranchEvidenceAuditScript(): void {
   assert.equal(payload.summary?.forcingSteps, 6);
   assert.equal(payload.summary?.stepsWithBranches, 6);
   assert.equal(payload.summary?.branchCount, 6);
+  assert.equal(payload.summary?.truncatedBranches, 0);
   assert.equal(payload.summary?.contradictionBranches, 6);
+  assert.equal(payload.summary?.emptyActionSteps, 0);
+  assert.equal(payload.summary?.nonForcingPatternSteps, 0);
   assert.equal(payload.summary?.failed, 0);
   assert.equal(payload.summary?.stopReasonCounts?.contradiction, 6);
   assert.ok(payload.rows?.every((row) => row.ok === true && row.technique === 'nishio-forcing-chains'));
   assert.ok(payload.rows?.every((row) => row.branchCount === 1));
+  assert.ok(payload.rows?.every((row) => (row.actionCount ?? 0) > 0));
+  assert.ok(payload.rows?.every((row) => row.pattern?.family === 'forcing'));
   assert.ok(payload.rows?.every((row) => row.contradictionAtKinds?.every((kind) => kind !== null)));
   assert.ok(payload.rows?.every((row) => row.maxSteps?.every((maxSteps) => maxSteps === 0)));
 
@@ -6345,7 +6950,11 @@ function testBugGraphEvidenceAuditScript(): void {
       placementRows?: number;
       eliminationRows?: number;
       rowsWithBaseLinks?: number;
+      rowsWithTargetNodes?: number;
+      rowsWithParityNodes?: number;
+      boundedCompletionRows?: number;
       totalBaseStrongLinks?: number;
+      subtypeCounts?: Record<string, number>;
       failed?: number;
     };
     rows?: Array<{
@@ -6356,6 +6965,7 @@ function testBugGraphEvidenceAuditScript(): void {
       actionTypes?: string[];
       baseStrongLinks?: number;
       nodeIds?: string[];
+      hasBoundedCompletionNote?: boolean;
     }>;
   };
   assert.equal(payload.summary?.auditId, 'bug-graph-evidence.v1');
@@ -6363,13 +6973,21 @@ function testBugGraphEvidenceAuditScript(): void {
   assert.equal(payload.summary?.placementRows, 2);
   assert.equal(payload.summary?.eliminationRows, 3);
   assert.equal(payload.summary?.rowsWithBaseLinks, 3);
+  assert.equal(payload.summary?.rowsWithTargetNodes, 5);
+  assert.equal(payload.summary?.rowsWithParityNodes, 3);
+  assert.equal(payload.summary?.boundedCompletionRows, 1);
   assert.equal(payload.summary?.totalBaseStrongLinks, 78);
+  assert.equal(payload.summary?.subtypeCounts?.['bug-plus-one'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['bug-plus-two-common-extra'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['bug-plus-two-parity-elimination'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['bug-plus-n-common-extra'], 1);
   assert.equal(payload.summary?.failed, 0);
   assert.ok(payload.rows?.every((row) => row.ok === true));
 
   const placementRows = payload.rows?.filter((row) => row.technique === 'bug-plus-one') ?? [];
   assert.equal(placementRows.length, 2);
   assert.ok(placementRows.every((row) => row.actionTypes?.includes('place')));
+  assert.ok(placementRows.every((row) => !row.actionTypes?.includes('eliminate')));
   assert.ok(placementRows.every((row) => row.nodeIds?.includes('bug-parity-row')));
   assert.ok(placementRows.every((row) => row.nodeIds?.includes('bug-parity-col')));
   assert.ok(placementRows.every((row) => row.nodeIds?.includes('bug-parity-box')));
@@ -6380,7 +6998,11 @@ function testBugGraphEvidenceAuditScript(): void {
   assert.ok(eliminationRows.every((row) =>
     row.nodeIds?.includes('bug-common-extra-targets')
     || row.nodeIds?.includes('bug-elimination-targets')));
-  assert.ok(eliminationRows.some((row) => row.subtype === 'bug-plus-two-parity-elimination'));
+  const parityRow = eliminationRows.find((row) => row.subtype === 'bug-plus-two-parity-elimination');
+  assert.ok(parityRow);
+  assert.equal(parityRow.hasBoundedCompletionNote, true);
+  assert.ok(parityRow.nodeIds?.includes('bug-elimination-targets'));
+  assert.ok(parityRow.nodeIds?.some((id) => id.startsWith('bug-extra-group:')));
 
   const humanOutput = execFileSync(process.execPath, [
     'scripts/audit-bug-graph-evidence.mjs',
@@ -6395,6 +7017,149 @@ function testBugGraphEvidenceAuditScript(): void {
     scripts?: Record<string, string>;
   };
   assert.equal(packageJson.scripts?.['audit:bug-evidence'], 'npm run build && node scripts/audit-bug-graph-evidence.mjs');
+}
+
+function testFishEvidenceAuditScript(): void {
+  const output = execFileSync(process.execPath, [
+    'scripts/audit-fish-evidence.mjs',
+    '--json',
+    '--max-rows',
+    '45',
+  ], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const payload = JSON.parse(output) as {
+    summary?: {
+      auditId?: string;
+      scannedRows?: number;
+      rowsWithFish?: number;
+      fishSteps?: number;
+      eliminationActions?: number;
+      solutionUnsafeActions?: number;
+      patternMismatches?: number;
+      missingEvidenceRows?: number;
+      techniqueCounts?: Record<string, number>;
+      subtypeCounts?: Record<string, number>;
+      failed?: number;
+    };
+    rows?: Array<{ ok?: boolean; fishSteps?: number; techniques?: string[] }>;
+  };
+  assert.equal(payload.summary?.auditId, 'fish-evidence.v1');
+  assert.equal(payload.summary?.scannedRows, 45);
+  assert.ok((payload.summary?.rowsWithFish ?? 0) > 0);
+  assert.ok((payload.summary?.fishSteps ?? 0) > 0);
+  assert.ok((payload.summary?.eliminationActions ?? 0) > 0);
+  assert.equal(payload.summary?.solutionUnsafeActions, 0);
+  assert.equal(payload.summary?.patternMismatches, 0);
+  assert.equal(payload.summary?.missingEvidenceRows, 0);
+  assert.equal(payload.summary?.failed, 0);
+  assert.ok((payload.summary?.techniqueCounts?.['mutant-fish'] ?? 0) > 0);
+  assert.ok((payload.summary?.techniqueCounts?.['larger-fish'] ?? 0) > 0);
+  assert.ok((payload.summary?.subtypeCounts?.['mutant-fish-size-3'] ?? 0) > 0);
+  assert.ok(payload.rows?.every((row) => row.ok === true));
+
+  const humanOutput = execFileSync(process.execPath, [
+    'scripts/audit-fish-evidence.mjs',
+    '--max-rows',
+    '45',
+  ], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  assert.match(humanOutput, /Fish evidence:/);
+  assert.match(humanOutput, /solutionUnsafe=0/);
+
+  const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+    scripts?: Record<string, string>;
+  };
+  assert.equal(packageJson.scripts?.['audit:fish-evidence'], 'npm run build && node scripts/audit-fish-evidence.mjs');
+}
+
+function testUniquenessEvidenceAuditScript(): void {
+  const output = execFileSync(process.execPath, [
+    'scripts/audit-uniqueness-evidence.mjs',
+    '--json',
+  ], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const payload = JSON.parse(output) as {
+    summary?: {
+      auditId?: string;
+      uniquenessRows?: number;
+      rowsWithUrNodes?: number;
+      rowsWithUniqueLoopNodes?: number;
+      rowsWithLinks?: number;
+      maxUniqueLoopCells?: number;
+      subtypeCounts?: Record<string, number>;
+      failed?: number;
+    };
+    rows?: Array<{
+      technique?: string;
+      pattern?: { family?: string; subtype?: string } | null;
+      ok?: boolean;
+      actionTypes?: string[];
+      linkCount?: number;
+      nodeIds?: string[];
+      uniqueLoopCellCount?: number;
+    }>;
+  };
+  assert.equal(payload.summary?.auditId, 'uniqueness-evidence.v1');
+  assert.equal(payload.summary?.uniquenessRows, 23);
+  assert.equal(payload.summary?.rowsWithUrNodes, 14);
+  assert.equal(payload.summary?.rowsWithUniqueLoopNodes, 4);
+  assert.equal(payload.summary?.rowsWithLinks, 7);
+  assert.equal(payload.summary?.maxUniqueLoopCells, 14);
+  assert.equal(payload.summary?.failed, 0);
+  assert.ok(payload.rows?.every((row) => row.ok === true));
+  assert.ok(payload.rows?.every((row) => row.actionTypes?.includes('eliminate')));
+
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-1'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-2-shared-extra'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-3-naked-set'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-3-hidden-set'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-4'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle:type-5'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-loop:2x3-or-3x2-single-roof'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-loop:2x3-or-3x2-shared-guardian'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-loop:generalized-single-roof'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['hidden-unique-rectangle:type-6-strong-link-corner'], 2);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle-aic:single-roof-chain'], 1);
+  assert.equal(payload.summary?.subtypeCounts?.['unique-rectangle-aic:floor-roof-chain'], 2);
+
+  const uniqueLoopRows = payload.rows?.filter((row) => row.technique === 'unique-loop') ?? [];
+  assert.equal(uniqueLoopRows.length, 4);
+  assert.ok(uniqueLoopRows.every((row) => row.nodeIds?.includes('unique-loop')));
+  assert.ok(uniqueLoopRows.every((row) => row.nodeIds?.includes('unique-loop:base-pair')));
+  assert.ok(uniqueLoopRows.every((row) => row.nodeIds?.includes('unique-loop:guardians')));
+  assert.ok(uniqueLoopRows.every((row) => row.nodeIds?.includes('unique-loop:targets')));
+  assert.ok(uniqueLoopRows.some((row) => row.uniqueLoopCellCount === 14));
+
+  const type5Rows = payload.rows?.filter((row) => row.pattern?.family === 'unique-rectangle' && row.pattern.subtype === 'type-5') ?? [];
+  assert.equal(type5Rows.length, 2);
+  assert.ok(type5Rows.every((row) => row.nodeIds?.includes('ur-extra')));
+  assert.ok(type5Rows.every((row) => row.nodeIds?.includes('ur-targets')));
+
+  const linkedRows = payload.rows?.filter((row) => (row.linkCount ?? 0) > 0) ?? [];
+  assert.ok(linkedRows.every((row) =>
+    row.technique === 'rectangle-elimination'
+    || row.technique === 'hidden-unique-rectangle'
+    || row.technique === 'aic-ur'));
+
+  const humanOutput = execFileSync(process.execPath, [
+    'scripts/audit-uniqueness-evidence.mjs',
+  ], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  assert.match(humanOutput, /Uniqueness evidence: 23\/23/);
+  assert.match(humanOutput, /maxUniqueLoopCells=14/);
+
+  const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+    scripts?: Record<string, string>;
+  };
+  assert.equal(packageJson.scripts?.['audit:uniqueness-evidence'], 'npm run build && node scripts/audit-uniqueness-evidence.mjs');
 }
 
 function hasCandidate(candidateMasks: readonly number[], cell: number, digit: number): boolean {
@@ -6722,6 +7487,20 @@ function testMutantFish(): void {
     allowedTechniques: ['mutant-fish'],
   });
   assert.equal(noTarget, null);
+
+  const overlappingCoverNoHit = nextStep(buildExactCandidateState([
+    [0, [1, 8]],
+    [1, [1, 8]],
+    [9, [1, 8]],
+    [10, [1, 8]],
+    [18, [1, 8]],
+    [19, [1, 8]],
+    [27, [1, 8]],
+  ]), {
+    allowContradictoryCandidateState: true,
+    allowedTechniques: ['mutant-fish'],
+  });
+  assert.equal(overlappingCoverNoHit, null);
 }
 
 function testFinnedXWing(): void {
@@ -7600,6 +8379,9 @@ function testReferenceChainEntryPoints(): void {
   for (const fixture of loadReferenceTechniqueFixtures().chains.map(toReferenceChainFixture)) {
     assertReferenceChainFixture(fixture);
   }
+  for (const fixture of (loadReferenceTechniqueFixtures().forcing ?? []).map(toReferenceForcingFixture)) {
+    assertReferenceForcingFixture(fixture);
+  }
   for (const fixture of (loadReferenceTechniqueFixtures().wings ?? []).map(toReferenceWingFixture)) {
     assertReferenceWingFixture(fixture);
   }
@@ -8201,180 +8983,190 @@ function testTwoStringKite(): void {
 }
 
 function run(): void {
-  testPublicSourceImportGuard();
-  testPackageExportsDist();
-  testPublicRepoMaintenanceFiles();
-  testParseAndSerialize();
-  testBoardAdapters();
-  testForbiddenCandidates();
-  testTrustedCandidateState();
-  testStateCandidateContradictionsAndAssumptions();
-  testValidationConflict();
-  testUniqueness();
-  testCanonicalize();
-  testPublicBoardValueValidation();
-  testPublicGridTablesAreImmutable();
-  testCanonicalTransformStateAndStep();
-  testCli();
-  testTechniquesCli();
-  testStableTechniqueGoldenCoverage();
-  testExperimentalTechniqueDefinitions();
-  testTechniqueDefinitionBoundaryIntegrity();
-  testSolverFullHouse();
-  testHiddenSinglePatternEvidence();
-  testInvalidFilledBoardNotSolved();
-  testVerifyStepAndWalkthrough();
-  testAnalyzeSolveUsage();
-  testIllegalCandidateStateBlocksContradictoryScan();
-  testSolverNakedSingleWithForbiddenCandidate();
-  testSolveCli();
-  testExtendedSolveProfile();
-  testExtendedGeneratorPolicyIncludesFallback();
-  testFindTechniqueScenario();
-  testRate();
-  testHintAndSummaries();
-  testExtendedRate();
-  testAllowedTechniqueOrder();
-  testExperimentalForcingDefaultsToFallback();
-  testForcingBranchInvalidInternalStepDoesNotEscape();
-  testSolverMaxStepsAndScenarioContradictionGuards();
-  testFindSteps();
-  testRateCli();
-  testProfileCli();
-  testCliAllowAndPreferValidation();
-  testBatchSolveAndRateCli();
-  testSchemas();
-  testSchemaCli();
-  testGenerationRequestAnalysisInvalid();
-  testGenerationRequestAnalysisUnlikely();
-  testGenerationRequestAnalysisBudgetWarning();
-  testGeneratorRuntimeValidation();
-  testSeededRandomNeverShufflesOutOfBounds();
-  testDefaultTechniqueOrderPolicy();
-  testGenerationAnalyzeCli();
-  testGenerateInvalidRequest();
-  testGenerateScoreTargetTolerance();
-  testGenerateOneSmoke();
-  testPuzzleMinimizerHonorsTimeout();
-  testGenerateRejectsUnsolvedByRatingPolicy();
-  testGenerateCli();
-  testGenerateTechniqueConstraints();
-  testGenerateRelaxation();
-  testSearchSmoke();
-  testSearchRejectsInvalidOptions();
-  testSearchUsesStableSeedSequence();
-  testSearchCliSummaryOnly();
-  testSearchCliEventFilter();
-  testSearchCliWriteCandidates();
-  testSearchCliManifestSeedMatchesGeneratedCandidates();
-  testSelectFromCandidates();
-  testCliParsesInlineJsonArray();
-  testSelectCli();
-  testParallelSearchPlanCli();
-  testMergeCandidatesCli();
-  testCandidatePoolStatsAndDedupeApi();
-  testCandidatePoolStatsAndDedupeCli();
-  testPresentation();
-  testSolveTextCli();
-  testLockedCandidates();
-  testNakedPair();
-  testHiddenPair();
-  testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy();
-  testReferenceSmokeFixturesReachableViaExplicitOptions();
-  testReferenceSmokeFixturesListedByTechniquesCli();
-  testReferenceAuditScript();
-  testReferenceRatingCorpus();
-  testReferenceRatingAuditScript();
-  testReferenceRatingCandidateSearchScript();
-  testReferenceRatingCandidateSynthesisScript();
-  testReferenceGapAuditScript();
-  testReferenceCoverageAuditScript();
-  testForcingBranchEvidenceAuditScript();
-  testForcingSmokeEvidenceAuditScript();
-  testBugGraphEvidenceAuditScript();
-  testDirectTechniques();
-  testNakedTriple();
-  testHiddenTriple();
-  testNakedQuad();
-  testHiddenQuad();
-  testXWing();
-  testSwordfish();
-  testFrankenSwordfish();
-  testFinnedFrankenSwordfish();
-  testFinnedFrankenJellyfish();
-  testJellyfish();
-  testLargerFish();
-  testMutantFish();
-  testFinnedXWing();
-  testSashimiXWing();
-  testFinnedSwordfish();
-  testFinnedJellyfish();
-  testSashimiSwordfish();
-  testSashimiJellyfish();
-  testAlignedPairExclusion();
-  testExocet();
-  testDoubleExocet();
-  testPatternOverlay();
-  testTridagons();
-  testSkLoops();
-  testAicExotic();
-  testForcingNets();
-  testDigitForcingChains();
-  testNishioForcingChains();
-  testCellForcingChains();
-  testUnitForcingChains();
-  testRegionForcingChainsAlias();
-  testDynamicForcingChains();
-  testDynamicForcingChainsPlus();
-  testBowmansBingo();
-  testBowmansBingoRealBoards();
-  testXYWing();
-  testXYZWing();
-  testWXYZWing();
-  testBigWings();
-  testWWing();
-  testChuteRemotePairs();
-  testRemotePairs();
-  testAlmostLockedPair();
-  testAlmostLockedTriple();
-  testAlmostLockedQuad();
-  testAlsXZ();
-  testAlsXYWing();
-  testAicAls();
-  testFireworks();
-  testTwinnedXYChains();
-  testSueDeCoq();
-  testDeathBlossom();
-  testSimpleColoring();
-  testThreeDMedusa();
-  testGroupedXCycles();
-  testGroupedAic();
-  testXChain();
-  testMultiColors();
-  testXYChain();
-  testAicSameDigitEndpoint();
-  testAicDifferentDigitEndpoint();
-  testAicContinuousLoop();
-  testAicDiscontinuousWeakLoop();
-  testAicDiscontinuousStrongLoop();
-  testReferenceChainEntryPoints();
-  testSkyscraper();
-  testTurbotFish();
-  testEmptyRectangle();
-  testUniqueRectangle();
-  testUniqueRectangleType4();
-  testUniqueRectangleType3NakedSet();
-  testUniqueRectangleType3HiddenSet();
-  testAvoidableRectangle();
-  testRectangleElimination();
-  testExtendedRectangle();
-  testUniqueLoop();
-  testHiddenUniqueRectangle();
-  testAicUr();
-  testBugPlusOne();
-  testBugPlusTwo();
-  testBugPlusN();
-  testTwoStringKite();
+  runFastTest('testPublicSourceImportGuard', testPublicSourceImportGuard);
+  runFastTest('testPackageExportsDist', testPackageExportsDist);
+  runFastTest('testPublicRepoMaintenanceFiles', testPublicRepoMaintenanceFiles);
+  runFastTest('testParseAndSerialize', testParseAndSerialize);
+  runFastTest('testBoardAdapters', testBoardAdapters);
+  runFastTest('testForbiddenCandidates', testForbiddenCandidates);
+  runFastTest('testTrustedCandidateState', testTrustedCandidateState);
+  runFastTest('testStateCandidateContradictionsAndAssumptions', testStateCandidateContradictionsAndAssumptions);
+  runFastTest('testValidationConflict', testValidationConflict);
+  runFastTest('testUniqueness', testUniqueness);
+  runSlowTest('testCanonicalize', testCanonicalize);
+  runFastTest('testPublicBoardValueValidation', testPublicBoardValueValidation);
+  runFastTest('testPublicGridTablesAreImmutable', testPublicGridTablesAreImmutable);
+  runFastTest('testCanonicalTransformStateAndStep', testCanonicalTransformStateAndStep);
+  runFastTest('testCli', testCli);
+  runFastTest('testTechniquesCli', testTechniquesCli);
+  runFastTest('testStableTechniqueGoldenCoverage', testStableTechniqueGoldenCoverage);
+  runFastTest('testExperimentalTechniqueDefinitions', testExperimentalTechniqueDefinitions);
+  runFastTest('testTechniqueDefinitionBoundaryIntegrity', testTechniqueDefinitionBoundaryIntegrity);
+  runFastTest('testSolverFullHouse', testSolverFullHouse);
+  runFastTest('testHiddenSinglePatternEvidence', testHiddenSinglePatternEvidence);
+  runFastTest('testInvalidFilledBoardNotSolved', testInvalidFilledBoardNotSolved);
+  runFastTest('testVerifyStepAndWalkthrough', testVerifyStepAndWalkthrough);
+  runFastTest('testAnalyzeSolveUsage', testAnalyzeSolveUsage);
+  runFastTest('testIllegalCandidateStateBlocksContradictoryScan', testIllegalCandidateStateBlocksContradictoryScan);
+  runFastTest('testSolverNakedSingleWithForbiddenCandidate', testSolverNakedSingleWithForbiddenCandidate);
+  runFastTest('testSolveCli', testSolveCli);
+  runFastTest('testExtendedSolveProfile', testExtendedSolveProfile);
+  runFastTest('testExtendedGeneratorPolicyIncludesFallback', testExtendedGeneratorPolicyIncludesFallback);
+  runFastTest('testFindTechniqueScenario', testFindTechniqueScenario);
+  runFastTest('testRate', testRate);
+  runFastTest('testHintAndSummaries', testHintAndSummaries);
+  runFastTest('testExtendedRate', testExtendedRate);
+  runFastTest('testAllowedTechniqueOrder', testAllowedTechniqueOrder);
+  runFastTest('testExperimentalForcingDefaultsToFallback', testExperimentalForcingDefaultsToFallback);
+  runFastTest('testForcingBranchInvalidInternalStepDoesNotEscape', testForcingBranchInvalidInternalStepDoesNotEscape);
+  runFastTest('testSolverMaxStepsAndScenarioContradictionGuards', testSolverMaxStepsAndScenarioContradictionGuards);
+  runFastTest('testFindSteps', testFindSteps);
+  runFastTest('testRateCli', testRateCli);
+  runFastTest('testProfileCli', testProfileCli);
+  runFastTest('testCliAllowAndPreferValidation', testCliAllowAndPreferValidation);
+  runFastTest('testBatchSolveAndRateCli', testBatchSolveAndRateCli);
+  runFastTest('testSchemas', testSchemas);
+  runFastTest('testSchemaCli', testSchemaCli);
+  runFastTest('testGenerationRequestAnalysisInvalid', testGenerationRequestAnalysisInvalid);
+  runFastTest('testGenerationRequestAnalysisUnlikely', testGenerationRequestAnalysisUnlikely);
+  runFastTest('testGenerationRequestAnalysisBudgetWarning', testGenerationRequestAnalysisBudgetWarning);
+  runFastTest('testGeneratorRuntimeValidation', testGeneratorRuntimeValidation);
+  runFastTest('testSeededRandomNeverShufflesOutOfBounds', testSeededRandomNeverShufflesOutOfBounds);
+  runFastTest('testSolutionGridSources', testSolutionGridSources);
+  runFastTest('testDefaultTechniqueOrderPolicy', testDefaultTechniqueOrderPolicy);
+  runFastTest('testGenerationAnalyzeCli', testGenerationAnalyzeCli);
+  runFastTest('testGenerateInvalidRequest', testGenerateInvalidRequest);
+  runFastTest('testGenerateScoreTargetTolerance', testGenerateScoreTargetTolerance);
+  runFastTest('testGenerateOneSmoke', testGenerateOneSmoke);
+  runFastTest('testPuzzleMinimizerHonorsTimeout', testPuzzleMinimizerHonorsTimeout);
+  runFastTest('testGenerateRejectsUnsolvedByRatingPolicy', testGenerateRejectsUnsolvedByRatingPolicy);
+  runFastTest('testGenerateCli', testGenerateCli);
+  runFastTest('testGenerateTechniqueConstraints', testGenerateTechniqueConstraints);
+  runFastTest('testGenerateRelaxation', testGenerateRelaxation);
+  runFastTest('testSearchSmoke', testSearchSmoke);
+  runFastTest('testSearchRejectsInvalidOptions', testSearchRejectsInvalidOptions);
+  runFastTest('testSearchUsesStableSeedSequence', testSearchUsesStableSeedSequence);
+  runFastTest('testSearchCliSummaryOnly', testSearchCliSummaryOnly);
+  runFastTest('testSearchCliEventFilter', testSearchCliEventFilter);
+  runFastTest('testSearchCliWriteCandidates', testSearchCliWriteCandidates);
+  runFastTest('testSearchCliManifestSeedMatchesGeneratedCandidates', testSearchCliManifestSeedMatchesGeneratedCandidates);
+  runSlowTest('testSelectFromCandidates', testSelectFromCandidates);
+  runFastTest('testCliParsesInlineJsonArray', testCliParsesInlineJsonArray);
+  runSlowTest('testSelectCli', testSelectCli);
+  runFastTest('testParallelSearchPlanCli', testParallelSearchPlanCli);
+  runSlowTest('testMergeCandidatesCli', testMergeCandidatesCli);
+  runSlowTest('testCandidatePoolStatsAndDedupeApi', testCandidatePoolStatsAndDedupeApi);
+  runSlowTest('testCandidatePoolStatsAndDedupeCli', testCandidatePoolStatsAndDedupeCli);
+  runFastTest('testPresentation', testPresentation);
+  runFastTest('testSolveTextCli', testSolveTextCli);
+  runFastTest('testLockedCandidates', testLockedCandidates);
+  runFastTest('testNakedPair', testNakedPair);
+  runFastTest('testHiddenPair', testHiddenPair);
+  runFastTest('testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy', testReferenceSmokeFixturesAlignWithDefinitionsAndGalaxyPolicy);
+  runFastTest('testReferenceSmokeFixturesReachableViaExplicitOptions', testReferenceSmokeFixturesReachableViaExplicitOptions);
+  runFastTest('testReferenceSmokeFixturesListedByTechniquesCli', testReferenceSmokeFixturesListedByTechniquesCli);
+  runSlowTest('testReferenceAuditScript', testReferenceAuditScript);
+  runSlowTest('testReferenceRatingCorpus', testReferenceRatingCorpus);
+  runSlowTest('testReferenceRatingAuditScript', testReferenceRatingAuditScript);
+  runSlowTest('testReferenceRatingCandidateSearchScript', testReferenceRatingCandidateSearchScript);
+  runSlowTest('testReferenceRatingCandidateSynthesisScript', testReferenceRatingCandidateSynthesisScript);
+  runSlowTest('testReferenceGapAuditScript', testReferenceGapAuditScript);
+  runSlowTest('testReferenceCoverageAuditScript', testReferenceCoverageAuditScript);
+  runSlowTest('testForcingBranchEvidenceAuditScript', testForcingBranchEvidenceAuditScript);
+  runSlowTest('testForcingSmokeEvidenceAuditScript', testForcingSmokeEvidenceAuditScript);
+  runSlowTest('testBugGraphEvidenceAuditScript', testBugGraphEvidenceAuditScript);
+  runSlowTest('testFishEvidenceAuditScript', testFishEvidenceAuditScript);
+  runSlowTest('testUniquenessEvidenceAuditScript', testUniquenessEvidenceAuditScript);
+  runFastTest('testDirectTechniques', testDirectTechniques);
+  runFastTest('testNakedTriple', testNakedTriple);
+  runFastTest('testHiddenTriple', testHiddenTriple);
+  runFastTest('testNakedQuad', testNakedQuad);
+  runFastTest('testHiddenQuad', testHiddenQuad);
+  runFastTest('testXWing', testXWing);
+  runFastTest('testSwordfish', testSwordfish);
+  runFastTest('testFrankenSwordfish', testFrankenSwordfish);
+  runFastTest('testFinnedFrankenSwordfish', testFinnedFrankenSwordfish);
+  runFastTest('testFinnedFrankenJellyfish', testFinnedFrankenJellyfish);
+  runFastTest('testJellyfish', testJellyfish);
+  runFastTest('testLargerFish', testLargerFish);
+  runFastTest('testMutantFish', testMutantFish);
+  runFastTest('testFinnedXWing', testFinnedXWing);
+  runFastTest('testSashimiXWing', testSashimiXWing);
+  runFastTest('testFinnedSwordfish', testFinnedSwordfish);
+  runFastTest('testFinnedJellyfish', testFinnedJellyfish);
+  runFastTest('testSashimiSwordfish', testSashimiSwordfish);
+  runFastTest('testSashimiJellyfish', testSashimiJellyfish);
+  runFastTest('testAlignedPairExclusion', testAlignedPairExclusion);
+  runFastTest('testExocet', testExocet);
+  runFastTest('testDoubleExocet', testDoubleExocet);
+  runFastTest('testPatternOverlay', testPatternOverlay);
+  runFastTest('testTridagons', testTridagons);
+  runFastTest('testSkLoops', testSkLoops);
+  runFastTest('testAicExotic', testAicExotic);
+  runFastTest('testForcingNets', testForcingNets);
+  runFastTest('testDigitForcingChains', testDigitForcingChains);
+  runFastTest('testNishioForcingChains', testNishioForcingChains);
+  runFastTest('testCellForcingChains', testCellForcingChains);
+  runFastTest('testUnitForcingChains', testUnitForcingChains);
+  runFastTest('testRegionForcingChainsAlias', testRegionForcingChainsAlias);
+  runFastTest('testDynamicForcingChains', testDynamicForcingChains);
+  runFastTest('testDynamicForcingChainsPlus', testDynamicForcingChainsPlus);
+  runFastTest('testBowmansBingo', testBowmansBingo);
+  runSlowTest('testBowmansBingoRealBoards', testBowmansBingoRealBoards);
+  runFastTest('testXYWing', testXYWing);
+  runFastTest('testXYZWing', testXYZWing);
+  runFastTest('testWXYZWing', testWXYZWing);
+  runFastTest('testBigWings', testBigWings);
+  runFastTest('testWWing', testWWing);
+  runFastTest('testChuteRemotePairs', testChuteRemotePairs);
+  runFastTest('testRemotePairs', testRemotePairs);
+  runFastTest('testAlmostLockedPair', testAlmostLockedPair);
+  runFastTest('testAlmostLockedTriple', testAlmostLockedTriple);
+  runFastTest('testAlmostLockedQuad', testAlmostLockedQuad);
+  runFastTest('testAlsXZ', testAlsXZ);
+  runFastTest('testAlsXYWing', testAlsXYWing);
+  runFastTest('testAicAls', testAicAls);
+  runFastTest('testFireworks', testFireworks);
+  runFastTest('testTwinnedXYChains', testTwinnedXYChains);
+  runFastTest('testSueDeCoq', testSueDeCoq);
+  runFastTest('testDeathBlossom', testDeathBlossom);
+  runFastTest('testSimpleColoring', testSimpleColoring);
+  runFastTest('testThreeDMedusa', testThreeDMedusa);
+  runFastTest('testGroupedXCycles', testGroupedXCycles);
+  runFastTest('testGroupedAic', testGroupedAic);
+  runFastTest('testXChain', testXChain);
+  runFastTest('testMultiColors', testMultiColors);
+  runFastTest('testXYChain', testXYChain);
+  runFastTest('testAicSameDigitEndpoint', testAicSameDigitEndpoint);
+  runFastTest('testAicDifferentDigitEndpoint', testAicDifferentDigitEndpoint);
+  runFastTest('testAicContinuousLoop', testAicContinuousLoop);
+  runFastTest('testAicDiscontinuousWeakLoop', testAicDiscontinuousWeakLoop);
+  runFastTest('testAicDiscontinuousStrongLoop', testAicDiscontinuousStrongLoop);
+  runFastTest('testReferenceChainEntryPoints', testReferenceChainEntryPoints);
+  runFastTest('testSkyscraper', testSkyscraper);
+  runFastTest('testTurbotFish', testTurbotFish);
+  runFastTest('testEmptyRectangle', testEmptyRectangle);
+  runFastTest('testUniqueRectangle', testUniqueRectangle);
+  runFastTest('testUniqueRectangleType4', testUniqueRectangleType4);
+  runFastTest('testUniqueRectangleType3NakedSet', testUniqueRectangleType3NakedSet);
+  runFastTest('testUniqueRectangleType3HiddenSet', testUniqueRectangleType3HiddenSet);
+  runFastTest('testAvoidableRectangle', testAvoidableRectangle);
+  runFastTest('testRectangleElimination', testRectangleElimination);
+  runFastTest('testExtendedRectangle', testExtendedRectangle);
+  runFastTest('testUniqueLoop', testUniqueLoop);
+  runFastTest('testHiddenUniqueRectangle', testHiddenUniqueRectangle);
+  runFastTest('testAicUr', testAicUr);
+  runFastTest('testBugPlusOne', testBugPlusOne);
+  runFastTest('testBugPlusTwo', testBugPlusTwo);
+  runFastTest('testBugPlusN', testBugPlusN);
+  runFastTest('testTwoStringKite', testTwoStringKite);
+  if (skippedFastTests > 0) {
+    process.stdout.write(`Skipped ${skippedFastTests} fast tests; run npm test or npm run test:full to include them\n`);
+  }
+  if (skippedSlowTests > 0) {
+    process.stdout.write(`Skipped ${skippedSlowTests} slow tests; run npm run test:slow or npm run test:full to include them\n`);
+  }
+  printTimingSummary();
   process.stdout.write('All tests passed\n');
 }
 

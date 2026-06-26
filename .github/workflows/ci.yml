@@ -5,11 +5,15 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
-  verify:
-    name: ${{ matrix.os }} / Node ${{ matrix.node-version }}
+  fast:
+    name: Fast / ${{ matrix.os }} / Node ${{ matrix.node-version }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -41,8 +45,28 @@ jobs:
       - name: Examples Typecheck
         run: npm run examples:typecheck
 
-      - name: Reference Technique Smoke Audit
-        run: npm run audit:reference
+  smoke:
+    name: Smoke / Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 20
+          - 22
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
 
       - name: Dist Smoke
         run: npm run smoke:dist
@@ -50,8 +74,50 @@ jobs:
       - name: CLI Smoke
         run: npm run smoke:cli
 
+      - name: Pack Dry Run
+        run: npm run pack:dry-run
+
       - name: Pack Smoke
         run: npm run smoke:pack
+
+  slow-audit:
+    name: Slow Audit / Node 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Slow Tests
+        run: CLASSIC9_TEST_TIMING=1 npm run test:slow
+
+  release-audit:
+    name: Release Audit / Node 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
 
       - name: Release Smoke Audit
         run: npm run verify:release -- --input tests/fixtures/release-smoke-corpus.json

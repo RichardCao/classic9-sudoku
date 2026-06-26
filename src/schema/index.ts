@@ -24,6 +24,17 @@ const TECHNIQUE_COUNT_RECORD_SCHEMA: JsonSchema = {
   },
 };
 
+const CANONICAL_KEY_USAGE_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['reused', 'computed', 'invalid'],
+  properties: {
+    reused: { type: 'integer', minimum: 0 },
+    computed: { type: 'integer', minimum: 0 },
+    invalid: { type: 'integer', minimum: 0 },
+  },
+};
+
 const CANONICAL_KEY_SCHEMA: JsonSchema = {
   type: 'string',
   minLength: 81,
@@ -593,8 +604,12 @@ export const CANONICAL_PAIR_RESULT_SCHEMA: JsonSchema = {
     },
     key: CANONICAL_KEY_SCHEMA,
     board: BOARD_SCHEMA,
-    solution: SOLUTION_BOARD_SCHEMA,
+    solution: BOARD_SCHEMA,
     transform: CANONICAL_TRANSFORM_SCHEMA,
+    warnings: {
+      type: 'array',
+      items: { type: 'string' },
+    },
   },
 };
 
@@ -771,6 +786,13 @@ const GENERATION_REQUEST_PROPERTIES: Record<string, unknown> = {
       maxAttempts: { type: 'integer', minimum: 1 },
       maxElapsedMs: { type: 'integer', minimum: 1 },
     },
+  },
+  solutionSource: {
+    enum: ['transform-fixed', 'random-backtracking', 'pool'],
+  },
+  solutionPool: {
+    type: 'array',
+    items: SOLUTION_BOARD_SCHEMA,
   },
   ...SEARCH_ONLY_REQUEST_PROPERTIES,
 };
@@ -988,6 +1010,84 @@ export const SEARCH_EVENT_SCHEMA: JsonSchema = {
   ],
 };
 
+const RANGE_BUCKET_PLAN_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['min', 'max'],
+  properties: {
+    min: { type: 'number' },
+    max: { type: 'number' },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+    },
+  },
+};
+
+const RANGE_BUCKET_COUNT_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['min', 'max', 'selected'],
+  properties: {
+    min: { type: 'number' },
+    max: { type: 'number' },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+    },
+    selected: {
+      type: 'integer',
+      minimum: 0,
+    },
+  },
+};
+
+const TECHNIQUE_BUCKET_PLAN_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['techniques'],
+  properties: {
+    techniques: {
+      type: 'array',
+      minItems: 1,
+      items: TECHNIQUE_ID_SCHEMA,
+    },
+    minCount: {
+      type: 'integer',
+      minimum: 1,
+    },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+    },
+  },
+};
+
+const TECHNIQUE_BUCKET_COUNT_SCHEMA: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['techniques', 'selected'],
+  properties: {
+    techniques: {
+      type: 'array',
+      minItems: 1,
+      items: TECHNIQUE_ID_SCHEMA,
+    },
+    minCount: {
+      type: 'integer',
+      minimum: 1,
+    },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+    },
+    selected: {
+      type: 'integer',
+      minimum: 0,
+    },
+  },
+};
+
 export const CANDIDATE_SELECTION_PLAN_SCHEMA: JsonSchema = {
   $id: 'https://github.com/RichardCao/classic9-sudoku/schema/candidate-selection-plan.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -1010,23 +1110,20 @@ export const CANDIDATE_SELECTION_PLAN_SCHEMA: JsonSchema = {
     scoreBuckets: {
       type: 'array',
       $comment: 'min <= max 和 bucket 不重叠是跨项动态规则，请通过 selectFromCandidates() 做运行时校验。',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['min', 'max'],
-        properties: {
-          min: {
-            type: 'number',
-          },
-          max: {
-            type: 'number',
-          },
-          limit: {
-            type: 'integer',
-            minimum: 1,
-          },
-        },
-      },
+      items: RANGE_BUCKET_PLAN_SCHEMA,
+    },
+    clueBuckets: {
+      type: 'array',
+      $comment: 'min <= max 和 bucket 不重叠是跨项动态规则，请通过 selectFromCandidates() 做运行时校验。',
+      items: RANGE_BUCKET_PLAN_SCHEMA,
+    },
+    hardestTechniqueBuckets: {
+      type: 'array',
+      items: TECHNIQUE_BUCKET_PLAN_SCHEMA,
+    },
+    requiredTechniqueBuckets: {
+      type: 'array',
+      items: TECHNIQUE_BUCKET_PLAN_SCHEMA,
     },
   },
 };
@@ -1060,7 +1157,17 @@ export const CANDIDATE_SELECTION_RESULT_SCHEMA: JsonSchema = {
     diagnostics: {
       type: 'object',
       additionalProperties: false,
-      required: ['selected', 'rejected', 'rejectedByReason', 'scoreBucketCounts', 'preferredTechniqueHits'],
+      required: [
+        'selected',
+        'rejected',
+        'rejectedByReason',
+        'canonicalKeyUsage',
+        'scoreBucketCounts',
+        'clueBucketCounts',
+        'hardestTechniqueBucketCounts',
+        'requiredTechniqueBucketCounts',
+        'preferredTechniqueHits',
+      ],
       properties: {
         selected: {
           type: 'integer',
@@ -1073,25 +1180,22 @@ export const CANDIDATE_SELECTION_RESULT_SCHEMA: JsonSchema = {
         rejectedByReason: {
           ...COUNT_RECORD_SCHEMA,
         },
+        canonicalKeyUsage: CANONICAL_KEY_USAGE_SCHEMA,
         scoreBucketCounts: {
           type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['min', 'max', 'selected'],
-            properties: {
-              min: { type: 'number' },
-              max: { type: 'number' },
-              limit: {
-                type: 'integer',
-                minimum: 1,
-              },
-              selected: {
-                type: 'integer',
-                minimum: 0,
-              },
-            },
-          },
+          items: RANGE_BUCKET_COUNT_SCHEMA,
+        },
+        clueBucketCounts: {
+          type: 'array',
+          items: RANGE_BUCKET_COUNT_SCHEMA,
+        },
+        hardestTechniqueBucketCounts: {
+          type: 'array',
+          items: TECHNIQUE_BUCKET_COUNT_SCHEMA,
+        },
+        requiredTechniqueBucketCounts: {
+          type: 'array',
+          items: TECHNIQUE_BUCKET_COUNT_SCHEMA,
         },
         preferredTechniqueHits: {
           ...COUNT_RECORD_SCHEMA,
@@ -1107,7 +1211,7 @@ export const CANDIDATE_POOL_STATS_SCHEMA: JsonSchema = {
   title: '候选池统计结果',
   type: 'object',
   additionalProperties: false,
-  required: ['total', 'score', 'clues', 'gradeCounts', 'hardestTechniqueCounts', 'techniqueHits', 'canonical', 'seeds'],
+  required: ['total', 'score', 'clues', 'gradeCounts', 'hardestTechniqueCounts', 'techniqueHits', 'solved', 'sourceCounts', 'canonical', 'seeds'],
   properties: {
     total: { type: 'integer', minimum: 0 },
     score: {
@@ -1143,6 +1247,18 @@ export const CANDIDATE_POOL_STATS_SCHEMA: JsonSchema = {
       ...COUNT_RECORD_SCHEMA,
     },
     techniqueHits: {
+      ...COUNT_RECORD_SCHEMA,
+    },
+    solved: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['true', 'false'],
+      properties: {
+        true: { type: 'integer', minimum: 0 },
+        false: { type: 'integer', minimum: 0 },
+      },
+    },
+    sourceCounts: {
       ...COUNT_RECORD_SCHEMA,
     },
     canonical: {
@@ -1201,12 +1317,13 @@ export const CANDIDATE_DEDUPE_RESULT_SCHEMA: JsonSchema = {
     diagnostics: {
       type: 'object',
       additionalProperties: false,
-      required: ['input', 'kept', 'removed', 'key'],
+      required: ['input', 'kept', 'removed', 'key', 'canonicalKeyUsage'],
       properties: {
         input: { type: 'integer', minimum: 0 },
         kept: { type: 'integer', minimum: 0 },
         removed: { type: 'integer', minimum: 0 },
         key: { enum: ['canonical', 'puzzle'] },
+        canonicalKeyUsage: CANONICAL_KEY_USAGE_SCHEMA,
       },
     },
   },

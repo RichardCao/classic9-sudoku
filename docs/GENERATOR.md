@@ -8,6 +8,23 @@
 2. 提前识别分数范围和技巧范围之间的矛盾。
 3. 为 `generateOne` 和 `search` 提供统一 diagnostics。
 
+## 公开策略边界
+
+截至 2026-06-26，`generateOne()` 不新增 `mode`、`generationStrategy` 或 `preset-transform` 公开参数。现有请求语义保持不变。
+
+本仓库已经用 benchmark-only 策略评估过 `preset-transform`、`staged-targeted`、`adaptive-beam` 和 technique loss：
+
+1. `preset-transform` 对已验证 seed 的粗难度快速返回有价值，但当前只允许本地/自有 provenance seed，且结构等价变换还存在评分漂移决策，暂不作为公开 API。
+2. `staged-targeted` 能提供 checkpoint 诊断，但命中率和 p95 没有达到替换默认生成器的门槛。
+3. `adaptive-beam` 能作为离线搜索/诊断 harness，但 remove/restore-only mutation 没有稳定提升 medium/hard 命中率，p95 成本明显高于 staged baseline。
+4. hardestTechnique / requiredTechnique 目标应优先通过候选池生产、评分、canonical 去重和分桶选择完成，不承诺在线实时 fresh generation 稳定命中。
+
+因此公开能力边界是：
+
+1. 在线 `generateOne()` 适合常规约束和 best-effort 生成。
+2. medium / hard / expert、窄 score range、指定 technique 的稳定产出，推荐使用 `search` 或 shard workflow 构建候选池，再用候选池选择器筛选。
+3. benchmark-only 策略只用于本仓库评估，不随 npm API 承诺兼容性。
+
 ## analyzeGenerationRequest
 
 `analyzeGenerationRequest(request)` 会返回：
@@ -98,7 +115,59 @@ npm run benchmark:uniqueness -- --iterations 20 --json
 
 这个脚本是开发/发布前分析工具，不随 npm 包发布。它用于比较当前 MRV 搜索、未来 optimized MRV 或 exact-cover/DLX prototype 的效果；不要把单机 benchmark 数值写成公开性能承诺。
 
-当前完整终盘生成器是 lightweight / reproducible 取向：它从一个固定合法终盘出发，做数字置换、行列带内/栈内置换、带/栈置换和转置等价变换。它适合 smoke、稳定测试和可复现候选池任务，但不声称覆盖所有终盘等价类。需要更大终盘多样性时，应在后续版本增加真正随机终盘生成或外部终盘池。
+## solution source
+
+`solutionSource` 控制完整终盘来源。默认值仍是 `transform-fixed`，因此旧 seed 行为保持兼容。
+
+当前支持：
+
+1. `transform-fixed`
+   从固定合法终盘出发，做数字置换、行列带内/栈内置换、带/栈置换和转置等价变换。它适合 smoke、稳定测试和可复现候选池任务，但不声称覆盖所有终盘等价类。
+2. `random-backtracking`
+   使用 seeded RNG 做随机 backtracking 终盘填充。相同 seed 可复现，不同 seed 通常得到不同终盘。该模式用于增加终盘多样性，但仍受当前 budget 保护。
+3. `pool`
+   从调用方提供的 `solutionPool` 中按 seed 抽取终盘。pool 中每一项必须是 81 长度完整合法终盘。pool 数据不随 npm 包提供，调用方需要自行负责来源、license 和质量。
+
+示例：
+
+```json
+{
+  "seed": 1,
+  "solutionSource": "random-backtracking",
+  "minimality": "none",
+  "constraints": {
+    "clues": { "target": 40 }
+  },
+  "budget": {
+    "maxAttempts": 1,
+    "maxElapsedMs": 3000
+  }
+}
+```
+
+外部 pool：
+
+```json
+{
+  "seed": 1,
+  "solutionSource": "pool",
+  "solutionPool": [
+    [5, 3, 4, 6, 7, 8, 9, 1, 2]
+  ],
+  "constraints": {
+    "clues": { "target": 40 }
+  }
+}
+```
+
+CLI 可以用文件注入 pool：
+
+```bash
+node dist/src/cli/index.js generate request.json --solution-pool solution-pool.json
+node dist/src/cli/index.js search request.json --solution-pool solution-pool.json --write-candidates candidates.json
+```
+
+`solutionPool` 文件必须是 JSON array，每一项是完整 81 数字终盘。CLI 使用 `--solution-pool` 时，如果请求未显式设置 `solutionSource`，会自动使用 `pool`。
 
 `score.target` 和 `score.tolerance` 表示硬约束：如果二者同时给出，生成器只接受分数落在 `[target - tolerance, target + tolerance]` 范围内的题目。`target` 也会用于失败时选择最接近的 `bestCandidate`。
 

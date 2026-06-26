@@ -2,6 +2,38 @@
 
 本文档记录公开库层面的重要变化。
 
+## 0.5.0
+
+第五版公开发布。
+
+已新增或收口的内容：
+
+1. 生成器新增完整终盘来源控制：默认仍为兼容旧 seed 行为的 `transform-fixed`，同时支持 `random-backtracking` 和调用方提供的 `solutionPool` / `pool` 来源，用于提高终盘多样性和接入外部自有终盘池。
+2. CLI 的 `generate` / `search` 支持通过 `--solution-pool` 注入外部完整终盘文件；如果请求未显式设置 `solutionSource`，会自动使用 pool 来源。
+3. 候选池 workflow 补齐统计、canonical 去重、bucket selection、technique bucket selection、合并和续跑文档，推荐用离线候选池处理 hard / expert / 窄分数段 / 指定技巧目标。
+4. canonical 对空盘和单线索等低信息题面增加 fast path，并新增 release canonical equivalence audit，用来验证旋转、镜像、行列/宫带/栈置换、转置和数字重标号不会改变 canonical key。
+5. `CANONICAL.md` 明确 `canonical.classic9.v1` 覆盖的标准等价变换边界，以及对唯一解题面、非唯一解题面和 puzzle/solution pair 的处理方式。
+6. 发布包内容边界收紧：npm 包只包含 runtime、用户文档、示例和基础项目文件；ADR、路线图、发布准备、benchmark/audit 过程、issue backlog、市场指标和测试审计保留在 GitHub 仓库。
+7. 新增 browser usage、minimal use、popular package migration、generator cookbook 等面向调用方的文档。
+8. 发布验证增加 canonical release audit 和更严格的 pack smoke，确保 `scripts/`、`tests/`、源码和 GitHub-only 文档不会进入 npm tarball。
+
+行为和契约变化：
+
+1. `generateOne()` 的默认终盘来源不变；未设置 `solutionSource` 时仍按旧的 deterministic transform 路径生成，不把实验性策略作为默认行为。
+2. `solutionPool` 只接受完整合法 81 位终盘。pool 数据不随 npm 包提供，调用方需要自行负责来源、license、质量和 provenance。
+3. 生成器对 hard / expert、窄 score range、hardest technique 和 required technique 仍是 best-effort；稳定生产这类题面应优先使用 `search()`、候选池、canonical 去重、评分分桶和后续选择。
+4. 候选池会优先复用已有合法 `canonicalKey`；需要严格导入审计时应启用 `verifyCanonicalKey` 或 CLI 的 `--verify-canonical-key`。
+5. `canonical.classic9.v1` 的 key 仍由题面 givens 决定，不使用唯一解答案作为 tie-break；如果未来改变算法，必须升级 canonical version。
+6. `verify:release` 现在要求传入外部或仓库内 release smoke corpus，例如 `npm run verify:release -- --input tests/fixtures/release-smoke-corpus.json`。
+
+当前版本仍不承诺：
+
+1. Public `generationStrategy`、`adaptive-beam`、`preset-transform` 或内置 preset puzzle database。
+2. 在线实时稳定命中 hard / expert / 指定 hardest technique。
+3. 把 benchmark-only 生成策略纳入公开 API。
+4. 稳定 subpath exports。
+5. 和外部 canonical 实现输出格式逐字节一致；当前承诺是 `canonical.classic9.v1` 内部稳定，并覆盖标准 classic 9x9 等价变换。
+
 ## 0.4.0
 
 第四版公开发布。
@@ -12,7 +44,7 @@
 2. 新增 `reference-rating-corpus.json` 真实题面评分路径 corpus，和 `reference-smoke.json` 的人工候选态 smoke fixture 明确分层；正式 corpus 行必须是普通题面、唯一解、完整评分路径可回放。
 3. `audit:reference` 现在同时跑 reference smoke 和 real-board rating corpus audit；rating corpus 每一步都会经过 `verifyStep(..., { mode: "evidence" })`，并校验 place / eliminate 动作不违背已知答案。
 4. 新增 `audit:coverage`、`find:reference-candidates`、`synthesize:reference-candidates` 等 reference corpus 工具，用于目标技巧优先搜索、候选题面去重、命中后 clue minimization 和覆盖缺口审计。
-5. 新增 `verify:coverage`，发布前可单独跑 coverage、forcing evidence、forcing smoke 和 BUG graph evidence 审计；`verify:release` 现在会在基础 `verify` 之后追加这些覆盖审计。
+5. 新增 `verify:coverage`，发布前可单独跑 coverage、forcing evidence、forcing smoke 和 BUG graph evidence 审计；源码仓库测试也拆分为快速 `npm test` 和慢速 `npm run test:slow`，后者覆盖真实题面 corpus、reference audit 和 forcing evidence 等慢速检查。
 6. 公开 API 补齐二维数组 / nullable board 适配器、`hint()`、`summarizeAnalysis()` 和 `summarizeRating()`，便于前端和题库服务直接消费提示文本、评分摘要和扁平 board 转换。
 7. `checkUniqueness()` 输出更完整的搜索诊断，包括预算中止、节点访问、耗时和解数下界，方便服务端区分确定结果和预算内未知。
 8. 多个高级技巧的 evidence 增加 `pattern`、`links`、`nodes` 和 subtype 边界测试，覆盖 fish、wing、ALS、chain、UR/BUG、Exocet、Tridagons、SK Loops、forcing 等家族。
@@ -20,7 +52,7 @@
 
 行为和契约变化：
 
-1. `verify:release` 比 0.3.0 更严格，会额外执行 reference coverage / evidence 类审计；它适合作为发布前门禁，但运行时间明显长于普通 typecheck。
+1. `verify:release` 比 0.3.0 更严格，会执行快速测试、慢速测试、examples typecheck、dist/CLI/pack smoke 和外部题集 release audit；它适合作为发布前门禁，但运行时间明显长于普通 typecheck。
 2. `audit:reference` 不再只是轻量 smoke；它也会跑 real-board rating corpus，因此在本地和 CI 中应按慢速审计对待。
 3. `reference-smoke.json` 中的 trusted / artificial candidate state 仍只用于技巧 finder 边界测试，不得直接计入真实题面 rating corpus。
 4. 添加或搜索 rating corpus 行时，若目标是覆盖某个技巧，应使用 `targetFirstTechniques` 或候选搜索脚本的 `--target-first`，并把目标技巧放在最前面。

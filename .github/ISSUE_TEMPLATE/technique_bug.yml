@@ -1,0 +1,44 @@
+name: 技巧或解题路径问题
+description: 报告某个技巧误报、漏报、证据不完整或评分路径异常
+title: "[Technique] "
+labels:
+  - technique
+  - bug
+body:
+  - type: textarea
+    id: puzzle
+    attributes:
+      label: Puzzle
+      description: 81 位题面字符串，空格用 0、. 或 -。
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution
+      description: 如果已知，请提供 81 位完整答案。用于检查是否误删真解候选。
+      render: text
+  - type: input
+    id: profile
+    attributes:
+      label: Profile / options
+      placeholder: "stable / extended / galaxy / allowedTechniques=..."
+  - type: input
+    id: expected
+    attributes:
+      label: 期望技巧
+      placeholder: "例如 x-wing"
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 提供当前返回的 step、actions、evidence 或 CLI 输出。
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: 来源和上下文
+      description: 如果来自网页、书籍、题库或中途候选态，请说明来源和是否为真实题面。

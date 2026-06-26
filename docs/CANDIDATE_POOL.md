@@ -40,7 +40,9 @@
 
 `solved: true` 表示该候选已经能被生成时使用的评分策略解出。`search` 和 `generateOne` 只有在满足当前约束且 `solved === true` 时才会把候选作为成功结果输出；失败时的 `bestCandidate` 只用于诊断。
 
-如果候选包含 `canonicalKey`，候选池 API 会校验它是否等于当前 `puzzle` 的 canonical key。外部导入候选池时，不要手工伪造或复用其他题面的 key。
+如果候选包含 `canonicalKey`，候选池 API 默认只校验它是 81 位数字字符串，并直接复用这个 key 做统计、筛选或去重。这是性能优先策略，适合内部生成器产出的可信候选池。
+
+外部导入候选池时，不要手工伪造或复用其他题面的 key。如果需要严格审计，可以使用 API 的 `verifyCanonicalKey: true` 或 CLI 的 `--verify-canonical-key`，此时会重新计算 `puzzle` 的 canonical key 并比对。
 
 ## 选择计划
 
@@ -55,6 +57,15 @@
     { "min": 0, "max": 1300, "limit": 3 },
     { "min": 1301, "max": 2200, "limit": 3 },
     { "min": 2201, "max": 3200, "limit": 4 }
+  ],
+  "clueBuckets": [
+    { "min": 30, "max": 40, "limit": 10 }
+  ],
+  "hardestTechniqueBuckets": [
+    { "techniques": ["naked-single", "hidden-single"], "limit": 5 }
+  ],
+  "requiredTechniqueBuckets": [
+    { "techniques": ["full-house"], "minCount": 1, "limit": 10 }
   ]
 }
 ```
@@ -85,11 +96,23 @@ node dist/src/cli/index.js schema candidateSelectionResult
 4. `scoreBuckets`
    按分数分桶控制数量。
 
+5. `clueBuckets`
+   按线索数分桶控制数量。
+
+6. `hardestTechniqueBuckets`
+   按 `hardestTechnique` 分桶控制数量。
+
+7. `requiredTechniqueBuckets`
+   按 techniqueCounts 中出现的技巧分桶控制数量。`minCount` 默认是 `1`。
+
 选择计划会做基础校验：
 
 1. `maxResults` 必须是大于 0 的整数。
-2. 每个分数桶必须满足 `min <= max`。
-3. 分数桶的 `limit` 如果存在，必须是大于 0 的整数。
+2. 每个分数桶和线索桶必须满足 `min <= max`。
+3. 分数桶和线索桶不能互相重叠。
+4. bucket 的 `limit` 如果存在，必须是大于 0 的整数。
+5. 技巧 bucket 只能使用已知 `TechniqueId`。
+6. `requiredTechniqueBuckets.minCount` 如果存在，必须是大于 0 的整数。
 
 ## 命令行
 
@@ -103,10 +126,17 @@ node dist/src/cli/index.js select candidates.json plan.json
 node dist/src/cli/index.js select candidates.json plan.json --write-selected selected.json --write-rejected rejected.json
 ```
 
+严格校验导入池中的 `canonicalKey`：
+
+```bash
+node dist/src/cli/index.js select candidates.json plan.json --verify-canonical-key
+```
+
 输出：
 
 1. `selected`
 2. `rejected`
+3. `diagnostics.canonicalKeyUsage`
 
 `rejected` 会包含原因，例如：
 
@@ -114,6 +144,19 @@ node dist/src/cli/index.js select candidates.json plan.json --write-selected sel
 2. `canonical-duplicate`
 3. `score-out-of-buckets`
 4. `score-bucket-full`
+5. `clue-out-of-buckets`
+6. `clue-bucket-full`
+7. `hardest-technique-out-of-buckets`
+8. `hardest-technique-bucket-full`
+9. `required-technique-out-of-buckets`
+10. `required-technique-bucket-full`
+11. `unsolved-candidate`
+
+`diagnostics.canonicalKeyUsage` 会记录：
+
+1. `reused`：直接复用已有合法 `canonicalKey` 的次数。
+2. `computed`：候选缺少合法 `canonicalKey` 时重新计算的次数。
+3. `invalid`：候选带了非法格式 `canonicalKey` 的次数；常规校验会优先报错，因此正常情况下应为 0。
 
 写出文件时：
 
@@ -134,6 +177,12 @@ node dist/src/cli/index.js candidate-stats candidates.json
 node dist/src/cli/index.js candidate-stats candidates.json --score-bucket-size 100 --clue-bucket-size 5
 ```
 
+严格校验 `canonicalKey`：
+
+```bash
+node dist/src/cli/index.js candidate-stats candidates.json --verify-canonical-key
+```
+
 输出包括：
 
 1. 总题数。
@@ -142,8 +191,12 @@ node dist/src/cli/index.js candidate-stats candidates.json --score-bucket-size 1
 4. `grade` 分布。
 5. 最高技巧分布。
 6. 技巧总命中次数。
-7. canonical key 覆盖和重复情况。
-8. seed 范围和重复 seed 数。
+7. `solved` true / false 分布。
+8. `sourceCounts` 来源分布；没有来源字段的候选记为 `unknown`。
+9. canonical key 覆盖和重复情况。
+10. seed 范围和重复 seed 数。
+
+统计命令不会为缺少 `canonicalKey` 的候选自动计算 key；它只统计已有 key 的覆盖和重复情况。
 
 对应 schema：
 
@@ -171,6 +224,12 @@ node dist/src/cli/index.js dedupe-candidates candidates.json --out deduped.json 
 
 ```bash
 node dist/src/cli/index.js dedupe-candidates candidates.json --out deduped.json --write-rejected duplicated.json
+```
+
+严格校验 `canonicalKey`：
+
+```bash
+node dist/src/cli/index.js dedupe-candidates candidates.json --out deduped.json --verify-canonical-key
 ```
 
 对应 schema：
